@@ -32,7 +32,7 @@ export const plans: Plans = {
 		price: 0
 	},
 	pro: {
-		monthlyPriceId: STRIPE_PRO_MONTHLY_PRICE_ID,
-		yearlyPriceId: STRIPE_PRO_YEARLY_PRICE_ID
+		monthlyPriceId: STRIPE_PRO_MONTHLY_PRICE_ID.trim(),
+		yearlyPriceId: STRIPE_PRO_YEARLY_PRICE_ID.trim()
 	}
 };
