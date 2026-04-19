@@ -26,6 +26,27 @@ export const GET = async () => {
 		results.rawFetchWithSignal = { error: String(e) };
 	}
 
+	// Test 2b: https.request (what NodeHttpClient uses)
+	try {
+		const https = await import('node:https');
+		const result = await new Promise<string>((resolve, reject) => {
+			const req = https.request(
+				'https://api.stripe.com/v1/account',
+				{ headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
+				(res) => {
+					let data = '';
+					res.on('data', (c: string) => (data += c));
+					res.on('end', () => resolve(`${res.statusCode}: ${data.slice(0, 50)}`));
+				}
+			);
+			req.on('error', reject);
+			req.end();
+		});
+		results.httpsRequest = { ok: true, result };
+	} catch (e) {
+		results.httpsRequest = { error: String(e) };
+	}
+
 	// Test 3: Stripe SDK with NodeHttpClient
 	try {
 		const Stripe = (await import('stripe')).default;
