@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	// 2. Verify webhook signature
 	let event: Stripe.Event;
 	try {
-		event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
+		event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET.trim());
 	} catch {
 		return json({ error: 'Invalid webhook signature.' }, { status: 400 });
 	}
