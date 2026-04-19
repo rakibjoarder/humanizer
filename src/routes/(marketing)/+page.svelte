@@ -151,30 +151,31 @@
 		{
 			num: '01',
 			icon: scanIcon,
-			title: 'Own-model detection',
-			body: 'Trained on 2M+ samples from GPT-4, Claude, Gemini and more. Our model achieves 98.2% accuracy on held-out test sets — not benchmarked on training data.'
+			title: 'AI detection you can act on',
+			body: 'Probability score plus a clear classification — so you know whether a draft reads like AI before you ship it. Trained across major model families, not a generic “score out of 100” widget.'
 		},
 		{
 			num: '02',
 			icon: 'm15 4-2 2-2-2 M18 7l-2 2-2-2 M21 3v3 M3 21l9-9 M14 7l7 7-4 4-7-7z',
-			title: 'Precision humanizer',
-			body: 'Rewrites at the sentence and word level, preserving your meaning while eliminating statistical AI fingerprints — burstiness, perplexity, vocabulary homogeneity.'
+			title: 'Humanizer for stiff copy',
+			body: 'Sentence- and word-level rewrites that keep your meaning while dialing down machine-like rhythm and diction. Built for the humanizer step after detection — not a random paraphraser.'
 		},
 		{
 			num: '03',
 			icon: shieldIcon,
-			title: 'Your text stays yours',
-			body: 'No logging, no training on your submissions. Text is processed in-memory and discarded. SOC 2 Type II in progress.'
+			title: 'Privacy by design',
+			body: 'We don’t use your text to train public models. Submissions are processed to return a result, with retention described in our Privacy Policy. SOC 2 Type II in progress.'
 		}
 	];
 
-	const logos = [
-		'Northwestern',
-		'Stanford Writing Lab',
-		'ContentForge',
-		'Penguin Labs',
-		'EditorSuite',
-		'Verity Press'
+	/** Generic use cases only — avoid implying real schools or brands use the product without proof */
+	const draftUseCases = [
+		'Course papers',
+		'Client emails',
+		'Blog posts',
+		'Proposals',
+		'Documentation',
+		'Marketing copy'
 	];
 
 	let openFaq = $state<number | null>(null);
@@ -666,7 +667,7 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     LOGO MARQUEE
+     USE-CASE MARQUEE (no implied customer logos)
 ════════════════════════════════════════════════════════════════════════════ -->
 <Reveal delay={400}>
 	<section style="
@@ -683,7 +684,7 @@
 				letter-spacing: 0.14em;
 				text-transform: uppercase;
 				margin: 0 0 16px;
-			">Trusted at —</p>
+			">Drafts people run through us —</p>
 		</div>
 
 		<div style="
@@ -698,8 +699,8 @@
 				animation: hai-marquee 40s linear infinite;
 				width: max-content;
 			">
-				{#each [logos, logos] as group}
-					{#each group as logo}
+				{#each [draftUseCases, draftUseCases] as group}
+					{#each group as label}
 						<span style="
 							font-family: 'Newsreader', Georgia, serif;
 							font-size: 22px;
@@ -707,7 +708,7 @@
 							color: var(--color-text-muted);
 							white-space: nowrap;
 							flex-shrink: 0;
-						">{logo}</span>
+						">{label}</span>
 					{/each}
 				{/each}
 			</div>
@@ -726,12 +727,25 @@
 		<Reveal delay={0}>
 			<h2 style="
 				font-family: 'Newsreader', Georgia, serif;
-				font-size: 40px;
+				font-size: clamp(28px, 4vw, 40px);
 				font-weight: 400;
 				color: var(--color-text-primary);
-				margin: 0 0 48px;
+				margin: 0 0 14px;
 				letter-spacing: -0.02em;
-			">AI detection and humanizing — built for real drafts.</h2>
+				line-height: 1.15;
+			">Detect AI patterns. Humanize what still sounds synthetic.</h2>
+			<p style="
+				font-family: 'Space Grotesk', system-ui, sans-serif;
+				font-size: 16px;
+				line-height: 1.55;
+				color: var(--color-text-secondary);
+				margin: 0 0 40px;
+				max-width: 640px;
+			">
+				Two focused tools for the draft in front of you — papers, emails, briefs, and notes. No extra “writing suite” clutter:
+				<strong style="font-weight: 600; color: var(--color-text-primary);">check</strong>, then
+				<strong style="font-weight: 600; color: var(--color-text-primary);">rewrite</strong>, when you need it.
+			</p>
 		</Reveal>
 
 		<div style="
@@ -890,7 +904,7 @@
 					</a>
 				</Reveal>
 				<Reveal delay={80}>
-					<a href="/register" style="display: block; text-decoration: none; padding-top: 16px;">
+					<a href="/pricing" style="display: block; text-decoration: none; padding-top: 16px;">
 						<PricingCard plan="pro" {billingCycle} highlighted={true} />
 					</a>
 				</Reveal>

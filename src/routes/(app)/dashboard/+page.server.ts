@@ -1,12 +1,65 @@
 import type { PageServerLoad } from './$types';
 import { getUserProfile } from '$lib/server/auth';
 import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
+import { stripe } from '$lib/server/stripe';
+import { createClient } from '@supabase/supabase-js';
+import { PUBLIC_SUPABASE_URL } from '$env/static/public';
+import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
 		redirectToLoginModal(url);
+	}
+
+	// Verify Stripe checkout session on upgrade redirect and immediately update the plan.
+	// Uses service-role client so the write succeeds regardless of RLS policies.
+	const stripeSessionId = url.searchParams.get('session_id');
+	if (stripeSessionId) {
+		try {
+			const checkoutSession = await stripe.checkout.sessions.retrieve(stripeSessionId);
+			if (
+				checkoutSession.payment_status === 'paid' &&
+				checkoutSession.metadata?.supabase_user_id === user.id
+			) {
+				const adminClient = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+					auth: { autoRefreshToken: false, persistSession: false }
+				});
+
+				await adminClient
+					.from('profiles')
+					.update({ plan: 'pro', stripe_customer_id: checkoutSession.customer as string })
+					.eq('id', user.id);
+
+				const subscriptionId =
+					typeof checkoutSession.subscription === 'string'
+						? checkoutSession.subscription
+						: checkoutSession.subscription?.id;
+
+				if (subscriptionId) {
+					const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+					await adminClient.from('subscriptions').upsert(
+						{
+							user_id: user.id,
+							stripe_subscription_id: subscriptionId,
+							stripe_customer_id: checkoutSession.customer as string,
+							plan: 'pro',
+							status: subscription.status,
+							current_period_start: new Date(
+								subscription.current_period_start * 1000
+							).toISOString(),
+							current_period_end: new Date(
+								subscription.current_period_end * 1000
+							).toISOString()
+						},
+						{ onConflict: 'stripe_subscription_id' }
+					);
+				}
+			}
+		} catch {
+			// Non-fatal: webhook will eventually sync the state
+		}
 	}
 
 	const profile = await getUserProfile(locals.supabase, user.id);

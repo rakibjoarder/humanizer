@@ -1,7 +1,6 @@
 <script lang="ts">
 	import PricingCard from '$lib/components/PricingCard.svelte';
 	import { goto } from '$app/navigation';
-	import { openLoginModal } from '$lib/stores/loginModal';
 
 	type BillingCycle = 'monthly' | 'yearly';
 
@@ -10,12 +9,8 @@
 	const isPro = $derived(data.profile?.plan === 'pro');
 
 	let billingCycle = $state<BillingCycle>('monthly');
-
-	// Stripe price IDs — these match the plans in $lib/server/stripe.ts
-	const priceIds: Record<string, Record<BillingCycle, string | null>> = {
-		free: { monthly: null, yearly: null },
-		pro: { monthly: 'price_pro_monthly', yearly: 'price_pro_yearly' }
-	};
+	let checkoutLoading = $state(false);
+	let checkoutError = $state('');
 
 	const yearlySavingsLabel: Record<string, string> = {
 		pro: 'Save $45/year'
@@ -27,8 +22,15 @@
 			return;
 		}
 
-		const priceId = priceIds[planKey]?.[billingCycle];
+		const priceId =
+			billingCycle === 'monthly'
+				? data.priceIds?.pro?.monthly
+				: data.priceIds?.pro?.yearly;
+
 		if (!priceId) return;
+
+		checkoutError = '';
+		checkoutLoading = true;
 
 		try {
 			const res = await fetch('/api/stripe/checkout', {
@@ -37,17 +39,24 @@
 				body: JSON.stringify({ priceId, billingCycle })
 			});
 
+			const json = await res.json();
+
 			if (res.status === 401) {
-				openLoginModal('/pricing');
+				// Not logged in — send to login with return URL
+				goto('/?login=1&redirect=/pricing');
 				return;
 			}
 
-			const data = await res.json();
-			if (data.url) {
-				window.location.href = data.url;
+			if (!res.ok || !json.url) {
+				checkoutError = json.error ?? 'Something went wrong. Please try again.';
+				return;
 			}
+
+			window.location.href = json.url;
 		} catch {
-			// Network error — do nothing, let the user retry
+			checkoutError = 'Network error. Please check your connection and try again.';
+		} finally {
+			checkoutLoading = false;
 		}
 	}
 
@@ -138,21 +147,23 @@
 		<section class="cards-section" aria-label="Pricing plans">
 			<div class="cards-grid">
 				<!-- Free -->
-				<div class="card-wrapper" onclick={() => handleSelectPlan('free')} role="button" tabindex="0"
-					onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('free')}>
-					<PricingCard plan="free" {billingCycle} highlighted={false} />
+				<div class="card-wrapper">
+					<PricingCard plan="free" {billingCycle} highlighted={false} onselect={() => handleSelectPlan('free')} />
 				</div>
 
 				<!-- Pro -->
-				<div class="card-wrapper card-wrapper-highlighted" onclick={() => handleSelectPlan('pro')} role="button" tabindex="0"
-					onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('pro')}>
+				<div class="card-wrapper card-wrapper-highlighted" class:loading={checkoutLoading}>
 					{#if billingCycle === 'yearly'}
 						<div class="savings-banner">{yearlySavingsLabel.pro}</div>
 					{/if}
-					<PricingCard plan="pro" {billingCycle} highlighted={true} />
+					<PricingCard plan="pro" {billingCycle} highlighted={true} onselect={() => !checkoutLoading && handleSelectPlan('pro')} />
 				</div>
 
 				</div>
+
+			{#if checkoutError}
+				<p class="checkout-error">{checkoutError}</p>
+			{/if}
 
 			<p class="footnote">
 				All plans include a 7-day free trial on paid tiers. No credit card required for Free.
@@ -431,11 +442,25 @@
 		position: relative;
 		cursor: pointer;
 		border-radius: 18px;
-		transition: transform 200ms ease;
+		transition: transform 200ms ease, opacity 200ms ease;
 	}
 
 	.card-wrapper:hover {
 		transform: translateY(-3px);
+	}
+
+	.card-wrapper.loading {
+		opacity: 0.6;
+		cursor: wait;
+		pointer-events: none;
+	}
+
+	.checkout-error {
+		font-family: 'DM Sans', system-ui, sans-serif;
+		font-size: 13px;
+		color: #ef4444;
+		text-align: center;
+		margin: 0;
 	}
 
 	.card-wrapper-highlighted {

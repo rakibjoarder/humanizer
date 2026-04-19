@@ -6,9 +6,10 @@
 		plan: Plan;
 		highlighted?: boolean;
 		billingCycle?: BillingCycle;
+		onselect?: () => void;
 	}
 
-	let { plan, highlighted = false, billingCycle = 'monthly' }: Props = $props();
+	let { plan, highlighted = false, billingCycle = 'monthly', onselect }: Props = $props();
 
 	interface Feature {
 		text: string;
@@ -133,6 +134,7 @@
 			class:cta-primary={highlighted || plan === 'free'}
 			class:cta-ghost={!highlighted && plan !== 'free'}
 			type="button"
+			onclick={onselect}
 		>
 			{data.cta}
 		</button>

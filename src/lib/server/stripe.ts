@@ -1,4 +1,8 @@
-import { STRIPE_SECRET_KEY } from '$env/static/private';
+import {
+	STRIPE_SECRET_KEY,
+	STRIPE_PRO_MONTHLY_PRICE_ID,
+	STRIPE_PRO_YEARLY_PRICE_ID
+} from '$env/static/private';
 import Stripe from 'stripe';
 
 // ── Stripe client ─────────────────────────────────────────────────────────────
@@ -28,7 +32,7 @@ export const plans: Plans = {
 		price: 0
 	},
 	pro: {
-		monthlyPriceId: 'price_pro_monthly',
-		yearlyPriceId: 'price_pro_yearly'
+		monthlyPriceId: STRIPE_PRO_MONTHLY_PRICE_ID,
+		yearlyPriceId: STRIPE_PRO_YEARLY_PRICE_ID
 	}
 };

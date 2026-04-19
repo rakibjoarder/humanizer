@@ -41,7 +41,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// 3. Auth guard (guest-friendly /detect is handled in (app)/+layout.server.ts)
-	const protectedPaths = ['/dashboard', '/humanize', '/settings'];
+	const protectedPaths = ['/home', '/dashboard', '/detect', '/humanize', '/settings', '/activity'];
 	if (protectedPaths.some((p) => path.startsWith(p))) {
 		const { session } = await event.locals.safeGetSession();
 		if (!session) {

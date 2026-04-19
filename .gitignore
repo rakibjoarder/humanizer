@@ -12,3 +12,7 @@ vite.config.ts.timestamp-*
 # Supabase CLI local cache
 supabase/.temp/
 .vercel
+
+# Playwright
+test-results/
+playwright-report/

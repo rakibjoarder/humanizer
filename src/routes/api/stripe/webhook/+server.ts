@@ -1,8 +1,16 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { stripe } from '$lib/server/stripe';
-import { STRIPE_WEBHOOK_SECRET } from '$env/static/private';
+import { STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import { PUBLIC_SUPABASE_URL } from '$env/static/public';
+import { createClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
+
+function getAdminClient() {
+	return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+		auth: { autoRefreshToken: false, persistSession: false }
+	});
+}
 
 // ── POST /api/stripe/webhook ──────────────────────────────────────────────────
 
@@ -28,22 +36,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		switch (event.type) {
 			case 'checkout.session.completed': {
 				const session = event.data.object as Stripe.Checkout.Session;
-				await handleCheckoutSessionCompleted(session, locals.supabase);
+				await handleCheckoutSessionCompleted(session, getAdminClient());
 				break;
 			}
 			case 'customer.subscription.updated': {
 				const subscription = event.data.object as Stripe.Subscription;
-				await handleSubscriptionUpdated(subscription, locals.supabase);
+				await handleSubscriptionUpdated(subscription, getAdminClient());
 				break;
 			}
 			case 'customer.subscription.deleted': {
 				const subscription = event.data.object as Stripe.Subscription;
-				await handleSubscriptionDeleted(subscription, locals.supabase);
+				await handleSubscriptionDeleted(subscription, getAdminClient());
 				break;
 			}
 			case 'invoice.payment_failed': {
 				const invoice = event.data.object as Stripe.Invoice;
-				await handleInvoicePaymentFailed(invoice, locals.supabase);
+				await handleInvoicePaymentFailed(invoice, getAdminClient());
 				break;
 			}
 			default:

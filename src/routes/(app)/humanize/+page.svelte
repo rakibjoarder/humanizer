@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
@@ -85,14 +85,21 @@
 	});
 
 	onMount(() => {
-		try {
-			if (page.url.searchParams.has('id')) return;
-			const stored = localStorage.getItem('humanize_prefill');
-			if (stored) {
-				inputText = stored;
+		void (async () => {
+			try {
+				if (page.url.searchParams.has('id')) return;
+				const stored = localStorage.getItem('humanize_prefill');
+				if (!stored) return;
 				localStorage.removeItem('humanize_prefill');
+				inputText = stored;
+				// Match Humanize button: min 10 chars; Pro only (free tier shows upgrade — no API call)
+				if (stored.trim().length < 10 || isFree) return;
+				await tick();
+				await handleHumanize();
+			} catch {
+				/* ignore */
 			}
-		} catch {}
+		})();
 	});
 
 	async function handleHumanize() {
