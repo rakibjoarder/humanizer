@@ -15,8 +15,8 @@ function getAdminClient() {
 // ── POST /api/stripe/webhook ──────────────────────────────────────────────────
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	// 1. Read raw body (required for signature verification)
-	const rawBody = await request.text();
+	// 1. Read raw body as Buffer (required for Stripe signature verification)
+	const rawBody = Buffer.from(await request.arrayBuffer());
 	const sig = request.headers.get('stripe-signature');
 
 	if (!sig) {
