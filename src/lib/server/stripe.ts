@@ -8,7 +8,9 @@ import Stripe from 'stripe';
 // ── Stripe client ─────────────────────────────────────────────────────────────
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-	apiVersion: '2025-02-24.acacia'
+	apiVersion: '2025-02-24.acacia',
+	maxNetworkRetries: 0,
+	timeout: 8000
 });
 
 // ── Plan configuration ────────────────────────────────────────────────────────
