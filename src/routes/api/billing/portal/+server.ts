@@ -31,7 +31,9 @@ export const POST: RequestHandler = async ({ locals }) => {
 		});
 
 		return json({ url: portalSession.url });
-	} catch {
-		return json({ error: 'Failed to create billing portal session.' }, { status: 500 });
+	} catch (err: unknown) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.error('[billing/portal]', message);
+		return json({ error: message }, { status: 500 });
 	}
 };
