@@ -101,6 +101,8 @@
 		}
 	}
 
+	let subscription = $derived(data.subscription);
+
 	let planLabel = $derived(
 		profile?.plan === 'pro' ? 'Pro' : 'Free'
 	);
@@ -109,6 +111,14 @@
 		profile?.plan === 'pro'
 			? 'Unlimited detections and humanizations per day.'
 			: '3 free detections total · 500 words per scan.'
+	);
+
+	let cancelDate = $derived(
+		subscription?.cancel_at_period_end && subscription?.current_period_end
+			? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+					year: 'numeric', month: 'long', day: 'numeric'
+				})
+			: null
 	);
 </script>
 
@@ -239,13 +249,20 @@
 					{#if profile?.plan !== 'free'}
 						<span
 							class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-							style="background: var(--color-brand-muted); color: var(--color-brand)"
+							style={cancelDate
+								? 'background: #f59e0b20; color: #f59e0b'
+								: 'background: var(--color-brand-muted); color: var(--color-brand)'}
 						>
-							Active
+							{cancelDate ? 'Cancelling' : 'Active'}
 						</span>
 					{/if}
 				</div>
 				<p class="text-xs" style="color: var(--color-text-muted)">{planDescription}</p>
+				{#if cancelDate}
+					<p class="text-xs mt-1" style="color: #f59e0b">
+						Cancels on {cancelDate}
+					</p>
+				{/if}
 			</div>
 
 			{#if profile?.plan === 'free'}

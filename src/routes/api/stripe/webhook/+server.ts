@@ -101,6 +101,7 @@ async function handleCheckoutSessionCompleted(
 				stripe_customer_id: session.customer as string,
 				plan,
 				status: subscription.status,
+				cancel_at_period_end: subscription.cancel_at_period_end,
 				current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
 				current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
 			},
@@ -138,6 +139,7 @@ async function handleSubscriptionUpdated(
 			.update({
 				plan,
 				status: subscription.status,
+				cancel_at_period_end: subscription.cancel_at_period_end,
 				current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
 				current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
 			})

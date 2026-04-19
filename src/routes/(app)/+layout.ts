@@ -17,5 +17,11 @@ export const load: LayoutLoad = async ({ parent }) => {
 		console.error('Failed to load profile:', error.message);
 	}
 
-	return { session, user, profile: profile ?? null };
+	const { data: subscription } = await supabase
+		.from('subscriptions')
+		.select('cancel_at_period_end, current_period_end, status')
+		.eq('user_id', user.id)
+		.maybeSingle();
+
+	return { session, user, profile: profile ?? null, subscription: subscription ?? null };
 };
