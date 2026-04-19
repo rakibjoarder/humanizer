@@ -1,5 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+
+export const config = { maxDuration: 30 };
 import { stripe } from '$lib/server/stripe';
 import { getUserProfile } from '$lib/server/auth';
 import { PUBLIC_APP_URL } from '$env/static/public';
