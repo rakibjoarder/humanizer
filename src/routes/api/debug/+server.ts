@@ -15,7 +15,18 @@ export const GET = async () => {
 		results.rawFetch = { error: String(e) };
 	}
 
-	// Test 2: Stripe SDK
+	// Test 2: raw fetch with AbortSignal (like SDK does)
+	try {
+		const r = await fetch('https://api.stripe.com/v1/account', {
+			headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+			signal: AbortSignal.timeout(10000)
+		});
+		results.rawFetchWithSignal = { status: r.status, ok: r.ok };
+	} catch (e) {
+		results.rawFetchWithSignal = { error: String(e) };
+	}
+
+	// Test 3: Stripe SDK
 	try {
 		const account = await stripe.accounts.retrieve();
 		results.stripeSdk = { id: account.id };
