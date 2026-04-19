@@ -1,6 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { FREE_DETECTION_MAX_WORDS_PER_SCAN, countWords } from '$lib/limits';
 import { detectText } from '$lib/server/api';
+import {
+	anonymousDemoAlreadyUsed,
+	demoDetectCookieHeader,
+	persistAnonymousDemo
+} from '$lib/server/demoDetect';
 import { checkRateLimit } from '$lib/server/rateLimit';
 import { checkQuota, incrementUsage } from '$lib/server/usage';
 import { getUserProfile } from '$lib/server/auth';
@@ -41,7 +47,33 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 3. Rate limit (IP-based)
+	const wordCount = countWords(text);
+
+	// 4. Optional auth (needed for word-limit exemption)
+	const { session, user } = await locals.safeGetSession();
+	const isAuthed = session !== null && user !== null;
+
+	let profile: Awaited<ReturnType<typeof getUserProfile>> | null = null;
+	if (isAuthed && user) {
+		try {
+			profile = await getUserProfile(locals.supabase, user.id);
+		} catch (err) {
+			console.error('[detect] Failed to fetch profile:', err);
+			return json({ error: 'Failed to fetch user profile.' }, { status: 500 });
+		}
+	}
+
+	const isPro = profile?.plan === 'pro';
+	if (!isPro && wordCount > FREE_DETECTION_MAX_WORDS_PER_SCAN) {
+		return json(
+			{
+				error: `Text must be at most ${FREE_DETECTION_MAX_WORDS_PER_SCAN} words on Free and preview scans. Upgrade to Pro for longer documents.`
+			},
+			{ status: 400 }
+		);
+	}
+
+	// 5. Rate limit (IP-based)
 	const ip =
 		request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
 
@@ -68,21 +100,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 4. Optional auth
-	const { session, user } = await locals.safeGetSession();
-	const isAuthed = session !== null && user !== null;
-
-	// 5. If authed: check quota
-	let profile: Awaited<ReturnType<typeof getUserProfile>> | null = null;
-
-	if (isAuthed && user) {
+	// 6. Anonymous: one preview per browser/IP (cookie + optional Redis)
+	if (!isAuthed) {
 		try {
-			profile = await getUserProfile(locals.supabase, user.id);
+			if (await anonymousDemoAlreadyUsed(request, ip)) {
+				return json(
+					{
+						error:
+							'Your free preview scan is already used. Create a free account for 3 more detections (500 words each).',
+						code: 'DEMO_EXHAUSTED'
+					},
+					{ status: 429 }
+				);
+			}
 		} catch (err) {
-			console.error('[detect] Failed to fetch profile:', err);
-			return json({ error: 'Failed to fetch user profile.' }, { status: 500 });
+			console.error('[detect] Demo check failed:', err);
+			return json({ error: 'Failed to verify preview eligibility.' }, { status: 500 });
 		}
+	}
 
+	// 7. Logged-in Free: lifetime detection quota (Pro unlimited)
+	if (isAuthed && user && profile) {
 		let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
 		try {
 			quotaResult = await checkQuota(locals.supabase, user.id, profile.plan);
@@ -94,7 +132,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (!quotaResult.allowed) {
 			return json(
 				{
-					error: `Free trial limit reached. You've used all ${quotaResult.limit} free detections. Upgrade to Pro for unlimited access.`,
+					error: `Free plan limit reached. You've used all ${quotaResult.limit} lifetime detections. Upgrade to Pro for unlimited access.`,
 					used: quotaResult.used,
 					limit: quotaResult.limit
 				},
@@ -103,7 +141,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
-	// 6. Call upstream detect API
+	// 8. Call upstream detect API
 	let result: Awaited<ReturnType<typeof detectText>>;
 	try {
 		result = await detectText(text);
@@ -112,10 +150,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Detection service is unavailable. Please try again later.' }, { status: 500 });
 	}
 
-	// 7. If authed: persist detection + increment usage
+	// 9. If authed: persist detection + increment usage
 	if (isAuthed && user && profile) {
-		const wordCount = text.split(/\s+/).filter(Boolean).length;
-
 		// Fire-and-forget persistence — do not block the response
 		Promise.all([
 			locals.supabase.from('detections').insert({
@@ -131,13 +167,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		]).catch((err) => {
 			console.error('[detect] Failed to persist detection / update usage:', err);
 		});
+	} else {
+		try {
+			await persistAnonymousDemo(ip);
+		} catch (err) {
+			console.error('[detect] Failed to persist anonymous demo marker:', err);
+		}
 	}
 
-	// 8. Return clean JSON
-	return json({
-		verdict: result.verdict,
-		ai_probability: result.ai_probability,
-		human_probability: result.human_probability,
-		classification: result.classification
-	});
+	const headers = new Headers();
+	if (!isAuthed) {
+		headers.set('Set-Cookie', demoDetectCookieHeader());
+	}
+
+	// 10. Return clean JSON
+	return json(
+		{
+			verdict: result.verdict,
+			ai_probability: result.ai_probability,
+			human_probability: result.human_probability,
+			classification: result.classification
+		},
+		{ headers }
+	);
 };

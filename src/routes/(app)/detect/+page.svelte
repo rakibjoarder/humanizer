@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { openLoginModal } from '$lib/stores/loginModal';
 	import type { PageData } from './$types';
 	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
 	import { detectText, type DetectResult } from '$lib/client/api';
@@ -10,6 +12,7 @@
 	import CardHeader from '$lib/components/CardHeader.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { countWords } from '$lib/limits';
 
 	// ── Icon paths ──────────────────────────────────────────────────────────────
 	const scanIcon  = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
@@ -103,11 +106,41 @@
 		setLastVisitedActivityId(s.id);
 	});
 
+	function trimToWordCap(text: string, max: number): string {
+		const w = text.trim().split(/\s+/).filter(Boolean);
+		if (w.length <= max) return text;
+		return w.slice(0, max).join(' ');
+	}
+
+	onMount(() => {
+		void (async () => {
+			try {
+				if (page.url.searchParams.has('id')) return;
+				const stored = localStorage.getItem('detect_prefill');
+				if (!stored) return;
+				const cap = data.maxWordsPerScan ?? 999999;
+				const applied = trimToWordCap(stored, cap);
+				localStorage.removeItem('detect_prefill');
+				inputText = applied;
+				const wc = countWords(applied);
+				// Same rules as manual Analyze — auto-run when hub/stash sends enough text
+				if (applied.length < 50 || wc === 0 || wc > cap) return;
+				await tick();
+				await handleAnalyze();
+			} catch {
+				/* ignore */
+			}
+		})();
+	});
+
 	// ── Derived ───────────────────────────────────────────────────────────────
 	const wordCount = $derived(
 		inputText.trim().length === 0 ? 0 : inputText.trim().split(/\s+/).filter(Boolean).length
 	);
-	const canSubmit = $derived(inputText.length >= 50 && !isLoading);
+	const maxWordsCap = $derived(data.maxWordsPerScan ?? Number.POSITIVE_INFINITY);
+	const canSubmit = $derived(
+		inputText.length >= 50 && wordCount > 0 && wordCount <= maxWordsCap && !isLoading
+	);
 
 	// Mock signal values derived from ai_probability
 	const signalValues = $derived(result ? [
@@ -140,6 +173,10 @@
 
 	function handleHumanize() {
 		try { localStorage.setItem('humanize_prefill', inputText); } catch {}
+		if (!data.user) {
+			openLoginModal('/humanize');
+			return;
+		}
 		goto('/humanize');
 	}
 
@@ -195,6 +232,20 @@
 			color: var(--color-text-secondary);
 			margin: 0;
 		">Analyze text for AI authorship.</p>
+		{#if data.previewBlurb}
+			<p
+				style="
+					margin: 14px 0 0;
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 13px;
+					line-height: 1.5;
+					color: var(--color-text-muted);
+					max-width: 52ch;
+				"
+			>
+				{data.previewBlurb}
+			</p>
+		{/if}
 	</div>
 
 	<!-- Input + result: stack on small screens, two columns from --detect-bp -->
@@ -218,7 +269,8 @@
 					bind:value={inputText}
 					placeholder="Paste your text here to analyze…"
 					minChars={50}
-					maxChars={10000}
+					maxWords={data.maxWordsPerScan ?? undefined}
+					maxChars={data.plan === 'pro' ? 50000 : 20000}
 				/>
 
 				{#if error}

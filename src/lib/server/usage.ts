@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { FREE_DETECTION_LIFETIME } from '$lib/limits';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,7 +13,6 @@ export interface QuotaResult {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FREE_DETECTION_LIMIT = 3; // lifetime detections for free users
 const UNLIMITED = -1;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ export async function checkQuota(
 	}
 
 	const used = count ?? 0;
-	const limit = FREE_DETECTION_LIMIT;
+	const limit = FREE_DETECTION_LIFETIME;
 
 	return { allowed: used < limit, used, limit };
 }

@@ -30,7 +30,7 @@
 		open = false;
 		await supabase.auth.signOut();
 		invalidate('supabase:auth');
-		goto('/login');
+		goto('/');
 	}
 
 	function toggle() {

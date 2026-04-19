@@ -48,7 +48,7 @@
 <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 20px;">
 	<p style="margin: 0;">
 		<a
-			href="/home#recent-activity"
+			href="/dashboard#recent-activity"
 			style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
 		>← Dashboard</a>
 	</p>

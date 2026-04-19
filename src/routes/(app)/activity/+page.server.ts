@@ -1,5 +1,5 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
 
 const ACTIVITY_LIMIT = 200;
 
@@ -12,11 +12,11 @@ export type ActivityItem = {
 	created_at: string;
 };
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
-		redirect(303, '/login');
+		redirectToLoginModal(url);
 	}
 
 	const [recentDetectionsRes, recentHumanizationsRes] = await Promise.all([

@@ -31,15 +31,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return { session, user };
 	};
 
-	// 3. Auth guard: protect /dashboard /detect /humanize /settings
-	const protectedPaths = ['/dashboard', '/detect', '/humanize', '/settings'];
+	// Legacy app route — send everyone to marketing hub
 	const path = event.url.pathname;
+	if (path === '/home' || path === '/home/') {
+		const dest = new URL('/', event.url);
+		dest.search = event.url.search;
+		dest.hash = event.url.hash;
+		return Response.redirect(dest, 308);
+	}
+
+	// 3. Auth guard (guest-friendly /detect is handled in (app)/+layout.server.ts)
+	const protectedPaths = ['/dashboard', '/humanize', '/settings'];
 	if (protectedPaths.some((p) => path.startsWith(p))) {
 		const { session } = await event.locals.safeGetSession();
 		if (!session) {
-			const redirectUrl = new URL('/login', event.url);
-			redirectUrl.searchParams.set('redirect', path);
-			return Response.redirect(redirectUrl, 303);
+			const dest = new URL('/', event.url);
+			dest.searchParams.set('login', '1');
+			dest.searchParams.set('redirect', path + event.url.search);
+			return Response.redirect(dest, 303);
 		}
 	}
 

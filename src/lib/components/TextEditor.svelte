@@ -1,9 +1,13 @@
 <script lang="ts">
+	import { countWords, trimToMaxWords } from '$lib/limits';
+
 	interface Props {
 		value?: string;
 		placeholder?: string;
 		minChars?: number;
 		maxChars?: number;
+		/** When set, trims pasted/typed text to this many words (Free tier scans). */
+		maxWords?: number;
 		label?: string;
 		readonly?: boolean;
 	}
@@ -13,6 +17,7 @@
 		placeholder = 'Paste or type your text here…',
 		minChars,
 		maxChars,
+		maxWords,
 		label,
 		readonly = false
 	}: Props = $props();
@@ -21,15 +26,22 @@
 	let focused = $state(false);
 
 	const charCount = $derived(value.length);
+	const wordCount = $derived(countWords(value));
 
 	const counterColor = $derived(
-		!maxChars
-			? 'var(--color-text-muted)'
-			: charCount / maxChars >= 1
+		maxWords != null
+			? wordCount / maxWords >= 1
 				? 'var(--color-ai)'
-				: charCount / maxChars >= 0.8
+				: wordCount / maxWords >= 0.9
 					? 'var(--color-uncertain)'
 					: 'var(--color-text-muted)'
+			: !maxChars
+				? 'var(--color-text-muted)'
+				: charCount / maxChars >= 1
+					? 'var(--color-ai)'
+					: charCount / maxChars >= 0.8
+						? 'var(--color-uncertain)'
+						: 'var(--color-text-muted)'
 	);
 
 	const belowMin = $derived(!!minChars && charCount > 0 && charCount < minChars);
@@ -39,14 +51,23 @@
 	}
 
 	const counterText = $derived(
-		maxChars
-			? `${formatNumber(charCount)} / ${formatNumber(maxChars)}`
-			: formatNumber(charCount)
+		maxWords != null
+			? `${formatNumber(wordCount)} / ${formatNumber(maxWords)} words`
+			: maxChars
+				? `${formatNumber(charCount)} / ${formatNumber(maxChars)}`
+				: formatNumber(charCount)
 	);
 
 	function handleInput(e: Event) {
 		const target = e.currentTarget as HTMLTextAreaElement;
 		let newVal = target.value;
+		if (maxWords != null) {
+			const trimmed = trimToMaxWords(newVal, maxWords);
+			if (trimmed !== newVal) {
+				newVal = trimmed;
+				target.value = newVal;
+			}
+		}
 		if (maxChars && newVal.length > maxChars) {
 			newVal = newVal.slice(0, maxChars);
 			target.value = newVal;

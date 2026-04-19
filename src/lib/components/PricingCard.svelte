@@ -40,8 +40,7 @@
 				{ text: 'AI Detection', available: true },
 				{ text: 'Humanizer', available: false },
 				{ text: 'History & saved results', available: false },
-				{ text: 'Email support', available: true },
-				{ text: 'API access', available: false }
+				{ text: 'Email support', available: true }
 			]
 		},
 		pro: {
@@ -58,8 +57,7 @@
 				{ text: 'AI Detection', available: true },
 				{ text: 'Humanizer', available: true },
 				{ text: 'History & saved results', available: true },
-				{ text: 'Priority support', available: true },
-				{ text: 'API access', available: false }
+				{ text: 'Priority support', available: true }
 			]
 		}
 	};

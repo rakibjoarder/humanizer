@@ -1,6 +1,6 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getUserProfile } from '$lib/server/auth';
+import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
 
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
-		redirect(303, '/login');
+		redirectToLoginModal(url);
 	}
 
 	let plan: 'free' | 'pro' = 'free';

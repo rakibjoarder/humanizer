@@ -1,8 +1,13 @@
 <script lang="ts">
 	import PricingCard from '$lib/components/PricingCard.svelte';
 	import { goto } from '$app/navigation';
+	import { openLoginModal } from '$lib/stores/loginModal';
 
 	type BillingCycle = 'monthly' | 'yearly';
+
+	let { data } = $props();
+
+	const isPro = $derived(data.profile?.plan === 'pro');
 
 	let billingCycle = $state<BillingCycle>('monthly');
 
@@ -33,7 +38,7 @@
 			});
 
 			if (res.status === 401) {
-				goto(`/login?redirect=/pricing`);
+				openLoginModal('/pricing');
 				return;
 			}
 
@@ -87,59 +92,73 @@
 
 	<!-- ── Hero text ── -->
 	<section class="hero-section">
-		<h1 class="hero-title">Simple, transparent pricing</h1>
-		<p class="hero-sub">Start free. Upgrade when you need more power. Cancel any time.</p>
+		{#if isPro}
+			<h1 class="hero-title">You’re on Pro</h1>
+			<p class="hero-sub">
+				You already have unlimited detection and humanizing. Manage billing from account settings, or jump back
+				to the app.
+			</p>
+			<div class="pro-member-actions">
+				<a class="pro-member-btn pro-member-btn-primary" href="/dashboard">Open dashboard</a>
+				<a class="pro-member-btn pro-member-btn-secondary" href="/settings">Account &amp; billing</a>
+			</div>
+		{:else}
+			<h1 class="hero-title">Simple, transparent pricing</h1>
+			<p class="hero-sub">Start free. Upgrade when you need more power. Cancel any time.</p>
 
-		<!-- Billing toggle -->
-		<div class="billing-toggle" role="group" aria-label="Billing cycle">
-			<button
-				class="toggle-btn"
-				class:active={billingCycle === 'monthly'}
-				onclick={() => (billingCycle = 'monthly')}
-				aria-pressed={billingCycle === 'monthly'}
-			>
-				Monthly
-			</button>
-			<button
-				class="toggle-btn"
-				class:active={billingCycle === 'yearly'}
-				onclick={() => (billingCycle = 'yearly')}
-				aria-pressed={billingCycle === 'yearly'}
-			>
-				Yearly
-				<span class="savings-chip">Up to 33% off</span>
-			</button>
-		</div>
+			<!-- Billing toggle -->
+			<div class="billing-toggle" role="group" aria-label="Billing cycle">
+				<button
+					class="toggle-btn"
+					class:active={billingCycle === 'monthly'}
+					onclick={() => (billingCycle = 'monthly')}
+					aria-pressed={billingCycle === 'monthly'}
+				>
+					Monthly
+				</button>
+				<button
+					class="toggle-btn"
+					class:active={billingCycle === 'yearly'}
+					onclick={() => (billingCycle = 'yearly')}
+					aria-pressed={billingCycle === 'yearly'}
+				>
+					Yearly
+					<span class="savings-chip">Up to 33% off</span>
+				</button>
+			</div>
 
-		{#if billingCycle === 'yearly'}
-			<p class="yearly-note">Billed annually · Cancel any time</p>
+			{#if billingCycle === 'yearly'}
+				<p class="yearly-note">Billed annually · Cancel any time</p>
+			{/if}
 		{/if}
 	</section>
 
 	<!-- ── Pricing cards ── -->
-	<section class="cards-section" aria-label="Pricing plans">
-		<div class="cards-grid">
-			<!-- Free -->
-			<div class="card-wrapper" onclick={() => handleSelectPlan('free')} role="button" tabindex="0"
-				onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('free')}>
-				<PricingCard plan="free" {billingCycle} highlighted={false} />
-			</div>
+	{#if !isPro}
+		<section class="cards-section" aria-label="Pricing plans">
+			<div class="cards-grid">
+				<!-- Free -->
+				<div class="card-wrapper" onclick={() => handleSelectPlan('free')} role="button" tabindex="0"
+					onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('free')}>
+					<PricingCard plan="free" {billingCycle} highlighted={false} />
+				</div>
 
-			<!-- Pro -->
-			<div class="card-wrapper card-wrapper-highlighted" onclick={() => handleSelectPlan('pro')} role="button" tabindex="0"
-				onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('pro')}>
-				{#if billingCycle === 'yearly'}
-					<div class="savings-banner">{yearlySavingsLabel.pro}</div>
-				{/if}
-				<PricingCard plan="pro" {billingCycle} highlighted={true} />
-			</div>
+				<!-- Pro -->
+				<div class="card-wrapper card-wrapper-highlighted" onclick={() => handleSelectPlan('pro')} role="button" tabindex="0"
+					onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('pro')}>
+					{#if billingCycle === 'yearly'}
+						<div class="savings-banner">{yearlySavingsLabel.pro}</div>
+					{/if}
+					<PricingCard plan="pro" {billingCycle} highlighted={true} />
+				</div>
 
-			</div>
+				</div>
 
-		<p class="footnote">
-			All plans include a 7-day free trial on paid tiers. No credit card required for Free.
-		</p>
-	</section>
+			<p class="footnote">
+				All plans include a 7-day free trial on paid tiers. No credit card required for Free.
+			</p>
+		</section>
+	{/if}
 
 	<!-- ── Feature comparison highlights ── -->
 	<section class="compare-section">
@@ -333,6 +352,53 @@
 		font-size: 13px;
 		color: var(--color-text-muted);
 		margin: 0;
+	}
+
+	.pro-member-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		justify-content: center;
+		margin-top: 4px;
+	}
+
+	.pro-member-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 11px 22px;
+		border-radius: 10px;
+		font-family: 'DM Sans', system-ui, sans-serif;
+		font-size: 14px;
+		font-weight: 600;
+		text-decoration: none;
+		transition:
+			background 160ms ease,
+			border-color 160ms ease,
+			color 160ms ease;
+	}
+
+	.pro-member-btn-primary {
+		background: var(--color-brand);
+		color: #fff;
+		border: 1px solid var(--color-brand);
+	}
+
+	.pro-member-btn-primary:hover {
+		background: var(--color-brand-hover);
+		border-color: var(--color-brand-hover);
+	}
+
+	.pro-member-btn-secondary {
+		background: var(--color-bg-surface);
+		color: var(--color-text-primary);
+		border: 1px solid var(--color-bg-border);
+		box-shadow: var(--shadow-card);
+	}
+
+	.pro-member-btn-secondary:hover {
+		border-color: var(--color-bg-border-hi);
+		background: var(--color-bg-elevated);
 	}
 
 	/* ── Cards ── */

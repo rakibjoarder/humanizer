@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Logo from '$lib/components/Logo.svelte';
+	import { openLoginModal } from '$lib/stores/loginModal';
 
 	let { data } = $props();
 	let supabase = $derived(data.supabase);
@@ -19,7 +20,7 @@
 		googleLoading = true;
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
-			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/home` }
+			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/` }
 		});
 		if (authError) { error = authError.message; googleLoading = false; }
 	}
@@ -124,7 +125,14 @@
 					<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0; line-height: 1.6;">
 						We sent a confirmation link to <strong style="color: var(--color-text-primary);">{email}</strong>. Click it to activate your account.
 					</p>
-					<a href="/login" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: var(--color-brand); text-decoration: none; margin-top: 4px;">Back to sign in →</a>
+					<a
+						href="/login"
+						style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: var(--color-brand); text-decoration: none; margin-top: 4px;"
+						onclick={(e) => {
+							e.preventDefault();
+							openLoginModal();
+						}}>Back to sign in →</a
+					>
 				</div>
 			{:else}
 				<!-- Error -->
@@ -277,7 +285,14 @@
 		{#if !success}
 			<p style="text-align: center; margin-top: 20px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; color: var(--color-text-muted);">
 				Already have an account?
-				<a href="/login" style="color: var(--color-brand); font-weight: 600; text-decoration: none; margin-left: 4px;">Sign in</a>
+				<a
+					href="/login"
+					style="color: var(--color-brand); font-weight: 600; text-decoration: none; margin-left: 4px;"
+					onclick={(e) => {
+						e.preventDefault();
+						openLoginModal();
+					}}>Sign in</a
+				>
 			</p>
 		{/if}
 	</div>

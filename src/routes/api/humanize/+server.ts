@@ -95,11 +95,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	const wordCount = text.split(/\s+/).filter(Boolean).length;
-
 	let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
 	try {
-		quotaResult = await checkQuota(locals.supabase, user.id, profile.plan, wordCount);
+		quotaResult = await checkQuota(locals.supabase, user.id, profile.plan);
 	} catch (err) {
 		console.error('[humanize] Quota check failed:', err);
 		return json({ error: 'Failed to check usage quota.' }, { status: 500 });
@@ -108,7 +106,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!quotaResult.allowed) {
 		return json(
 			{
-				error: `Daily word limit reached. Used ${quotaResult.used} of ${quotaResult.limit} words today.`,
+				error: `Could not run humanizer: quota check failed.`,
 				used: quotaResult.used,
 				limit: quotaResult.limit
 			},

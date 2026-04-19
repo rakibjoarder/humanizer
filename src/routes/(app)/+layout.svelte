@@ -5,6 +5,7 @@
 	import NavUserMenu from '$lib/components/NavUserMenu.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import { openLoginModal } from '$lib/stores/loginModal';
 
 	let { data, children } = $props();
 	let supabase = $derived(data.supabase);
@@ -32,7 +33,7 @@
 	async function signOut() {
 		await supabase.auth.signOut();
 		invalidate('supabase:auth');
-		goto('/login');
+		goto('/');
 	}
 
 	const planLabel = $derived(
@@ -129,7 +130,7 @@
 
 				<NavUserMenu {supabase} {user} {profile} />
 			{:else}
-				<Button variant="ghost" size="sm" onclick={() => goto('/login')}>Sign in</Button>
+				<Button variant="ghost" size="sm" onclick={() => openLoginModal()}>Sign in</Button>
 				<Button variant="primary" size="sm" onclick={() => goto('/register')}>Get started</Button>
 			{/if}
 

@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { SupabaseClient, Session, User } from '@supabase/supabase-js';
+import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,15 +26,19 @@ export interface AuthResult {
  * Uses the `safeGetSession` helper already set up in `hooks.server.ts` so the
  * JWT is always verified via `getUser()`.
  *
- * Throws a 303 redirect to `/login` when the user is not authenticated.
+ * Throws a 303 redirect that opens the login modal (see `redirectToLoginModal`).
  */
 export async function requireAuth(
-	locals: import('@sveltejs/kit').RequestEvent['locals']
+	locals: import('@sveltejs/kit').RequestEvent['locals'],
+	eventUrl?: URL
 ): Promise<AuthResult> {
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
-		redirect(303, '/login');
+		if (eventUrl) {
+			redirectToLoginModal(eventUrl);
+		}
+		redirect(303, '/?login=1');
 	}
 
 	return { session, user };

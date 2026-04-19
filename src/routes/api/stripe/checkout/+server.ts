@@ -75,7 +75,7 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 			customer: stripeCustomerId,
 			mode: 'subscription',
 			line_items: [{ price: priceId, quantity: 1 }],
-			success_url: `${origin}/home?upgraded=true`,
+			success_url: `${origin}/dashboard?upgraded=true`,
 			cancel_url: `${origin}/pricing`,
 			allow_promotion_codes: true,
 			metadata: {

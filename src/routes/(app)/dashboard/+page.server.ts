@@ -1,12 +1,12 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getUserProfile } from '$lib/server/auth';
+import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
-		redirect(303, '/login');
+		redirectToLoginModal(url);
 	}
 
 	const profile = await getUserProfile(locals.supabase, user.id);
