@@ -259,6 +259,14 @@
 		z-index: 0;
 	}
 
+	:global(html[data-theme='light']) .pricing-page .bg-glow {
+		background: radial-gradient(
+			ellipse 70% 50% at 50% 8%,
+			rgba(79, 70, 229, 0.07) 0%,
+			transparent 72%
+		);
+	}
+
 	/* ── Header ── */
 	.page-header {
 		position: sticky;
@@ -412,7 +420,7 @@
 		z-index: 2;
 		padding: 4px 10px;
 		background: var(--color-human);
-		color: var(--color-bg-base);
+		color: #fff;
 		border-radius: 99px;
 		font-family: 'DM Sans', system-ui, sans-serif;
 		font-size: 11px;

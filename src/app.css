@@ -26,6 +26,40 @@
 	--color-text-dim: #3a3a4a;
 
 	--color-accent-glow: rgba(99,102,241,0.28);
+
+	--nav-scroll-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.45);
+	color-scheme: dark;
+}
+
+/* Light theme — toggled via `document.documentElement.dataset.theme = 'light'` */
+html[data-theme='light'] {
+	--color-bg-base: #f0f0f5;
+	--color-bg-surface: #ffffff;
+	--color-bg-elevated: #e8e8f0;
+	--color-bg-sunk: #e0e0ea;
+	--color-bg-border: #d4d4e0;
+	--color-bg-border-hi: #c6c6d4;
+
+	--color-brand: #4f46e5;
+	--color-brand-hover: #6366f1;
+	--color-brand-muted: rgba(79, 70, 229, 0.12);
+	--color-brand-glow: rgba(79, 70, 229, 0.2);
+
+	--color-ai: #dc2626;
+	--color-ai-muted: rgba(220, 38, 38, 0.1);
+	--color-possibly-ai: #ea580c;
+	--color-uncertain: #ca8a04;
+	--color-human: #16a34a;
+	--color-human-muted: rgba(22, 163, 74, 0.12);
+
+	--color-text-primary: #111118;
+	--color-text-secondary: #4b4b5c;
+	--color-text-muted: #7a7a8f;
+	--color-text-dim: #9c9cb0;
+
+	--color-accent-glow: rgba(79, 70, 229, 0.18);
+	--nav-scroll-shadow: 0 4px 24px -8px rgba(15, 23, 42, 0.1);
+	color-scheme: light;
 }
 
 @theme {
@@ -97,7 +131,11 @@ body {
 }
 .hai-hover-lift:hover {
 	transform: translateY(-2px);
-	box-shadow: inset 0 0 0 1px var(--color-bg-border-hi), 0 8px 24px -8px rgba(0,0,0,0.4);
+	box-shadow: inset 0 0 0 1px var(--color-bg-border-hi), 0 8px 24px -8px rgba(0, 0, 0, 0.22);
+}
+
+html[data-theme='light'] .hai-hover-lift:hover {
+	box-shadow: inset 0 0 0 1px var(--color-bg-border-hi), 0 10px 28px -10px rgba(15, 23, 42, 0.12);
 }
 
 @keyframes pulse-dot {

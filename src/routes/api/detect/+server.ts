@@ -122,7 +122,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		Promise.all([
 			locals.supabase.from('detections').insert({
 				user_id: user.id,
-				text,
+				input_text: text,
 				verdict: result.verdict,
 				ai_probability: result.ai_probability,
 				human_probability: result.human_probability,

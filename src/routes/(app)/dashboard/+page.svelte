@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -91,6 +92,14 @@
 
 	function isValidClassification(c: string | null): c is Classification {
 		return c === 'LIKELY_AI' || c === 'POSSIBLY_AI' || c === 'POSSIBLY_HUMAN' || c === 'LIKELY_HUMAN';
+	}
+
+	function activityHref(item: ActivityItem) {
+		return item.type === 'detect' ? `/detect?id=${item.id}` : `/humanize?id=${item.id}`;
+	}
+
+	function onActivityRowActivate(item: ActivityItem) {
+		goto(activityHref(item));
 	}
 
 </script>
@@ -209,7 +218,11 @@
 			justify-content: space-between;
 		">
 			<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">Recent activity</span>
-			<button style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-brand); background: none; border: none; cursor: pointer; font-weight: 600;">View all</button>
+			<button
+				type="button"
+				style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-brand); background: none; border: none; cursor: pointer; font-weight: 600;"
+				onclick={() => goto('/detect')}
+			>View all</button>
 		</div>
 
 		{#if data.recentActivity.length === 0}
@@ -236,7 +249,21 @@
 					</thead>
 					<tbody>
 						{#each data.recentActivity as item (item.id)}
-							<tr style="border-bottom: 1px solid var(--color-bg-border);" onmouseenter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--color-bg-elevated)'; }} onmouseleave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = ''; }}>
+							<tr
+								style="border-bottom: 1px solid var(--color-bg-border); cursor: pointer;"
+								role="link"
+								tabindex="0"
+								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}"
+								onmouseenter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--color-bg-elevated)'; }}
+								onmouseleave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = ''; }}
+								onclick={() => onActivityRowActivate(item)}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										onActivityRowActivate(item);
+									}
+								}}
+							>
 								<!-- Date -->
 								<td style="padding: 12px 16px; white-space: nowrap;">
 									<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{formatDate(item.created_at)}</span>
@@ -276,7 +303,12 @@
 								</td>
 								<!-- Arrow -->
 								<td style="padding: 12px 16px;">
-									<a href={item.type === 'detect' ? '/detect' : '/humanize'} style="color: var(--color-text-muted); text-decoration: none; display: inline-flex;" aria-label="Go to {item.type}">
+									<a
+										href={activityHref(item)}
+										style="color: var(--color-text-muted); text-decoration: none; display: inline-flex;"
+										aria-label="Open {item.type} in new tab"
+										onclick={(e) => e.stopPropagation()}
+									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14 M13 6l6 6-6 6"/></svg>
 									</a>
 								</td>

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import type { PageData } from './$types';
 	import { humanizeText, type HumanizeResult } from '$lib/client/api';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
@@ -24,9 +26,14 @@
 
 	// Props
 	interface Props {
-		data: { plan: 'free' | 'pro' | 'annual'; user: { id: string } | null; };
+		data: PageData;
 	}
 	let { data }: Props = $props();
+
+	type ResultSource = 'none' | 'live' | 'history';
+	let resultSource = $state<ResultSource>('none');
+	/** Avoid re-hydrating saved row when `?id=` stays on URL after a new humanize */
+	let savedHydratedId = $state<string | null>(null);
 
 	// State
 	let inputText = $state('');
@@ -49,10 +56,40 @@
 	);
 	const estRemaining = $derived(Math.max(0, Math.round(130 * (1 - progress / 100) )));
 
+	$effect(() => {
+		const h = data.savedHumanization;
+		if (!h) {
+			if (savedHydratedId !== null) {
+				savedHydratedId = null;
+				if (resultSource === 'history') {
+					resultSource = 'none';
+					result = null;
+					inputText = '';
+				}
+			}
+			return;
+		}
+		if (savedHydratedId === h.id) {
+			return;
+		}
+		inputText = h.input_text;
+		result = {
+			humanized_text: h.output_text,
+			word_count: h.word_count ?? h.output_text.trim().split(/\s+/).filter(Boolean).length
+		};
+		error = null;
+		resultSource = 'history';
+		savedHydratedId = h.id;
+	});
+
 	onMount(() => {
 		try {
+			if (page.url.searchParams.has('id')) return;
 			const stored = localStorage.getItem('humanize_prefill');
-			if (stored) { inputText = stored; localStorage.removeItem('humanize_prefill'); }
+			if (stored) {
+				inputText = stored;
+				localStorage.removeItem('humanize_prefill');
+			}
 		} catch {}
 	});
 
@@ -61,6 +98,7 @@
 		isLoading = true;
 		error = null;
 		result = null;
+		resultSource = 'none';
 		elapsedSeconds = 0;
 		progress = 0;
 
@@ -71,6 +109,7 @@
 
 		try {
 			result = await humanizeText(inputText);
+			resultSource = 'live';
 			progress = 100;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
@@ -188,6 +227,11 @@
 		<CardHeader icon={sparkleIcon} label="Output · Humanized rewrite">
 			{#snippet right()}
 				{#if result}
+					{#if resultSource === 'history' && data.savedHumanization}
+						<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); margin-right: 8px;">
+							Saved · {new Date(data.savedHumanization.created_at).toLocaleString()}
+						</span>
+					{/if}
 					<ClassificationBadge classification="LIKELY_HUMAN" size="sm"/>
 					<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{outputWordCount} words</span>
 				{/if}

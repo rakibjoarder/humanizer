@@ -4,6 +4,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import Logo from '$lib/components/Logo.svelte';
 	import NavUserMenu from '$lib/components/NavUserMenu.svelte';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
 	let { data, children } = $props();
@@ -72,7 +73,7 @@
 	border-bottom: 1px solid var(--color-bg-border);
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
-	box-shadow: {scrollY > 10 ? '0 4px 20px -4px rgba(0,0,0,0.5)' : 'none'};
+	box-shadow: {scrollY > 10 ? 'var(--nav-scroll-shadow)' : 'none'};
 	transition: box-shadow 200ms ease;
 "
 >
@@ -139,6 +140,7 @@
 			"
 			class="marketing-nav-right"
 		>
+			<ThemeToggle />
 			{#if user}
 				<span
 					style="
@@ -311,7 +313,7 @@
 			min-width: auto;
 			gap: 8px;
 		}
-		.marketing-nav-right > :not(.marketing-hamburger) {
+		.marketing-nav-right > :not(.marketing-hamburger):not(.nav-theme-toggle) {
 			display: none !important;
 		}
 		.marketing-hamburger {

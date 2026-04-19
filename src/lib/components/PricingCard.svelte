@@ -169,15 +169,31 @@
 		padding: 28px;
 		border-radius: 16px;
 		border: 1px solid var(--color-bg-border);
-		background: rgba(17, 17, 24, 0.8);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
+		background: var(--color-bg-surface);
+		box-shadow: 0 4px 28px -12px rgba(0, 0, 0, 0.4);
 		transition: border-color 200ms ease, box-shadow 200ms ease;
+	}
+
+	:global(html[data-theme='light']) .pricing-card {
+		box-shadow:
+			inset 0 1px 0 0 var(--color-bg-border-hi),
+			0 4px 24px -8px rgba(15, 23, 42, 0.1);
 	}
 
 	.pricing-card.highlighted {
 		border-color: var(--color-brand);
-		box-shadow: 0 0 0 1px var(--color-brand), 0 0 40px var(--color-brand-muted);
+		box-shadow:
+			0 0 0 1px var(--color-brand),
+			0 0 40px var(--color-brand-muted),
+			0 8px 32px -12px rgba(0, 0, 0, 0.35);
+	}
+
+	:global(html[data-theme='light']) .pricing-card.highlighted {
+		box-shadow:
+			0 0 0 1px var(--color-brand),
+			0 0 36px var(--color-brand-muted),
+			inset 0 1px 0 0 var(--color-bg-border-hi),
+			0 8px 28px -10px rgba(15, 23, 42, 0.12);
 	}
 
 	.badge-wrapper {

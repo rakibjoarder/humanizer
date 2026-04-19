@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { PageData } from './$types';
 	import { detectText, type DetectResult } from '$lib/client/api';
 	import ScoreGauge from '$lib/components/ScoreGauge.svelte';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
@@ -35,6 +36,15 @@
 	];
 
 	// ── Props ──────────────────────────────────────────────────────────────────
+	interface Props {
+		data: PageData;
+	}
+	let { data }: Props = $props();
+
+	type ResultSource = 'none' | 'live' | 'history';
+	let resultSource = $state<ResultSource>('none');
+	/** Server row id we already hydrated from `?id=` — avoids re-applying when URL still has id after a live run */
+	let savedHydratedId = $state<string | null>(null);
 
 	// ── State ──────────────────────────────────────────────────────────────────
 	let inputText = $state('');
@@ -44,6 +54,51 @@
 	let copied    = $state(false);
 	let detId     = $state('');
 	let detMs     = $state(0);
+
+	function mapSavedRowToResult(s: NonNullable<PageData['savedDetection']>): DetectResult {
+		const ap = Math.min(1, Math.max(0, Number(s.ai_probability ?? 0)));
+		const hpRaw = Number(s.human_probability);
+		const hp = Number.isFinite(hpRaw)
+			? Math.min(1, Math.max(0, hpRaw))
+			: Math.min(1, Math.max(0, 1 - ap));
+		const verdict: DetectResult['verdict'] =
+			s.verdict === 'ai' || s.verdict === 'human'
+				? s.verdict
+				: ap >= 0.5
+					? 'ai'
+					: 'human';
+		const c = s.classification;
+		const classification: DetectResult['classification'] =
+			c === 'LIKELY_AI' || c === 'POSSIBLY_AI' || c === 'POSSIBLY_HUMAN' || c === 'LIKELY_HUMAN'
+				? c
+				: 'POSSIBLY_HUMAN';
+		return { verdict, ai_probability: ap, human_probability: hp, classification };
+	}
+
+	$effect(() => {
+		const s = data.savedDetection;
+		if (!s) {
+			if (savedHydratedId !== null) {
+				savedHydratedId = null;
+				if (resultSource === 'history') {
+					resultSource = 'none';
+					result = null;
+					inputText = '';
+				}
+			}
+			return;
+		}
+		if (savedHydratedId === s.id) {
+			return;
+		}
+		inputText = s.input_text;
+		result = mapSavedRowToResult(s);
+		error = null;
+		resultSource = 'history';
+		savedHydratedId = s.id;
+		detId = s.id.replace(/-/g, '').slice(0, 10).toUpperCase();
+		detMs = 0;
+	});
 
 	// ── Derived ───────────────────────────────────────────────────────────────
 	const wordCount = $derived(
@@ -70,6 +125,7 @@
 		const t0 = Date.now();
 		try {
 			result = await detectText(inputText);
+			resultSource = 'live';
 			detId = 'det_' + Math.random().toString(36).slice(2, 8).toUpperCase();
 			detMs = Date.now() - t0;
 		} catch (err) {
@@ -169,7 +225,18 @@
 
 				<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
 					<Button variant="primary" size="md" icon={scanIcon} disabled={!canSubmit} loading={isLoading} onclick={handleAnalyze}>Analyze</Button>
-					<Button variant="secondary" size="md" onclick={() => { inputText = ''; result = null; error = null; }}>Clear</Button>
+					<Button
+						variant="secondary"
+						size="md"
+						onclick={async () => {
+							inputText = '';
+							result = null;
+							error = null;
+							resultSource = 'none';
+							savedHydratedId = null;
+							await goto('/detect', { replaceState: true, noScroll: true });
+						}}
+					>Clear</Button>
 					<Button variant="ghost" size="md" onclick={pasteSample}>Paste sample</Button>
 				</div>
 			</div>
@@ -180,10 +247,16 @@
 			<CardHeader icon={gaugeIcon} label="Result">
 				{#snippet right()}
 					{#if result}
-						<span
-							class="detect-run-meta"
-							title="{detId} · {detMs}ms"
-						>{detId} · {detMs}ms</span>
+						{#if resultSource === 'history' && data.savedDetection}
+							<span class="detect-run-meta" title="Opened from your activity">
+								Saved · {new Date(data.savedDetection.created_at).toLocaleString()}
+							</span>
+						{:else}
+							<span
+								class="detect-run-meta"
+								title="{detId} · {detMs}ms"
+							>{detId} · {detMs}ms</span>
+						{/if}
 					{/if}
 				{/snippet}
 			</CardHeader>
@@ -206,7 +279,7 @@
 						<div class="detect-result-gauge-col">
 							<div class="detect-gauge-scale">
 								<!-- remount gauge each run so arc/number never show stale animation vs fresh bars -->
-								{#key detId}
+								{#key resultSource === 'history' && data.savedDetection ? data.savedDetection.id : detId}
 									<ScoreGauge
 										aiProbability={result.ai_probability}
 										classification={result.classification}

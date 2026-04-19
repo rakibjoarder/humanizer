@@ -132,8 +132,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	Promise.all([
 		locals.supabase.from('humanizations').insert({
 			user_id: user.id,
-			original_text: text,
-			humanized_text: result.humanized_text,
+			input_text: text,
+			output_text: result.humanized_text,
 			word_count: result.word_count
 		}),
 		incrementUsage(locals.supabase, user.id, result.word_count)
