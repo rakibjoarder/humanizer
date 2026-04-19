@@ -19,7 +19,7 @@
 		googleLoading = true;
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
-			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard` }
+			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/home` }
 		});
 		if (authError) { error = authError.message; googleLoading = false; }
 	}
@@ -104,7 +104,7 @@
 		<div style="
 			background: var(--color-bg-surface);
 			border-radius: 16px;
-			box-shadow: inset 0 0 0 1px var(--color-bg-border), 0 24px 48px -12px rgba(0,0,0,0.5);
+			box-shadow: var(--shadow-modal);
 			padding: 32px;
 		">
 			{#if success}

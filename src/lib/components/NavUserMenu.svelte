@@ -94,14 +94,14 @@
 				background: var(--color-bg-surface);
 				border: 1px solid var(--color-bg-border);
 				border-radius: 10px;
-				box-shadow: 0 12px 40px -12px rgba(0,0,0,0.55);
+				box-shadow: var(--shadow-dropdown);
 				z-index: 60;
 			"
 		>
 			<div
 				style="
 					padding: 8px 10px 10px;
-					border-bottom: 1px solid var(--color-bg-border);
+					border-bottom: 1px solid var(--color-divider);
 					margin-bottom: 6px;
 				"
 			>

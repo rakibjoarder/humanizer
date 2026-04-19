@@ -1,0 +1,30 @@
+<svg width="800" height="300" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#0f2d1e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="300" rx="20" fill="url(#bg5)"/>
+  <!-- watermark H -->
+  <text x="30" y="290"
+    font-family="Georgia,serif" font-size="280"
+    fill="white" opacity="0.04">H</text>
+  <!-- stacked wordmark -->
+  <text x="400" y="130"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="72" font-weight="400"
+    fill="white" text-anchor="middle" letter-spacing="-1">Humanize</text>
+  <line x1="140" y1="148" x2="660" y2="148" stroke="#065f46" stroke-width="1.5"/>
+  <text x="400" y="218"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="72" font-weight="400"
+    fill="white" text-anchor="middle" letter-spacing="-1"><tspan fill="#34d399" font-style="italic">AI</tspan>Write</text>
+  <!-- tagline -->
+  <text x="700" y="156"
+    font-family="Arial,sans-serif" font-size="10"
+    fill="#1a3d2a" letter-spacing="2" text-anchor="end">HUMANIZE WHAT AI WRITES</text>
+  <text x="700" y="172"
+    font-family="Arial,sans-serif" font-size="10"
+    fill="#065f46" letter-spacing="2" text-anchor="end">humanizeaiwrite.com</text>
+</svg>

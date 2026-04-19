@@ -11,47 +11,67 @@
 
 <button
 	type="button"
-	style="
-		display: inline-flex;
-		align-items: center;
-		gap: {size * 0.375}px;
-		background: none;
-		border: none;
-		padding: 0;
-		cursor: {onclick ? 'pointer' : 'default'};
-		user-select: none;
-	"
+	class="logo-btn"
+	style="gap: {size * 0.375}px;"
 	onclick={onclick}
 	aria-label="HumanizeAIWrite home"
 >
-	<!-- SVG Mark -->
-	<svg
+	<img
+		class="logo-icon logo-dark"
+		src="/assets/icon-dark.svg"
 		width={size}
 		height={size}
-		viewBox="0 0 24 24"
-		fill="none"
-		xmlns="http://www.w3.org/2000/svg"
+		alt=""
 		aria-hidden="true"
-	>
-		<rect x="2" y="2" width="20" height="20" rx="5" fill="#6366f1" />
-		<path
-			d="M7 8v8 M7 12h5 M12 8v8 M15 8l3 8 M18 8l-3 8"
-			stroke="#fff"
-			stroke-width="1.6"
-			stroke-linecap="round"
-		/>
-	</svg>
+	/>
+	<img
+		class="logo-icon logo-light"
+		src="/assets/icon-light.svg"
+		width={size}
+		height={size}
+		alt=""
+		aria-hidden="true"
+	/>
 
-	<!-- Wordmark -->
 	<span
-		style="
-			font-family: 'Newsreader', Georgia, serif;
-			font-size: {wordmarkSize}px;
-			font-weight: 500;
-			color: var(--color-text-primary);
-			letter-spacing: -0.02em;
-			line-height: 1;
-			white-space: nowrap;
-		"
-	>Humanize<span style="color: var(--color-brand);">AI</span></span>
+		class="logo-wordmark"
+		style="font-size: {wordmarkSize}px;"
+	>Humanize<span class="logo-ai">AI</span>Write</span>
 </button>
+
+<style>
+	.logo-btn {
+		display: inline-flex;
+		align-items: center;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: var(--logo-cursor, default);
+		user-select: none;
+	}
+
+	.logo-icon {
+		border-radius: 22%;
+		flex-shrink: 0;
+	}
+
+	/* theme switching */
+	.logo-light { display: none; }
+
+	:global(html[data-theme='light']) .logo-dark { display: none; }
+	:global(html[data-theme='light']) .logo-light { display: block; }
+
+	.logo-wordmark {
+		font-family: 'Newsreader', Georgia, serif;
+		font-weight: 500;
+		color: var(--color-text-primary);
+		letter-spacing: -0.02em;
+		line-height: 1;
+		white-space: nowrap;
+	}
+
+	.logo-ai {
+		color: var(--color-brand);
+		font-style: italic;
+	}
+</style>

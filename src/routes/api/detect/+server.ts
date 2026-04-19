@@ -83,11 +83,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			return json({ error: 'Failed to fetch user profile.' }, { status: 500 });
 		}
 
-		const wordCount = text.split(/\s+/).filter(Boolean).length;
-
 		let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
 		try {
-			quotaResult = await checkQuota(locals.supabase, user.id, profile.plan, wordCount);
+			quotaResult = await checkQuota(locals.supabase, user.id, profile.plan);
 		} catch (err) {
 			console.error('[detect] Quota check failed:', err);
 			return json({ error: 'Failed to check usage quota.' }, { status: 500 });
@@ -96,7 +94,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (!quotaResult.allowed) {
 			return json(
 				{
-					error: `Daily word limit reached. Used ${quotaResult.used} of ${quotaResult.limit} words today.`,
+					error: `Free trial limit reached. You've used all ${quotaResult.limit} free detections. Upgrade to Pro for unlimited access.`,
 					used: quotaResult.used,
 					limit: quotaResult.limit
 				},

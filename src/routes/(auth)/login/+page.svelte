@@ -18,13 +18,13 @@
 		loading = true;
 		const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 		if (authError) { error = authError.message; loading = false; return; }
-		const redirectTo = page.url.searchParams.get('redirect') ?? '/dashboard';
+		const redirectTo = page.url.searchParams.get('redirect') ?? '/home';
 		window.location.href = redirectTo;
 	}
 
 	async function handleGoogleLogin() {
 		googleLoading = true;
-		const redirectTo = page.url.searchParams.get('redirect') ?? '/dashboard';
+		const redirectTo = page.url.searchParams.get('redirect') ?? '/home';
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}` }
@@ -96,7 +96,7 @@
 		<div style="
 			background: var(--color-bg-surface);
 			border-radius: 16px;
-			box-shadow: inset 0 0 0 1px var(--color-bg-border), 0 24px 48px -12px rgba(0,0,0,0.5);
+			box-shadow: var(--shadow-modal);
 			padding: clamp(20px, 5vw, 32px);
 		">
 			<!-- Error -->

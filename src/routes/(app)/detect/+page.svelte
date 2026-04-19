@@ -358,7 +358,7 @@
 			box-shadow: inset 0 0 0 1px var(--color-bg-border);
 			overflow: hidden;
 		" class="animate-fade-up">
-			<div style="padding: 14px 20px; background: var(--color-bg-sunk); border-bottom: 1px solid var(--color-bg-border);">
+			<div style="padding: 14px 20px; background: var(--color-bg-sunk); border-bottom: 1px solid var(--color-divider);">
 				<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">Signal breakdown</span>
 			</div>
 			<div class="detail-grid">
@@ -696,7 +696,7 @@
 
 	.detail-grid-signals {
 		padding: clamp(16px, 3vw, 20px);
-		border-bottom: 1px solid var(--color-bg-border);
+		border-bottom: 1px solid var(--color-divider);
 		min-width: 0;
 	}
 

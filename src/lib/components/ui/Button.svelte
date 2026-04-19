@@ -35,7 +35,7 @@
 	const variantStyle = $derived(() => {
 		switch (variant) {
 			case 'primary':
-				return `background:#6366f1;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,0.15) inset,0 -1px 0 rgba(0,0,0,0.15) inset,0 8px 24px -10px #6366f1;`;
+				return `background:var(--color-brand);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,0.15) inset,0 -1px 0 rgba(0,0,0,0.15) inset,0 8px 24px -10px var(--color-brand);`;
 			case 'secondary':
 				return `background:var(--color-bg-elevated);color:var(--color-text-primary);box-shadow:inset 0 0 0 1px var(--color-bg-border);`;
 			case 'ghost':

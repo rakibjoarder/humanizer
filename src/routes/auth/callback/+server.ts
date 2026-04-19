@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, locals: { supabase } }) => {
 	const code = url.searchParams.get('code');
-	const redirectTo = url.searchParams.get('redirect') ?? '/dashboard';
+	const redirectTo = url.searchParams.get('redirect') ?? '/home';
 
 	if (code) {
 		const { error } = await supabase.auth.exchangeCodeForSession(code);

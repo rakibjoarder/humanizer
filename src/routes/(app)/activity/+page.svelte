@@ -48,7 +48,7 @@
 <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 20px;">
 	<p style="margin: 0;">
 		<a
-			href="/dashboard#recent-activity"
+			href="/home#recent-activity"
 			style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
 		>← Dashboard</a>
 	</p>
@@ -79,7 +79,7 @@
 			<div style="overflow-x: auto;">
 				<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px;">
 					<thead>
-						<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-sunk);">
+						<tr style="border-bottom: 1px solid var(--color-divider); background: var(--color-bg-sunk);">
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;">Date</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Type</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Words</th>
@@ -92,7 +92,7 @@
 							<tr
 								class="activity-row"
 								class:activity-row-last={item.id === lastVisitedActivityId}
-								style="border-bottom: 1px solid var(--color-bg-border); cursor: pointer;"
+								style="border-bottom: 1px solid var(--color-divider); cursor: pointer;"
 								role="link"
 								tabindex="0"
 								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}"

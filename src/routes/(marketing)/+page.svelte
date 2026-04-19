@@ -5,13 +5,16 @@
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import TextEditor from '$lib/components/TextEditor.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import PricingCard from '$lib/components/PricingCard.svelte';
+
+	type BillingCycle = 'monthly' | 'yearly';
+	let billingCycle = $state<BillingCycle>('monthly');
 
 	// ── Icon paths ──────────────────────────────────────────────────────────────
 	const scanIcon = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
 	const wandIcon = 'm15 4-2 2-2-2 M18 7l-2 2-2-2 M21 3v3 M3 21l9-9 M14 7l7 7-4 4-7-7z';
 	const shieldIcon = 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z';
 	const arrowR = 'M5 12h14 M13 6l6 6-6 6';
-	const checkIcon = 'M20 6 9 17l-5-5';
 
 	// ── Demo state ─────────────────────────────────────────────────────────────
 	let demoText = $state("In today's rapidly evolving digital landscape, the fundamentally transformative power of AI-driven technologies has revolutionized operational efficiency. Furthermore, comprehensive data-driven paradigms have empowered stakeholders to leverage unprecedented synergy, fostering seamless integration across multifaceted workflows. Moreover, this transformative approach ensures that organizations can maintain crucial competitive advantages while enabling innovative solutions that drive sustainable growth.");
@@ -44,35 +47,6 @@
 		demoResult = null;
 	}
 
-	// ── Pricing ────────────────────────────────────────────────────────────────
-	const plans = [
-		{
-			name: 'Free',
-			price: '$0',
-			period: '',
-			highlight: false,
-			savings: null,
-			features: [
-				'5 detections / day',
-				'500 word limit per scan',
-				'Community support'
-			]
-		},
-		{
-			name: 'Pro',
-			price: '$12',
-			period: '/ mo',
-			highlight: true,
-			savings: 'Save $29 / yr with annual',
-			features: [
-				'Unlimited detections',
-				'10,000 word limit per scan',
-				'Full humanizer (unlimited)',
-				'History & PDF export',
-				'Priority support'
-			]
-		},
-	];
 
 	// ── Features ───────────────────────────────────────────────────────────────
 	const features = [
@@ -251,7 +225,7 @@
 			<!-- Card header -->
 			<div style="
 				background: var(--color-bg-sunk);
-				border-bottom: 1px solid var(--color-bg-border);
+				border-bottom: 1px solid var(--color-divider);
 				padding: 14px 20px;
 				display: flex;
 				align-items: center;
@@ -518,7 +492,7 @@
 ">
 	<div style="max-width: 1200px; margin: 0 auto;">
 		<Reveal delay={0}>
-			<div style="margin-bottom: 48px;">
+			<div style="margin-bottom: 40px; text-align: center;">
 				<h2 style="
 					font-family: 'Newsreader', Georgia, serif;
 					font-size: 40px;
@@ -531,116 +505,86 @@
 					font-family: 'Space Grotesk', system-ui, sans-serif;
 					font-size: 15px;
 					color: var(--color-text-secondary);
-					margin: 0;
+					margin: 0 0 24px;
 				">7-day free trial · cancel anytime</p>
+
+				<!-- Billing toggle -->
+				<div style="
+					display: inline-flex;
+					padding: 4px;
+					background: var(--color-bg-surface);
+					border: 1px solid var(--color-bg-border);
+					border-radius: 12px;
+					gap: 4px;
+				" role="group" aria-label="Billing cycle">
+					<button
+						style="
+							padding: 8px 18px;
+							border-radius: 9px;
+							border: none;
+							font-family: 'Space Grotesk', system-ui, sans-serif;
+							font-size: 13px;
+							font-weight: 500;
+							cursor: pointer;
+							transition: background 200ms, color 200ms;
+							background: {billingCycle === 'monthly' ? 'var(--color-bg-elevated)' : 'transparent'};
+							color: {billingCycle === 'monthly' ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
+						"
+						onclick={() => (billingCycle = 'monthly')}
+						aria-pressed={billingCycle === 'monthly'}
+					>Monthly</button>
+					<button
+						style="
+							display: inline-flex;
+							align-items: center;
+							gap: 7px;
+							padding: 8px 18px;
+							border-radius: 9px;
+							border: none;
+							font-family: 'Space Grotesk', system-ui, sans-serif;
+							font-size: 13px;
+							font-weight: 500;
+							cursor: pointer;
+							transition: background 200ms, color 200ms;
+							background: {billingCycle === 'yearly' ? 'var(--color-bg-elevated)' : 'transparent'};
+							color: {billingCycle === 'yearly' ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
+						"
+						onclick={() => (billingCycle = 'yearly')}
+						aria-pressed={billingCycle === 'yearly'}
+					>
+						Yearly
+						<span style="
+							font-size: 10px;
+							font-weight: 700;
+							padding: 2px 7px;
+							border-radius: 99px;
+							background: var(--color-human-muted);
+							color: var(--color-human);
+							border: 1px solid var(--color-human);
+						">Save 33%</span>
+					</button>
+				</div>
 			</div>
 		</Reveal>
 
 		<div style="
 			display: grid;
-			grid-template-columns: repeat(3, 1fr);
+			grid-template-columns: repeat(2, 1fr);
 			gap: 20px;
+			max-width: 680px;
+			margin: 0 auto;
 			align-items: start;
 		" class="pricing-grid">
-			{#each plans as plan, i}
-				<Reveal delay={i * 80}>
-					<div style="
-						background: {plan.highlight ? 'rgba(99,102,241,0.06)' : 'var(--color-bg-surface)'};
-						border-radius: 14px;
-						box-shadow: inset 0 0 0 1px {plan.highlight ? 'var(--color-brand)' : 'var(--color-bg-border)'};
-						{plan.highlight ? 'box-shadow: inset 0 0 0 1px var(--color-brand), 0 0 40px var(--color-brand-glow);' : ''}
-						padding: 28px;
-						position: relative;
-					">
-						{#if plan.highlight}
-							<div style="
-								position: absolute;
-								top: -12px;
-								left: 50%;
-								transform: translateX(-50%);
-								background: var(--color-brand);
-								color: white;
-								font-family: 'Space Grotesk', system-ui, sans-serif;
-								font-size: 11px;
-								font-weight: 700;
-								letter-spacing: 0.08em;
-								text-transform: uppercase;
-								padding: 4px 12px;
-								border-radius: 99px;
-								white-space: nowrap;
-							">Recommended</div>
-						{/if}
-
-						<p style="
-							font-family: 'Space Grotesk', system-ui, sans-serif;
-							font-size: 13px;
-							font-weight: 600;
-							color: var(--color-text-secondary);
-							margin: 0 0 8px;
-							letter-spacing: 0.04em;
-							text-transform: uppercase;
-						">{plan.name}</p>
-
-						<div style="display: flex; align-items: baseline; gap: 4px; margin-bottom: 6px;">
-							<span style="
-								font-family: 'Newsreader', Georgia, serif;
-								font-size: 48px;
-								font-weight: 400;
-								color: var(--color-text-primary);
-								line-height: 1;
-							">{plan.price}</span>
-							{#if plan.period}
-								<span style="
-									font-family: 'Space Grotesk', system-ui, sans-serif;
-									font-size: 14px;
-									color: var(--color-text-muted);
-								">{plan.period}</span>
-							{/if}
-						</div>
-
-						{#if plan.savings}
-							<p style="
-								font-family: 'JetBrains Mono', monospace;
-								font-size: 11px;
-								color: var(--color-human);
-								margin: 0 0 20px;
-							">{plan.savings}</p>
-						{:else}
-							<div style="margin-bottom: 20px;"></div>
-						{/if}
-
-						<ul style="
-							list-style: none;
-							padding: 0;
-							margin: 0 0 24px;
-							display: flex;
-							flex-direction: column;
-							gap: 10px;
-						">
-							{#each plan.features as feat}
-								<li style="display: flex; align-items: center; gap: 10px;">
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-human)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;">
-										<path d={checkIcon} />
-									</svg>
-									<span style="
-										font-family: 'Space Grotesk', system-ui, sans-serif;
-										font-size: 13.5px;
-										color: var(--color-text-secondary);
-									">{feat}</span>
-								</li>
-							{/each}
-						</ul>
-
-						<Button
-							variant={plan.highlight ? 'primary' : 'secondary'}
-							size="md"
-							onclick={() => goto('/register')}
-						>
-							{plan.price === '$0' ? 'Get started free' : `Start ${plan.name}`}
-						</Button>
-					</div>
-				</Reveal>
-			{/each}
+			<Reveal delay={0}>
+				<a href="/register" style="display: block; text-decoration: none;">
+					<PricingCard plan="free" {billingCycle} highlighted={false} />
+				</a>
+			</Reveal>
+			<Reveal delay={80}>
+				<a href="/register" style="display: block; text-decoration: none; padding-top: 16px;">
+					<PricingCard plan="pro" {billingCycle} highlighted={true} />
+				</a>
+			</Reveal>
 		</div>
 	</div>
 </section>
@@ -655,7 +599,7 @@
 		}
 		.demo-left {
 			border-right: none !important;
-			border-bottom: 1px solid var(--color-bg-border);
+			border-bottom: 1px solid var(--color-divider);
 		}
 	}
 </style>

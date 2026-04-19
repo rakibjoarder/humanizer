@@ -15,7 +15,7 @@
 	align-items: center;
 	justify-content: space-between;
 	padding: 14px 20px;
-	border-bottom: 1px solid var(--color-bg-border);
+	border-bottom: 1px solid var(--color-divider);
 	background: var(--color-bg-sunk);
 	border-radius: 14px 14px 0 0;
 ">

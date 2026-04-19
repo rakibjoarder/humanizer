@@ -1,0 +1,8 @@
+<svg width="700" height="100" viewBox="0 0 700 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- transparent bg — use on any background -->
+  <text x="350" y="68"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="58" font-weight="400"
+    fill="#111111"
+    text-anchor="middle">Humanize<tspan fill="#059669" font-style="italic">AI</tspan>Write</text>
+</svg>

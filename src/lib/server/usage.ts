@@ -12,58 +12,45 @@ export interface QuotaResult {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FREE_DAILY_LIMIT = 500;
+const FREE_DETECTION_LIMIT = 3; // lifetime detections for free users
 const UNLIMITED = -1;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Returns today's date string in YYYY-MM-DD (UTC). */
 function todayUtc(): string {
 	return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Fetch how many words have already been used today for a given user.
- * Reads from the `usage_logs` table (columns: user_id, date, words_used).
- */
-async function getUsedToday(supabase: SupabaseClient, userId: string): Promise<number> {
-	const { data, error } = await supabase
-		.from('usage_logs')
-		.select('words_used')
-		.eq('user_id', userId)
-		.eq('date', todayUtc())
-		.maybeSingle();
-
-	if (error) {
-		throw new Error(`Failed to read usage_logs: ${error.message}`);
-	}
-
-	return (data?.words_used as number) ?? 0;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Check whether the user is allowed to process `wordCount` more words today.
+ * Check whether the user is allowed to run another detection.
  *
- * - free plan: 500 words / day hard cap
+ * - free plan: 3 total detections (lifetime, no reset)
  * - pro: unlimited
  */
 export async function checkQuota(
 	supabase: SupabaseClient,
 	userId: string,
-	plan: Plan,
-	wordCount: number
+	plan: Plan
 ): Promise<QuotaResult> {
 	if (plan === 'pro') {
 		return { allowed: true, used: 0, limit: UNLIMITED };
 	}
 
-	const used = await getUsedToday(supabase, userId);
-	const limit = FREE_DAILY_LIMIT;
-	const allowed = used + wordCount <= limit;
+	const { count, error } = await supabase
+		.from('detections')
+		.select('id', { count: 'exact', head: true })
+		.eq('user_id', userId);
 
-	return { allowed, used, limit };
+	if (error) {
+		throw new Error(`Failed to count detections: ${error.message}`);
+	}
+
+	const used = count ?? 0;
+	const limit = FREE_DETECTION_LIMIT;
+
+	return { allowed: used < limit, used, limit };
 }
 
 /**

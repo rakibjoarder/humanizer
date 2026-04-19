@@ -69,10 +69,10 @@
 	left: 0;
 	right: 0;
 	z-index: 40;
-	background: var(--color-bg-base);
-	border-bottom: 1px solid var(--color-bg-border);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
+	background: var(--nav-bg-light, var(--color-bg-base));
+	border-bottom: 1px solid var(--color-divider);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
 	box-shadow: {scrollY > 10 ? 'var(--nav-scroll-shadow)' : 'none'};
 	transition: box-shadow 200ms ease;
 "

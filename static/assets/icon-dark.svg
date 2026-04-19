@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="shimG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#gDark)"/>
+  <rect width="512" height="256" rx="112" fill="url(#shimG)"/>
+  <!-- H left pillar -->
+  <rect x="118" y="136" width="72" height="240" rx="36" fill="white"/>
+  <!-- H right pillar -->
+  <rect x="322" y="136" width="72" height="240" rx="36" fill="white"/>
+  <!-- pen arc crossbar -->
+  <path d="M118 256 q118 -140 276 0" stroke="white" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <!-- gold nib -->
+  <circle cx="394" cy="256" r="22" fill="#fbbf24"/>
+  <circle cx="394" cy="256" r="8"  fill="#92400e"/>
+</svg>

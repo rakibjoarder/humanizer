@@ -32,10 +32,10 @@
 			monthlyPrice: 0,
 			yearlyPrice: 0,
 			yearlyMonthlyEquiv: 0,
-			wordsPerDay: '5 detections/day',
+			wordsPerDay: '3 free detections',
 			cta: 'Get Started Free',
 			features: [
-				{ text: '5 detections per day', available: true },
+				{ text: '3 free detections total', available: true },
 				{ text: '500 words per scan', available: true },
 				{ text: 'AI Detection', available: true },
 				{ text: 'Humanizer', available: false },
@@ -156,25 +156,24 @@
 	}
 
 	:global(html[data-theme='light']) .pricing-card {
-		box-shadow:
-			inset 0 1px 0 0 var(--color-bg-border-hi),
-			0 4px 24px -8px rgba(15, 23, 42, 0.1);
+		border-color: transparent;
+		box-shadow: var(--shadow-card);
 	}
 
 	.pricing-card.highlighted {
 		border-color: var(--color-brand);
 		box-shadow:
-			0 0 0 1px var(--color-brand),
+			0 0 0 2px var(--color-brand),
 			0 0 40px var(--color-brand-muted),
 			0 8px 32px -12px rgba(0, 0, 0, 0.35);
 	}
 
 	:global(html[data-theme='light']) .pricing-card.highlighted {
+		border-color: var(--color-brand);
 		box-shadow:
-			0 0 0 1px var(--color-brand),
-			0 0 36px var(--color-brand-muted),
-			inset 0 1px 0 0 var(--color-bg-border-hi),
-			0 8px 28px -10px rgba(15, 23, 42, 0.12);
+			0 0 0 2px var(--color-brand),
+			0 8px 32px -8px rgba(5, 150, 105, 0.2),
+			0 2px 16px -4px rgba(15, 23, 42, 0.08);
 	}
 
 	.badge-wrapper {

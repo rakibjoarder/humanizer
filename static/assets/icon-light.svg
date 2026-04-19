@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gLight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d1fae5"/>
+      <stop offset="100%" stop-color="#a7f3d0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#gLight)" stroke="#6ee7b7" stroke-width="4"/>
+  <!-- H left pillar -->
+  <rect x="118" y="136" width="72" height="240" rx="36" fill="#065f46"/>
+  <!-- H right pillar -->
+  <rect x="322" y="136" width="72" height="240" rx="36" fill="#065f46"/>
+  <!-- pen arc crossbar -->
+  <path d="M118 256 q118 -140 276 0" stroke="#065f46" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <!-- amber nib -->
+  <circle cx="394" cy="256" r="22" fill="#d97706"/>
+  <circle cx="394" cy="256" r="8"  fill="#92400e"/>
+</svg>

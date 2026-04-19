@@ -29,13 +29,11 @@
 	interface Props {
 		data: {
 			profile: Profile;
-			wordsUsedToday: number;
-			dailyLimit: number;
+			detectionsLimit: number;
 			totalDetections: number;
 			totalHumanizations: number;
 			wordsAnalyzed: number;
 			avgAiProbability: number | null;
-			msUntilReset: number;
 			recentActivity: ActivityItem[];
 		};
 	}
@@ -53,14 +51,13 @@
 	const RING_C = 2 * Math.PI * RING_R;
 
 	const usageRatio = $derived(
-		data.dailyLimit === -1 ? 0 : Math.min(data.wordsUsedToday / data.dailyLimit, 1)
+		data.detectionsLimit === -1 ? 0 : Math.min(data.totalDetections / data.detectionsLimit, 1)
 	);
 	const ringOffset = $derived(RING_C - usageRatio * RING_C);
 	const ringColor = $derived(
-		data.dailyLimit === -1 ? 'var(--color-brand)' :
-		usageRatio >= 1        ? 'var(--color-ai)' :
-		usageRatio >= 0.8      ? 'var(--color-possibly-ai)' :
-		usageRatio >= 0.75     ? 'var(--color-uncertain)' :
+		data.detectionsLimit === -1 ? 'var(--color-brand)' :
+		usageRatio >= 1             ? 'var(--color-ai)' :
+		usageRatio >= 0.67          ? 'var(--color-possibly-ai)' :
 		'var(--color-brand)'
 	);
 
@@ -70,21 +67,13 @@
 
 	const showUpgradedBanner = $derived(page.url.searchParams.get('upgraded') === 'true');
 
-	// ── Resets-in label ────────────────────────────────────────────────────────
-	const resetsIn = $derived.by(() => {
-		const h = Math.floor(data.msUntilReset / 3_600_000);
-		const m = Math.floor((data.msUntilReset % 3_600_000) / 60_000);
-		return `${h}h ${m}m`;
-	});
-
 	// ── Stat boxes ─────────────────────────────────────────────────────────────
 	const statBoxes = $derived([
 		{ label: 'Total detections',    value: data.totalDetections.toLocaleString(),    sub: 'all time' },
 		{ label: 'Humanizations',       value: data.totalHumanizations.toLocaleString(), sub: 'all time' },
 		{ label: 'Words processed',     value: formatWords(data.wordsAnalyzed),          sub: 'all time' },
 		{ label: 'Avg. AI probability', value: data.avgAiProbability !== null ? `${data.avgAiProbability}%` : '—', sub: 'across detections' },
-		{ label: 'Words today',         value: data.wordsUsedToday.toLocaleString(),     sub: `resets in ${resetsIn}` },
-		{ label: 'Daily limit',         value: data.dailyLimit === -1 ? 'Unlimited' : data.dailyLimit.toLocaleString(), sub: planLabel },
+		{ label: 'Free detections used', value: data.detectionsLimit === -1 ? '∞' : `${data.totalDetections} / ${data.detectionsLimit}`, sub: planLabel },
 	]);
 
 	function formatWords(n: number): string {
@@ -154,10 +143,10 @@
 			align-items: center;
 			gap: 16px;
 		">
-			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0; align-self: flex-start;">Today's usage</p>
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0; align-self: flex-start;">Detections used</p>
 
 			<!-- Ring SVG -->
-			<svg width="150" height="150" viewBox="0 0 150 150" fill="none" aria-label="Daily word usage: {data.wordsUsedToday} of {data.dailyLimit === -1 ? 'unlimited' : data.dailyLimit}">
+			<svg width="150" height="150" viewBox="0 0 150 150" fill="none" aria-label="Detections used: {data.totalDetections} of {data.detectionsLimit === -1 ? 'unlimited' : data.detectionsLimit}">
 				<!-- Track -->
 				<circle cx="75" cy="75" r={RING_R} stroke="var(--color-bg-border)" stroke-width="10" fill="none"/>
 				<!-- Fill -->
@@ -172,22 +161,23 @@
 					transform="rotate(-90 75 75)"
 					style="transition: stroke-dashoffset 600ms ease-out, stroke 300ms ease;"
 				/>
-				<!-- Center: words used -->
+				<!-- Center: detections used -->
 				<text x="75" y="68" text-anchor="middle" dominant-baseline="middle"
 					font-family="'Newsreader', Georgia, serif" font-size="20" fill="var(--color-text-primary)">
-					{data.dailyLimit === -1 ? '∞' : data.wordsUsedToday.toLocaleString()}
+					{data.detectionsLimit === -1 ? '∞' : data.totalDetections.toLocaleString()}
 				</text>
 				<text x="75" y="88" text-anchor="middle" dominant-baseline="middle"
 					font-family="'JetBrains Mono', monospace" font-size="9" fill="var(--color-text-muted)" letter-spacing="0.06em">
-					{data.dailyLimit === -1 ? 'UNLIMITED' : `/ ${data.dailyLimit.toLocaleString()}`}
+					{data.detectionsLimit === -1 ? 'UNLIMITED' : `/ ${data.detectionsLimit.toLocaleString()}`}
 				</text>
 			</svg>
 
 			<!-- Plan label -->
 			<p style="font-family: 'Newsreader', Georgia, serif; font-size: 24px; font-weight: 400; color: var(--color-text-primary); margin: 0;">{planLabel}</p>
 
-			<!-- Resets in -->
-			<p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); margin: 0;">Resets in {resetsIn}</p>
+			{#if data.detectionsLimit !== -1 && data.totalDetections >= data.detectionsLimit}
+				<p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-ai); margin: 0;">Free limit reached · Upgrade to Pro</p>
+			{/if}
 
 			<Button variant="secondary" size="sm" onclick={() => {}}>Manage plan →</Button>
 		</div>
@@ -226,7 +216,7 @@
 		<div style="
 			padding: 14px 20px;
 			background: var(--color-bg-sunk);
-			border-bottom: 1px solid var(--color-bg-border);
+			border-bottom: 1px solid var(--color-divider);
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
@@ -253,7 +243,7 @@
 			<div style="overflow-x: auto;">
 				<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px;">
 					<thead>
-						<tr style="border-bottom: 1px solid var(--color-bg-border);">
+						<tr style="border-bottom: 1px solid var(--color-divider);">
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;">Date</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Type</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Words</th>
@@ -266,7 +256,7 @@
 							<tr
 								class="activity-row"
 								class:activity-row-last={item.id === lastVisitedActivityId}
-								style="border-bottom: 1px solid var(--color-bg-border); cursor: pointer;"
+								style="border-bottom: 1px solid var(--color-divider); cursor: pointer;"
 								role="link"
 								tabindex="0"
 								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}"

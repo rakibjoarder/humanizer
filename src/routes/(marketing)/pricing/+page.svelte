@@ -52,8 +52,8 @@
 			a: 'Yes. Plan changes take effect immediately. Unused time on your current billing cycle is prorated.'
 		},
 		{
-			q: 'What happens when I hit the free daily limit?',
-			a: 'Detection is paused until midnight UTC. Humanization requires Pro — the free plan does not include it.'
+			q: 'What happens when I use up my free detections?',
+			a: 'Once your 3 free detections are used, detection is paused until you upgrade. There is no daily reset — upgrade to Pro for unlimited access.'
 		},
 		{
 			q: 'Is my text stored or used to train models?',
@@ -68,8 +68,8 @@
 			a: 'We accept all major credit and debit cards via Stripe. Promotion codes are supported at checkout.'
 		},
 		{
-			q: 'How are free plan limits counted?',
-			a: 'The free plan allows 5 detections per day with a 500-word limit per scan. The counter resets at midnight UTC. Pro removes all limits.'
+			q: 'How does the free plan work?',
+			a: 'The free plan gives you 3 detections total (no daily reset) with a 500-word limit per scan. Upgrade to Pro to remove all limits.'
 		}
 	];
 
@@ -243,7 +243,7 @@
 		inset: 0;
 		background: radial-gradient(
 			ellipse 70% 50% at 50% 10%,
-			rgba(99, 102, 241, 0.1) 0%,
+			rgba(16, 185, 129, 0.08) 0%,
 			transparent 70%
 		);
 		z-index: 0;
@@ -252,7 +252,7 @@
 	:global(html[data-theme='light']) .pricing-page .bg-glow {
 		background: radial-gradient(
 			ellipse 70% 50% at 50% 8%,
-			rgba(79, 70, 229, 0.07) 0%,
+			rgba(5, 150, 105, 0.06) 0%,
 			transparent 72%
 		);
 	}
@@ -372,6 +372,10 @@
 		transform: translateY(-3px);
 	}
 
+	.card-wrapper-highlighted {
+		padding-top: 16px;
+	}
+
 	.savings-banner {
 		position: absolute;
 		top: -12px;
@@ -402,7 +406,7 @@
 		padding: 64px 24px;
 		background: var(--color-bg-surface);
 		border-top: 1px solid var(--color-bg-border);
-		border-bottom: 1px solid var(--color-bg-border);
+		border-bottom: 1px solid var(--color-divider);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -501,7 +505,7 @@
 	}
 
 	.faq-item {
-		border-bottom: 1px solid var(--color-bg-border);
+		border-bottom: 1px solid var(--color-divider);
 	}
 
 	.faq-item:last-child {
@@ -600,7 +604,7 @@
 		font-weight: 600;
 		text-decoration: none;
 		transition: background 200ms ease;
-		box-shadow: 0 0 28px rgba(99, 102, 241, 0.3);
+		box-shadow: 0 0 28px rgba(16, 185, 129, 0.3);
 	}
 
 	.bottom-cta-btn:hover {

@@ -108,7 +108,7 @@
 	let planDescription = $derived(
 		profile?.plan === 'pro'
 			? 'Unlimited detections and humanizations per day.'
-			: '5 detections per day · 500 words per scan.'
+			: '3 free detections total · 500 words per scan.'
 	);
 </script>
 

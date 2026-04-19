@@ -5,7 +5,7 @@ export const load: PageLoad = async ({ parent, url }) => {
 	const { session } = await parent();
 
 	if (session) {
-		const redirectTo = url.searchParams.get('redirect') ?? '/dashboard';
+		const redirectTo = url.searchParams.get('redirect') ?? '/home';
 		redirect(303, redirectTo);
 	}
 
