@@ -19,6 +19,12 @@
 		variant = 'arc'
 	}: Props = $props();
 
+	// Unique gradient id so multiple gauges / SSR+hydration never share one defs URL
+	const gradId =
+		typeof crypto !== 'undefined' && 'randomUUID' in crypto
+			? `gauge-grad-${crypto.randomUUID()}`
+			: `gauge-grad-${Math.random().toString(36).slice(2, 11)}`;
+
 	// Classification → color
 	const classColor = $derived(
 		classification === 'LIKELY_AI' ? '#ef4444' :
@@ -32,14 +38,21 @@
 	let displayNum = $state(0);
 	let mounted = $state(false);
 
+	// Cancel in-flight animation when aiProbability changes — otherwise two RAF loops
+	// fight and the center % can desync from the arc / from other UI using the same numbers.
 	$effect(() => {
 		const target = aiProbability;
 		if (!mounted) return;
 
+		let raf = 0;
+		let cancelled = false;
+
 		if (!animate) {
 			animVal = target;
 			displayNum = Math.round(target * 100);
-			return;
+			return () => {
+				cancelled = true;
+			};
 		}
 
 		const start = animVal;
@@ -49,21 +62,26 @@
 		let startTime: number | null = null;
 
 		function easeOut(t: number): number {
-			// cubic-bezier(0.22, 1, 0.36, 1) approximation
 			return 1 - Math.pow(1 - t, 3);
 		}
 
 		function frame(ts: number) {
+			if (cancelled) return;
 			if (startTime === null) startTime = ts;
 			const elapsed = ts - startTime;
 			const progress = Math.min(elapsed / duration, 1);
 			const eased = easeOut(progress);
 			animVal = start + (target - start) * eased;
 			displayNum = Math.round(startNum + (targetNum - startNum) * eased);
-			if (progress < 1) requestAnimationFrame(frame);
+			if (progress < 1) raf = requestAnimationFrame(frame);
 		}
 
-		requestAnimationFrame(frame);
+		raf = requestAnimationFrame(frame);
+
+		return () => {
+			cancelled = true;
+			cancelAnimationFrame(raf);
+		};
 	});
 
 	onMount(() => {
@@ -76,6 +94,10 @@
 	const cy = $derived(size / 2 + size * 0.04);
 
 	const circumference = $derived(2 * Math.PI * r * (240 / 360));
+
+	const strokeW = $derived(size * 0.054);
+	// Just outside rounded stroke caps, on same radials as arc ends (150° → 0%, 30° → 100%)
+	const labelRadius = $derived(r + strokeW / 2 + size * 0.042);
 
 	// strokeDashoffset: 0 = full, circumference = empty
 	const strokeDashoffset = $derived(circumference * (1 - animVal));
@@ -107,11 +129,9 @@
 	const dotAngle = $derived(150 + animVal * 240);
 	const dotPos = $derived(polarToCartesian(cx, cy, r, dotAngle));
 
-	// Tick label positions
-	const tickStart = $derived(polarToCartesian(cx, cy, r + 14, 150));
-	const tickEnd = $derived(polarToCartesian(cx, cy, r + 14, 30));
-
-	const gradId = 'gaugeGrad';
+	// 0% / 100% sit on the arc end radials (same angles as path), outside the stroke
+	const tickStart = $derived(polarToCartesian(cx, cy, labelRadius, 150));
+	const tickEnd = $derived(polarToCartesian(cx, cy, labelRadius, 30));
 </script>
 
 {#if variant === 'arc'}
@@ -143,7 +163,7 @@
 	<path
 		d={arcPath}
 		stroke="var(--color-bg-border)"
-		stroke-width={size * 0.054}
+		stroke-width={strokeW}
 		stroke-linecap="round"
 		fill="none"
 	/>
@@ -152,7 +172,7 @@
 	<path
 		d={arcPath}
 		stroke="url(#{gradId})"
-		stroke-width={size * 0.054}
+		stroke-width={strokeW}
 		stroke-linecap="round"
 		fill="none"
 		stroke-dasharray={circumference}

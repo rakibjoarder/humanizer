@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { goto, invalidate } from '$app/navigation';
 	import Logo from '$lib/components/Logo.svelte';
+	import NavUserMenu from '$lib/components/NavUserMenu.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
 	let { data, children } = $props();
@@ -31,12 +32,6 @@
 		invalidate('supabase:auth');
 		goto('/login');
 	}
-
-	const avatarInitial = $derived(
-		profile?.full_name
-			? profile.full_name.charAt(0).toUpperCase()
-			: (user?.email?.charAt(0).toUpperCase() ?? '?')
-	);
 
 	const planLabel = $derived(
 		profile?.plan === 'pro' ? 'Pro' : profile?.plan === 'annual' ? 'Annual' : 'Free'
@@ -109,8 +104,11 @@
 			{/each}
 		</div>
 
-		<!-- Right side -->
-		<div style="display: flex; align-items: center; gap: 10px; margin-left: auto;" class="app-nav-right">
+		<!-- Right side: min-width keeps link column from shifting when CTAs differ in width -->
+		<div
+			style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; flex-shrink: 0; min-width: 200px;"
+			class="app-nav-right"
+		>
 			{#if user}
 				<!-- Plan badge -->
 				<span style="
@@ -126,28 +124,7 @@
 					box-shadow: inset 0 0 0 1px {planBorder};
 				">{planLabel}</span>
 
-				<!-- Avatar -->
-				<button
-					onclick={signOut}
-					title="Sign out"
-					style="
-						width: 32px;
-						height: 32px;
-						border-radius: 50%;
-						background: var(--color-brand);
-						color: white;
-						border: none;
-						cursor: pointer;
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 13px;
-						font-weight: 700;
-						display: flex;
-						align-items: center;
-						justify-content: center;
-						flex-shrink: 0;
-					"
-					aria-label="Sign out ({user.email})"
-				>{avatarInitial}</button>
+				<NavUserMenu {supabase} {user} {profile} />
 			{:else}
 				<Button variant="ghost" size="sm" onclick={() => goto('/login')}>Sign in</Button>
 				<Button variant="primary" size="sm" onclick={() => goto('/register')}>Get started</Button>
@@ -227,6 +204,7 @@
 <style>
 	@media (max-width: 768px) {
 		.app-nav-links { display: none !important; }
+		.app-nav-right { min-width: auto; }
 		.app-hamburger { display: flex !important; }
 	}
 </style>

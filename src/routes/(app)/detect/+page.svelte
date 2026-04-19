@@ -84,15 +84,20 @@
 		goto('/humanize');
 	}
 
+	function verdictLabel(v: DetectResult['verdict']) {
+		return v === 'ai' ? 'AI-authored' : 'Human-authored';
+	}
+
 	async function handleCopyReport() {
 		if (!result) return;
 		const report = [
 			`HumanizeAI Detection Report`,
 			`ID: ${detId}  |  Time: ${detMs}ms`,
 			``,
-			`AI Probability: ${Math.round(result.ai_probability * 100)}%`,
-			`Human Probability: ${Math.round(result.human_probability * 100)}%`,
+			`Verdict: ${verdictLabel(result.verdict)}`,
 			`Classification: ${result.classification}`,
+			`AI probability: ${Math.round(result.ai_probability * 100)}%`,
+			`Human probability: ${Math.round(result.human_probability * 100)}%`,
 		].join('\n');
 		try {
 			await navigator.clipboard.writeText(report);
@@ -106,7 +111,7 @@
 	}
 </script>
 
-<div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px;">
+<div class="detect-page">
 	<!-- Page header -->
 	<div style="margin-bottom: 28px;">
 		<h1 style="
@@ -125,8 +130,8 @@
 		">Analyze text for AI authorship.</p>
 	</div>
 
-	<!-- Two-column grid -->
-	<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;" class="detect-grid">
+	<!-- Input + result: stack on small screens, two columns from --detect-bp -->
+	<div class="detect-grid">
 
 		<!-- Left: Input card -->
 		<div style="
@@ -171,79 +176,89 @@
 		</div>
 
 		<!-- Right: Result card -->
-		<div style="
-			background: var(--color-bg-surface);
-			border-radius: 14px;
-			box-shadow: inset 0 0 0 1px var(--color-bg-border);
-			overflow: hidden;
-			min-height: 420px;
-		">
+		<div class="detect-result-card">
 			<CardHeader icon={gaugeIcon} label="Result">
 				{#snippet right()}
 					{#if result}
-						<span style="
-							font-family: 'JetBrains Mono', monospace;
-							font-size: 11px;
-							color: var(--color-text-muted);
-							background: var(--color-bg-elevated);
-							padding: 3px 8px;
-							border-radius: 4px;
-							box-shadow: inset 0 0 0 1px var(--color-bg-border);
-						">{detId} · {detMs}ms</span>
+						<span
+							class="detect-run-meta"
+							title="{detId} · {detMs}ms"
+						>{detId} · {detMs}ms</span>
 					{/if}
 				{/snippet}
 			</CardHeader>
 
-			<div style="padding: 20px;">
+			<div class="detect-result-body">
 				{#if isLoading}
-					<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-height: 360px; text-align: center;">
-						<div style="position: relative; width: 160px; height: 160px;">
-							<svg width="160" height="160" viewBox="0 0 160 160" fill="none" style="position: absolute; inset: 0;" aria-hidden="true">
+					<div class="detect-result-placeholder detect-result-loading">
+						<div class="detect-loading-ring" aria-hidden="true">
+							<svg width="160" height="160" viewBox="0 0 160 160" fill="none">
 								<circle cx="80" cy="80" r="60" stroke="var(--color-bg-border)" stroke-width="8" fill="none"/>
 								<circle cx="80" cy="80" r="60" stroke="var(--color-brand)" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="40 400" style="animation: hai-spin 1.4s linear infinite; transform-origin: 80px 80px;"/>
 							</svg>
-							<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
-								<span style="font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--color-brand); animation: hai-dots 1.4s ease-in-out infinite; letter-spacing: 0.12em;">···</span>
-							</div>
+							<span class="detect-loading-dots">···</span>
 						</div>
-						<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted); margin: 0;">Scanning {wordCount} words…</p>
+						<p class="detect-loading-caption">Scanning {wordCount} words…</p>
 					</div>
 
 				{:else if result}
-					<div style="display: flex; flex-direction: column; align-items: center; gap: 16px;" class="animate-fade-up">
-						<ScoreGauge aiProbability={result.ai_probability} classification={result.classification} size={260} animate={true}/>
-						<ClassificationBadge classification={result.classification}/>
-
-						<!-- Prob rows -->
-						<div style="width: 100%; display: flex; flex-direction: column; gap: 10px; margin-top: 4px;">
-							{#each [
-								{ label: 'AI signal',    value: result.ai_probability,    color: 'var(--color-ai)' },
-								{ label: 'Human signal', value: result.human_probability, color: 'var(--color-human)' }
-							] as row}
-								<div style="display: flex; flex-direction: column; gap: 5px;">
-									<div style="display: flex; align-items: center; justify-content: space-between;">
-										<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">{row.label}</span>
-										<span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: {row.color};">{Math.round(row.value * 100)}%</span>
-									</div>
-									<div style="height: 6px; background: var(--color-bg-elevated); border-radius: 99px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--color-bg-border);">
-										<div style="height: 100%; width: {Math.round(row.value * 100)}%; background: {row.color}; border-radius: 99px; transition: width 700ms cubic-bezier(0.22,1,0.36,1);"></div>
-									</div>
-								</div>
-							{/each}
+					<div class="detect-result-panel animate-fade-up">
+						<div class="detect-result-gauge-col">
+							<div class="detect-gauge-scale">
+								<!-- remount gauge each run so arc/number never show stale animation vs fresh bars -->
+								{#key detId}
+									<ScoreGauge
+										aiProbability={result.ai_probability}
+										classification={result.classification}
+										size={220}
+										animate={true}
+									/>
+								{/key}
+							</div>
+							<div class="detect-result-badges">
+								<ClassificationBadge classification={result.classification} />
+								<span class="detect-verdict-pill" data-verdict={result.verdict}>
+									Verdict: {verdictLabel(result.verdict)}
+								</span>
+							</div>
 						</div>
 
-						<div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-							<Button variant="secondary" size="sm" icon={wandIcon} onclick={handleHumanize}>Humanize this text</Button>
-							<Button variant="ghost" size="sm" icon={copied ? checkIcon : copyIcon} onclick={handleCopyReport}>{copied ? 'Copied!' : 'Copy report'}</Button>
+						<div class="detect-result-meta-col">
+							<p class="detect-meta-heading">Confidence</p>
+							<div class="detect-prob-rows">
+								{#each [
+									{ label: 'AI score', value: result.ai_probability, color: 'var(--color-ai)' },
+									{ label: 'Human score', value: result.human_probability, color: 'var(--color-human)' }
+								] as row (row.label)}
+									{@const pct = Math.min(100, Math.max(0, Math.round(row.value * 100)))}
+									<div class="detect-prob-row">
+										<div class="detect-prob-row-head">
+											<span class="detect-prob-label">{row.label}</span>
+											<span class="detect-prob-value" style="color: {row.color};">{pct}%</span>
+										</div>
+										<div class="detect-prob-track">
+											<div
+												class="detect-prob-fill"
+												style="width: {pct}%; background: {row.color};"
+											></div>
+										</div>
+									</div>
+								{/each}
+							</div>
+
+							<div class="detect-result-actions">
+								<Button variant="secondary" size="sm" icon={wandIcon} onclick={handleHumanize}>Humanize this text</Button>
+								<Button variant="ghost" size="sm" icon={copied ? checkIcon : copyIcon} onclick={handleCopyReport}>{copied ? 'Copied!' : 'Copy report'}</Button>
+							</div>
 						</div>
 					</div>
 
 				{:else}
-					<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 360px; text-align: center;">
-						<div style="width: 52px; height: 52px; border-radius: 12px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border); display: flex; align-items: center; justify-content: center;">
-							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={scanIcon}/></svg>
+					<div class="detect-result-placeholder">
+						<div class="detect-empty-icon" aria-hidden="true">
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={scanIcon}/></svg>
 						</div>
-						<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-muted); margin: 0; max-width: 200px; line-height: 1.6;">Paste text and click Analyze to see results</p>
+						<p class="detect-empty-copy">Paste at least 50 characters in the input, then click <strong>Analyze</strong> to see AI probability and classification.</p>
 					</div>
 				{/if}
 			</div>
@@ -262,9 +277,9 @@
 			<div style="padding: 14px 20px; background: var(--color-bg-sunk); border-bottom: 1px solid var(--color-bg-border);">
 				<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">Signal breakdown</span>
 			</div>
-			<div style="display: grid; grid-template-columns: 1fr 1fr;" class="detail-grid">
+			<div class="detail-grid">
 				<!-- Signal bars -->
-				<div style="padding: 20px; border-right: 1px solid var(--color-bg-border);">
+				<div class="detail-grid-signals">
 					<div style="display: flex; flex-direction: column; gap: 12px;">
 						{#each signals as label, i}
 							<div style="display: flex; flex-direction: column; gap: 5px;">
@@ -280,9 +295,9 @@
 					</div>
 				</div>
 				<!-- Flagged passages -->
-				<div style="padding: 20px;">
-					<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 12px;">Flagged passages</p>
-					<div style="background: var(--color-bg-elevated); border-radius: 10px; padding: 16px; box-shadow: inset 0 0 0 1px var(--color-bg-border); max-height: 200px; overflow-y: auto;">
+				<div class="detail-grid-passages">
+					<p class="detail-passages-title">Flagged phrases</p>
+					<div class="detail-passages-scroll">
 						<DiffText text={inputText.slice(0, 480)} flags={AI_TELLS} color="var(--color-ai)"/>
 					</div>
 				</div>
@@ -292,8 +307,349 @@
 </div>
 
 <style>
-	@media (max-width: 800px) {
-		.detect-grid, .detail-grid { grid-template-columns: 1fr !important; }
-		.detail-grid > div:first-child { border-right: none !important; border-bottom: 1px solid var(--color-bg-border); }
+	.detect-page {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: clamp(16px, 3vw, 32px) clamp(12px, 3vw, 24px) clamp(40px, 6vw, 64px);
+	}
+
+	.detect-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: clamp(16px, 2.5vw, 24px);
+		align-items: stretch;
+	}
+
+	@media (min-width: 900px) {
+		.detect-grid {
+			grid-template-columns: 1fr 1fr;
+			align-items: start;
+		}
+	}
+
+	.detect-result-card {
+		background: var(--color-bg-surface);
+		border-radius: 14px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		overflow: hidden;
+		min-width: 0;
+	}
+
+	.detect-run-meta {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 10px;
+		color: var(--color-text-muted);
+		background: var(--color-bg-elevated);
+		padding: 4px 8px;
+		border-radius: 4px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		max-width: min(100%, 220px);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		display: inline-block;
+		vertical-align: middle;
+	}
+
+	.detect-result-body {
+		padding: clamp(16px, 3vw, 22px);
+		min-width: 0;
+	}
+
+	.detect-result-placeholder {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		min-height: clamp(260px, 42vh, 360px);
+		text-align: center;
+		padding: 12px 8px;
+	}
+
+	.detect-result-loading {
+		gap: 20px;
+	}
+
+	.detect-loading-ring {
+		position: relative;
+		width: min(160px, 50vw);
+		height: min(160px, 50vw);
+		flex-shrink: 0;
+	}
+
+	.detect-loading-ring svg {
+		width: 100%;
+		height: 100%;
+	}
+
+	.detect-loading-dots {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'JetBrains Mono', monospace;
+		font-size: clamp(18px, 5vw, 22px);
+		color: var(--color-brand);
+		animation: hai-dots 1.4s ease-in-out infinite;
+		letter-spacing: 0.12em;
+	}
+
+	.detect-loading-caption {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 13px;
+		color: var(--color-text-muted);
+		margin: 0;
+		max-width: 28ch;
+	}
+
+	.detect-empty-icon {
+		width: 52px;
+		height: 52px;
+		border-radius: 12px;
+		background: var(--color-bg-elevated);
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.detect-empty-copy {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 14px;
+		color: var(--color-text-muted);
+		margin: 0;
+		max-width: 36ch;
+		line-height: 1.6;
+	}
+
+	.detect-empty-copy strong {
+		color: var(--color-text-secondary);
+		font-weight: 600;
+	}
+
+	/* Result: gauge + meta — stack narrow, row when space allows */
+	.detect-result-panel {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: clamp(20px, 4vw, 28px);
+		align-items: start;
+		justify-items: center;
+		width: 100%;
+		min-width: 0;
+	}
+
+	@media (min-width: 560px) {
+		.detect-result-panel {
+			grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+			justify-items: stretch;
+			align-items: start;
+			column-gap: clamp(16px, 3vw, 28px);
+		}
+
+		.detect-result-gauge-col {
+			justify-self: stretch;
+			max-width: 280px;
+			width: 100%;
+		}
+	}
+
+	.detect-result-gauge-col {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 14px;
+		width: 100%;
+		min-width: 0;
+	}
+
+	.detect-gauge-scale {
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		line-height: 0;
+	}
+
+	.detect-gauge-scale :global(svg) {
+		width: min(100%, 260px);
+		height: auto;
+		max-width: 100%;
+	}
+
+	.detect-result-badges {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		max-width: 320px;
+	}
+
+	.detect-verdict-pill {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		background: var(--color-bg-elevated);
+		padding: 6px 12px;
+		border-radius: 8px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		text-align: center;
+		width: fit-content;
+		max-width: 100%;
+	}
+
+	.detect-verdict-pill[data-verdict='ai'] {
+		color: var(--color-ai);
+		box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.35);
+		background: var(--color-ai-muted);
+	}
+
+	.detect-verdict-pill[data-verdict='human'] {
+		color: var(--color-human);
+		box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.35);
+		background: var(--color-human-muted);
+	}
+
+	.detect-result-meta-col {
+		width: 100%;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+
+	.detect-meta-heading {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-muted);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		margin: 0;
+	}
+
+	.detect-prob-rows {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		width: 100%;
+	}
+
+	.detect-prob-row {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		min-width: 0;
+	}
+
+	.detect-prob-row-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		min-width: 0;
+	}
+
+	.detect-prob-label {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-muted);
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		flex-shrink: 0;
+	}
+
+	.detect-prob-value {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 14px;
+		font-weight: 700;
+		flex-shrink: 0;
+	}
+
+	.detect-prob-track {
+		height: 8px;
+		background: var(--color-bg-elevated);
+		border-radius: 99px;
+		overflow: hidden;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+	}
+
+	.detect-prob-fill {
+		height: 100%;
+		border-radius: 99px;
+		transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+		min-width: 0;
+	}
+
+	.detect-result-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		width: 100%;
+		margin-top: 4px;
+	}
+
+	@media (max-width: 559px) {
+		.detect-result-actions {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.detect-result-actions :global(button) {
+			width: 100%;
+			justify-content: center;
+		}
+	}
+
+	.detail-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+	}
+
+	.detail-grid-signals {
+		padding: clamp(16px, 3vw, 20px);
+		border-bottom: 1px solid var(--color-bg-border);
+		min-width: 0;
+	}
+
+	.detail-grid-passages {
+		padding: clamp(16px, 3vw, 20px);
+		min-width: 0;
+	}
+
+	.detail-passages-title {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-muted);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		margin: 0 0 12px;
+	}
+
+	.detail-passages-scroll {
+		background: var(--color-bg-elevated);
+		border-radius: 10px;
+		padding: 14px 16px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		max-height: min(220px, 40vh);
+		overflow-y: auto;
+		overflow-x: hidden;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	@media (min-width: 900px) {
+		.detail-grid {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.detail-grid-signals {
+			border-bottom: none;
+			border-right: 1px solid var(--color-bg-border);
+		}
 	}
 </style>

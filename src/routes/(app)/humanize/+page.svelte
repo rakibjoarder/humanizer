@@ -4,6 +4,7 @@
 	import { humanizeText, type HumanizeResult } from '$lib/client/api';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
+	import TextEditor from '$lib/components/TextEditor.svelte';
 	import CardHeader from '$lib/components/CardHeader.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
@@ -13,14 +14,6 @@
 	const checkIcon   = 'M20 6 9 17l-5-5';
 	const scanIcon    = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
 	const refreshIcon = 'M3 12a9 9 0 0 1 15-6.7L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-15 6.7L3 16 M3 21v-5h5';
-
-	// AI-tell words highlighted in input
-	const AI_TELLS = new Set([
-		'rapidly','evolving','landscape,','fundamentally','Furthermore,','multifaceted',
-		'comprehensive','Moreover,','seamless','integration','empowered','stakeholders',
-		'leverage','data-driven','unprecedented','Additionally,','paradigm','revolutionized',
-		'operational','efficiency.','transformative','crucial','synergy','ingenuity','innovation.'
-	]);
 
 	// Human-natural words highlighted in output
 	const HUMAN_FIXES = new Set([
@@ -36,7 +29,7 @@
 	let { data }: Props = $props();
 
 	// State
-	let inputText       = $state("In today's rapidly evolving digital landscape, the fundamentally transformative power of AI-driven technologies has revolutionized operational efficiency. Furthermore, comprehensive data-driven paradigms have empowered stakeholders to leverage unprecedented synergy, fostering seamless integration across multifaceted workflows. Moreover, this transformative approach ensures that organizations can maintain crucial competitive advantages while enabling innovative solutions that drive sustainable growth.");
+	let inputText = $state('');
 	let isLoading       = $state(false);
 	let result          = $state<HumanizeResult | null>(null);
 	let error           = $state<string | null>(null);
@@ -156,45 +149,20 @@
 		margin-bottom: 20px;
 		margin-top: 24px;
 	">
-		<CardHeader icon={wandIcon} label="Input · AI-generated text">
+		<CardHeader icon={wandIcon} label="Input">
 			{#snippet right()}
-				<ClassificationBadge classification="LIKELY_AI" size="sm"/>
 				<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{inputWordCount} words</span>
 			{/snippet}
 		</CardHeader>
 
 		<div style="padding: 20px;">
-			<!-- DiffText display of input -->
-			<div style="
-				background: var(--color-bg-elevated);
-				border-radius: 10px;
-				padding: 18px 20px;
-				box-shadow: inset 0 0 0 1px var(--color-bg-border);
-				margin-bottom: 16px;
-				min-height: 120px;
-				cursor: text;
-			">
-				{#if inputText.trim()}
-					<DiffText text={inputText} flags={AI_TELLS} color="var(--color-ai)"/>
-				{:else}
-					<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 15px; color: var(--color-text-dim);">Paste AI-generated text here…</span>
-				{/if}
+			<div style="margin-bottom: 16px;">
+				<TextEditor
+					bind:value={inputText}
+					placeholder="Paste or type the text you want to sound more natural…"
+					minChars={10}
+				/>
 			</div>
-
-			<!-- Editable textarea (visually hidden but functional) -->
-			<textarea
-				bind:value={inputText}
-				rows={1}
-				style="
-					position: absolute;
-					width: 1px;
-					height: 1px;
-					opacity: 0;
-					pointer-events: none;
-					overflow: hidden;
-				"
-				aria-label="Input text for humanization"
-			></textarea>
 
 			<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 				<Button

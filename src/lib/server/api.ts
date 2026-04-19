@@ -71,12 +71,37 @@ async function callApi<T>(
 	return cleanPayload<T>(path, raw);
 }
 
+/** Coerce upstream detect probabilities to 0–1 and a consistent pair (fixes 0–100 scale + drift). */
+function normalizeDetectProbabilities(
+	ai: unknown,
+	human: unknown
+): { ai: number; human: number } {
+	let a = typeof ai === 'number' && Number.isFinite(ai) ? ai : 0;
+	let h = typeof human === 'number' && Number.isFinite(human) ? human : 0;
+
+	if (a > 1 || h > 1) {
+		if (a > 1) a /= 100;
+		if (h > 1) h /= 100;
+	}
+	a = Math.min(1, Math.max(0, a));
+	h = Math.min(1, Math.max(0, h));
+
+	const sum = a + h;
+	if (sum > 1e-6 && Math.abs(sum - 1) > 0.02) {
+		a /= sum;
+		h /= sum;
+	}
+
+	return { ai: a, human: h };
+}
+
 function cleanPayload<T>(path: '/detect' | '/humanize', raw: Record<string, unknown>): T {
 	if (path === '/detect') {
+		const { ai, human } = normalizeDetectProbabilities(raw.ai_probability, raw.human_probability);
 		const cleaned: DetectResponse = {
 			verdict: raw.verdict as DetectResponse['verdict'],
-			ai_probability: raw.ai_probability as number,
-			human_probability: raw.human_probability as number,
+			ai_probability: ai,
+			human_probability: human,
 			classification: raw.classification as DetectResponse['classification']
 		};
 		return cleaned as unknown as T;
