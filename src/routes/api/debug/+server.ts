@@ -26,12 +26,25 @@ export const GET = async () => {
 		results.rawFetchWithSignal = { error: String(e) };
 	}
 
-	// Test 3: Stripe SDK
+	// Test 3: Stripe SDK with NodeHttpClient
+	try {
+		const Stripe = (await import('stripe')).default;
+		const s = new Stripe(STRIPE_SECRET_KEY, {
+			apiVersion: '2025-02-24.acacia',
+			httpClient: Stripe.createNodeHttpClient()
+		});
+		const account = await s.accounts.retrieve();
+		results.stripeNode = { id: account.id };
+	} catch (e) {
+		results.stripeNode = { error: e instanceof Error ? e.message : String(e) };
+	}
+
+	// Test 4: Stripe SDK with default (imported stripe instance)
 	try {
 		const account = await stripe.accounts.retrieve();
-		results.stripeSdk = { id: account.id };
+		results.stripeDefault = { id: account.id };
 	} catch (e) {
-		results.stripeSdk = { error: e instanceof Error ? e.message : String(e) };
+		results.stripeDefault = { error: e instanceof Error ? e.message : String(e) };
 	}
 
 	results.keyPrefix = STRIPE_SECRET_KEY.slice(0, 12) + '...';
