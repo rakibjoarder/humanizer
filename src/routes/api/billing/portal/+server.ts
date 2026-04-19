@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const config = { maxDuration: 30 };
+export const config = { runtime: 'nodejs20.x', maxDuration: 30 };
 import { stripe } from '$lib/server/stripe';
 import { getUserProfile } from '$lib/server/auth';
 import { PUBLIC_APP_URL } from '$env/static/public';
@@ -35,7 +35,9 @@ export const POST: RequestHandler = async ({ locals }) => {
 		return json({ url: portalSession.url });
 	} catch (err: unknown) {
 		const message = err instanceof Error ? err.message : String(err);
-		console.error('[billing/portal]', message);
-		return json({ error: message }, { status: 500 });
+		const cause = err instanceof Error && (err as NodeJS.ErrnoException).code;
+		const detail = `${message}${cause ? ` (code: ${cause})` : ''}`;
+		console.error('[billing/portal]', detail);
+		return json({ error: detail }, { status: 500 });
 	}
 };
