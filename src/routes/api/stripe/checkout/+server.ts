@@ -62,8 +62,9 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 				.from('profiles')
 				.update({ stripe_customer_id: stripeCustomerId })
 				.eq('id', user.id);
-		} catch {
-			return json({ error: 'Failed to create Stripe customer.' }, { status: 500 });
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			return json({ error: `Failed to create Stripe customer: ${msg}` }, { status: 500 });
 		}
 	}
 
@@ -85,7 +86,9 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		});
 
 		return json({ url: checkoutSession.url });
-	} catch {
-		return json({ error: 'Failed to create checkout session.' }, { status: 500 });
+	} catch (err: unknown) {
+		const msg = err instanceof Error ? err.message : String(err);
+		console.error('[stripe/checkout]', msg);
+		return json({ error: msg }, { status: 500 });
 	}
 };
