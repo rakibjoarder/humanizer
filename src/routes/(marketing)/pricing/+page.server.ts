@@ -5,8 +5,8 @@ export const load: PageServerLoad = async () => {
 	return {
 		priceIds: {
 			pro: {
-				monthly: STRIPE_PRO_MONTHLY_PRICE_ID,
-				yearly: STRIPE_PRO_YEARLY_PRICE_ID
+				monthly: STRIPE_PRO_MONTHLY_PRICE_ID.trim(),
+				yearly: STRIPE_PRO_YEARLY_PRICE_ID.trim()
 			}
 		}
 	};
