@@ -19,6 +19,7 @@
 		{ label: 'Detect', href: '/detect' },
 		{ label: 'Humanize', href: '/humanize' },
 		{ label: 'Dashboard', href: '/dashboard' },
+		{ label: 'Activity', href: '/activity' },
 		{ label: 'Pricing', href: '/pricing' }
 	];
 

@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
+	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
 	import { humanizeText, type HumanizeResult } from '$lib/client/api';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
@@ -80,6 +81,7 @@
 		error = null;
 		resultSource = 'history';
 		savedHydratedId = h.id;
+		setLastVisitedActivityId(h.id);
 	});
 
 	onMount(() => {
@@ -144,6 +146,14 @@
 <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px;">
 	<!-- Page header -->
 	<div style="margin-bottom: 8px;">
+		{#if page.url.searchParams.get('id')}
+			<p style="margin: 0 0 10px;">
+				<a
+					href="/activity"
+					style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
+				>← Activity log</a>
+			</p>
+		{/if}
 		<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
 			<span style="
 				font-family: 'JetBrains Mono', monospace;

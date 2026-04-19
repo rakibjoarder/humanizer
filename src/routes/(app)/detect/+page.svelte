@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { PageData } from './$types';
+	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
 	import { detectText, type DetectResult } from '$lib/client/api';
 	import ScoreGauge from '$lib/components/ScoreGauge.svelte';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
@@ -98,6 +100,7 @@
 		savedHydratedId = s.id;
 		detId = s.id.replace(/-/g, '').slice(0, 10).toUpperCase();
 		detMs = 0;
+		setLastVisitedActivityId(s.id);
 	});
 
 	// ── Derived ───────────────────────────────────────────────────────────────
@@ -170,6 +173,14 @@
 <div class="detect-page">
 	<!-- Page header -->
 	<div style="margin-bottom: 28px;">
+		{#if page.url.searchParams.get('id')}
+			<p style="margin: 0 0 12px;">
+				<a
+					href="/activity"
+					style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
+				>← Activity log</a>
+			</p>
+		{/if}
 		<h1 style="
 			font-family: 'Newsreader', Georgia, serif;
 			font-size: 34px;

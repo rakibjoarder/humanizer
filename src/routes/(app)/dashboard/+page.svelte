@@ -1,6 +1,11 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import {
+		getLastVisitedActivityId,
+		setLastVisitedActivityId
+	} from '$lib/client/lastActivityVisit';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
@@ -36,6 +41,12 @@
 	}
 
 	let { data }: Props = $props();
+
+	const lastVisitedActivityId = $derived.by(() => {
+		if (!browser) return null;
+		void page.url.pathname;
+		return getLastVisitedActivityId();
+	});
 
 	// ── Ring gauge math ────────────────────────────────────────────────────────
 	const RING_R = 54;
@@ -99,6 +110,7 @@
 	}
 
 	function onActivityRowActivate(item: ActivityItem) {
+		setLastVisitedActivityId(item.id);
 		goto(activityHref(item));
 	}
 
@@ -202,12 +214,15 @@
 	</div>
 
 	<!-- ── Recent activity ── -->
-	<div style="
+	<div
+		id="recent-activity"
+		style="
 		background: var(--color-bg-surface);
 		border-radius: 14px;
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		overflow: hidden;
-	">
+	"
+	>
 		<!-- Header -->
 		<div style="
 			padding: 14px 20px;
@@ -221,7 +236,7 @@
 			<button
 				type="button"
 				style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-brand); background: none; border: none; cursor: pointer; font-weight: 600;"
-				onclick={() => goto('/detect')}
+				onclick={() => goto('/activity')}
 			>View all</button>
 		</div>
 
@@ -250,12 +265,12 @@
 					<tbody>
 						{#each data.recentActivity as item (item.id)}
 							<tr
+								class="activity-row"
+								class:activity-row-last={item.id === lastVisitedActivityId}
 								style="border-bottom: 1px solid var(--color-bg-border); cursor: pointer;"
 								role="link"
 								tabindex="0"
 								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}"
-								onmouseenter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'var(--color-bg-elevated)'; }}
-								onmouseleave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = ''; }}
 								onclick={() => onActivityRowActivate(item)}
 								onkeydown={(e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
@@ -307,7 +322,10 @@
 										href={activityHref(item)}
 										style="color: var(--color-text-muted); text-decoration: none; display: inline-flex;"
 										aria-label="Open {item.type} in new tab"
-										onclick={(e) => e.stopPropagation()}
+										onclick={(e) => {
+											e.stopPropagation();
+											setLastVisitedActivityId(item.id);
+										}}
 									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14 M13 6l6 6-6 6"/></svg>
 									</a>
@@ -322,6 +340,16 @@
 </div>
 
 <style>
+	.activity-row:hover {
+		background: var(--color-bg-elevated);
+	}
+	.activity-row-last {
+		background: var(--color-brand-muted);
+		box-shadow: inset 3px 0 0 var(--color-brand);
+	}
+	.activity-row-last:hover {
+		background: var(--color-bg-elevated);
+	}
 	@media (max-width: 960px) {
 		.dash-top { grid-template-columns: 1fr !important; }
 	}
