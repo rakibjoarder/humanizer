@@ -67,7 +67,7 @@
 			if (json.url) {
 				window.location.href = json.url;
 			} else {
-				alert('Could not open billing portal. Please try again.');
+				alert(json.error ?? 'Could not open billing portal. Please try again.');
 			}
 		} catch {
 			alert('Failed to reach billing portal.');
