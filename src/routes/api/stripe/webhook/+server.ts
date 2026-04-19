@@ -186,7 +186,7 @@ async function handleInvoicePaymentFailed(
 
 function resolvePlanFromSubscription(
 	subscription: Stripe.Subscription
-): 'free' | 'pro' | 'annual' {
+): 'free' | 'pro' {
 	// Check product metadata or nickname for plan name
 	const item = subscription.items?.data?.[0];
 	if (!item) return 'free';
@@ -198,12 +198,10 @@ function resolvePlanFromSubscription(
 	const priceNickname = (price.nickname ?? '').toLowerCase();
 	const combined = `${productName} ${priceNickname}`;
 
-	if (combined.includes('annual')) return 'annual';
 	if (combined.includes('pro')) return 'pro';
 
 	// Fall back to metadata on the subscription itself
 	const metaPlan = subscription.metadata?.plan?.toLowerCase();
-	if (metaPlan === 'annual') return 'annual';
 	if (metaPlan === 'pro') return 'pro';
 
 	return 'pro'; // default for any paid subscription

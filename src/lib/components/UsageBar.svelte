@@ -7,7 +7,7 @@
 
 	let { used, limit, plan }: Props = $props();
 
-	const isUnlimited = $derived(plan === 'pro' || plan === 'annual');
+	const isUnlimited = $derived(plan === 'pro');
 
 	const ratio = $derived(isUnlimited ? 0 : Math.min(used / limit, 1));
 

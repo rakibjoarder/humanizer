@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type Plan = 'free' | 'pro' | 'annual';
+export type Plan = 'free' | 'pro';
 
 export interface QuotaResult {
 	allowed: boolean;
@@ -12,8 +12,8 @@ export interface QuotaResult {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FREE_DAILY_LIMIT = 500; // words per day
-const UNLIMITED = -1; // sentinel for pro / annual
+const FREE_DAILY_LIMIT = 500;
+const UNLIMITED = -1;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ async function getUsedToday(supabase: SupabaseClient, userId: string): Promise<n
  * Check whether the user is allowed to process `wordCount` more words today.
  *
  * - free plan: 500 words / day hard cap
- * - pro / annual: unlimited
+ * - pro: unlimited
  */
 export async function checkQuota(
 	supabase: SupabaseClient,
@@ -55,7 +55,7 @@ export async function checkQuota(
 	plan: Plan,
 	wordCount: number
 ): Promise<QuotaResult> {
-	if (plan === 'pro' || plan === 'annual') {
+	if (plan === 'pro') {
 		return { allowed: true, used: 0, limit: UNLIMITED };
 	}
 

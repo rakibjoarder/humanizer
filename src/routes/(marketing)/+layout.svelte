@@ -39,7 +39,7 @@
 	}
 
 	const planLabel = $derived(
-		profile?.plan === 'pro' ? 'Pro' : profile?.plan === 'annual' ? 'Annual' : 'Free'
+		profile?.plan === 'pro' ? 'Pro' : 'Free'
 	);
 
 	const planColor = $derived(
@@ -299,7 +299,7 @@
 				style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted); text-decoration: none;"
 			>Privacy</a>
 			<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-dim);"
-				>&copy; 2026 HumanizeAI</span>
+				>&copy; 2026 HumanizeAIWrite</span>
 		</div>
 	</div>
 </footer>

@@ -21,7 +21,7 @@
 	}
 
 	interface Profile {
-		plan: 'free' | 'pro' | 'annual';
+		plan: 'free' | 'pro';
 		full_name: string | null;
 		email: string;
 	}
@@ -65,8 +65,7 @@
 	);
 
 	const planLabel = $derived(
-		data.profile.plan === 'pro' ? 'Pro · Monthly' :
-		data.profile.plan === 'annual' ? 'Annual' : 'Free'
+		data.profile.plan === 'pro' ? 'Pro · Monthly' : 'Free'
 	);
 
 	const showUpgradedBanner = $derived(page.url.searchParams.get('upgraded') === 'true');

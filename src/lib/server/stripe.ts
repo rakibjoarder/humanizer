@@ -21,7 +21,6 @@ export interface PaidPlanConfig {
 export interface Plans {
 	free: FreePlanConfig;
 	pro: PaidPlanConfig;
-	annual: PaidPlanConfig;
 }
 
 export const plans: Plans = {
@@ -31,9 +30,5 @@ export const plans: Plans = {
 	pro: {
 		monthlyPriceId: 'price_pro_monthly',
 		yearlyPriceId: 'price_pro_yearly'
-	},
-	annual: {
-		monthlyPriceId: 'price_annual_monthly',
-		yearlyPriceId: 'price_annual_yearly'
 	}
 };

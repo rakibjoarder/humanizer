@@ -36,7 +36,7 @@
 	}
 
 	const planLabel = $derived(
-		profile?.plan === 'pro' ? 'Pro' : profile?.plan === 'annual' ? 'Annual' : 'Free'
+		profile?.plan === 'pro' ? 'Pro' : 'Free'
 	);
 
 	const planColor = $derived(

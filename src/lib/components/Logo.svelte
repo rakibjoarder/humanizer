@@ -22,7 +22,7 @@
 		user-select: none;
 	"
 	onclick={onclick}
-	aria-label="HumanizeAI home"
+	aria-label="HumanizeAIWrite home"
 >
 	<!-- SVG Mark -->
 	<svg

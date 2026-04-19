@@ -1,5 +1,5 @@
 <script lang="ts">
-	type Plan = 'free' | 'pro' | 'annual';
+	type Plan = 'free' | 'pro';
 	type BillingCycle = 'monthly' | 'yearly';
 
 	interface Props {
@@ -32,15 +32,15 @@
 			monthlyPrice: 0,
 			yearlyPrice: 0,
 			yearlyMonthlyEquiv: 0,
-			wordsPerDay: '500 words/day',
+			wordsPerDay: '5 detections/day',
 			cta: 'Get Started Free',
 			features: [
-				{ text: '500 words per day', available: true },
+				{ text: '5 detections per day', available: true },
+				{ text: '500 words per scan', available: true },
 				{ text: 'AI Detection', available: true },
 				{ text: 'Humanizer', available: false },
 				{ text: 'History & saved results', available: false },
 				{ text: 'Email support', available: true },
-				{ text: 'Priority support', available: false },
 				{ text: 'API access', available: false }
 			]
 		},
@@ -53,31 +53,13 @@
 			cta: 'Start Pro',
 			badge: 'Most Popular',
 			features: [
-				{ text: 'Unlimited words', available: true },
+				{ text: 'Unlimited detections', available: true },
+				{ text: 'Unlimited words per scan', available: true },
 				{ text: 'AI Detection', available: true },
 				{ text: 'Humanizer', available: true },
 				{ text: 'History & saved results', available: true },
-				{ text: 'Priority email support', available: true },
 				{ text: 'Priority support', available: true },
 				{ text: 'API access', available: false }
-			]
-		},
-		annual: {
-			name: 'Annual',
-			monthlyPrice: 0,
-			yearlyPrice: 79,
-			yearlyMonthlyEquiv: 7,
-			wordsPerDay: 'Unlimited',
-			cta: 'Get Annual Plan',
-			badge: 'Best Value',
-			features: [
-				{ text: 'Unlimited words', available: true },
-				{ text: 'AI Detection', available: true },
-				{ text: 'Humanizer', available: true },
-				{ text: 'History & saved results', available: true },
-				{ text: 'Priority email support', available: true },
-				{ text: 'Priority support', available: true },
-				{ text: 'API access', available: true }
 			]
 		}
 	};
@@ -85,7 +67,6 @@
 	const data = $derived(plans[plan]);
 
 	const displayPrice = $derived(
-		plan === 'annual' ? data.yearlyMonthlyEquiv :
 		data.monthlyPrice === 0 ? 0 :
 		billingCycle === 'yearly' ? data.yearlyMonthlyEquiv : data.monthlyPrice
 	);
@@ -117,9 +98,9 @@
 			<span class="price-period">/mo</span>
 		</div>
 
-		{#if (billingCycle === 'yearly' || plan === 'annual') && data.yearlyPrice > 0}
+		{#if billingCycle === 'yearly' && data.yearlyPrice > 0}
 			<p class="billed-yearly">
-				Billed ${data.yearlyPrice}/yr{plan === 'annual' ? ' · Annual only' : ''}
+				Billed ${data.yearlyPrice}/yr
 				{#if yearlySavings}
 					<span class="savings-tag">Save ${yearlySavings}</span>
 				{/if}

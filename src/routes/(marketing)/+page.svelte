@@ -54,8 +54,7 @@
 			savings: null,
 			features: [
 				'5 detections / day',
-				'1,000 word limit per scan',
-				'Basic humanizer (50 words)',
+				'500 word limit per scan',
 				'Community support'
 			]
 		},
@@ -73,20 +72,6 @@
 				'Priority support'
 			]
 		},
-		{
-			name: 'Agency',
-			price: '$49',
-			period: '/ mo',
-			highlight: false,
-			savings: 'Save $118 / yr with annual',
-			features: [
-				'Everything in Pro',
-				'10 team seats',
-				'API access (REST)',
-				'Custom word-limit per request',
-				'Dedicated Slack support'
-			]
-		}
 	];
 
 	// ── Features ───────────────────────────────────────────────────────────────
@@ -164,8 +149,8 @@
 				margin: 0 0 28px;
 				max-width: 900px;
 			">
-				Write like a <em style="font-style: italic; color: var(--color-brand);">human.</em><br/>
-				Think like a <em style="font-style: italic; color: var(--color-ai);">machine.</em>
+				Humanize what <em style="font-style: italic; color: var(--color-brand);">AI</em><br/>
+				<em style="font-style: italic; color: var(--color-human);">writes.</em>
 			</h1>
 		</Reveal>
 

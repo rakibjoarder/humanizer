@@ -102,15 +102,13 @@
 	}
 
 	let planLabel = $derived(
-		profile?.plan === 'pro' ? 'Pro' : profile?.plan === 'annual' ? 'Annual' : 'Free'
+		profile?.plan === 'pro' ? 'Pro' : 'Free'
 	);
 
 	let planDescription = $derived(
 		profile?.plan === 'pro'
 			? 'Unlimited detections and humanizations per day.'
-			: profile?.plan === 'annual'
-				? 'Unlimited everything with API access and priority support.'
-				: '500 words per day across detect and humanize.'
+			: '5 detections per day · 500 words per scan.'
 	);
 </script>
 

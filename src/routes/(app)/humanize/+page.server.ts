@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		redirect(303, '/login');
 	}
 
-	let plan: 'free' | 'pro' | 'annual' = 'free';
+	let plan: 'free' | 'pro' = 'free';
 
 	try {
 		const profile = await getUserProfile(locals.supabase, user.id);

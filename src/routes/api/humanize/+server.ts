@@ -89,7 +89,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json(
 			{
 				error:
-					'Humanization requires a Pro or Annual plan. Please upgrade to continue.'
+					'Humanization requires a Pro plan. Please upgrade to continue.'
 			},
 			{ status: 403 }
 		);

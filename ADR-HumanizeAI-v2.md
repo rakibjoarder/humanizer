@@ -1,20 +1,22 @@
 # App Design & Architecture Document (ADR)
 ## AI Detector & Humanizer — Web Application
 
-**Version:** 2.0  
-**Date:** April 18, 2026  
-**Stack:** SvelteKit · Stripe · Supabase · textaihumanizer.xyz API
+**Version:** 2.1 (name finalised — HumanizeAIWrite)
+**Date:** April 19, 2026  
+**Stack:** SvelteKit · Stripe · Supabase · textaihumanizer.xyz API  
+**Domain:** humanizeaiwrite.com (~$10–12/yr · Porkbun/Namecheap)
 
 ---
 
 ## 1. Product Overview
 
 ### 1.1 App Name & Tagline
-**HumanizeAI**  
-*"Write like a human. Think like a machine."*
+**HumanizeAIWrite**  
+*"Humanize what AI writes."*  
+Domain: `humanizeaiwrite.com`
 
 ### 1.2 Problem Statement
-AI-generated content is increasingly flagged by universities, employers, and publishers. **HumanizeAI** solves both sides of the problem:
+AI-generated content is increasingly flagged by universities, employers, and publishers. **HumanizeAIWrite** solves both sides of the problem:
 
 1. **Detect** — Analyze text and determine the likelihood it was AI-written
 2. **Humanize** — Rewrite AI-generated text so it reads naturally and authentically
@@ -586,4 +588,4 @@ The app ships **dark mode only** for v1.0. The forensics/precision aesthetic onl
 
 ---
 
-*End of ADR — HumanizeAI v2.0*
+*End of ADR — HumanizeAIWrite v2.0*

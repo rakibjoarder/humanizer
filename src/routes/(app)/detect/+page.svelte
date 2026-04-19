@@ -150,7 +150,7 @@
 	async function handleCopyReport() {
 		if (!result) return;
 		const report = [
-			`HumanizeAI Detection Report`,
+			`HumanizeAIWrite Detection Report`,
 			`ID: ${detId}  |  Time: ${detMs}ms`,
 			``,
 			`Verdict: ${verdictLabel(result.verdict)}`,

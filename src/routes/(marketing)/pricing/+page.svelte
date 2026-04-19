@@ -9,13 +9,11 @@
 	// Stripe price IDs — these match the plans in $lib/server/stripe.ts
 	const priceIds: Record<string, Record<BillingCycle, string | null>> = {
 		free: { monthly: null, yearly: null },
-		pro: { monthly: 'price_pro_monthly', yearly: 'price_pro_yearly' },
-		annual: { monthly: 'price_annual_monthly', yearly: 'price_annual_yearly' }
+		pro: { monthly: 'price_pro_monthly', yearly: 'price_pro_yearly' }
 	};
 
 	const yearlySavingsLabel: Record<string, string> = {
-		pro: 'Save $45/year',
-		annual: 'Save $189/year'
+		pro: 'Save $45/year'
 	};
 
 	async function handleSelectPlan(planKey: string) {
@@ -55,7 +53,7 @@
 		},
 		{
 			q: 'What happens when I hit the free daily limit?',
-			a: 'Detection is paused until midnight UTC. Humanization requires Pro or Agency — the free plan does not include it.'
+			a: 'Detection is paused until midnight UTC. Humanization requires Pro — the free plan does not include it.'
 		},
 		{
 			q: 'Is my text stored or used to train models?',
@@ -70,8 +68,8 @@
 			a: 'We accept all major credit and debit cards via Stripe. Promotion codes are supported at checkout.'
 		},
 		{
-			q: 'What counts as a "word" for the daily limit?',
-			a: 'A word is any whitespace-separated token. The daily counter resets at midnight UTC and covers both detection and humanization combined.'
+			q: 'How are free plan limits counted?',
+			a: 'The free plan allows 5 detections per day with a 500-word limit per scan. The counter resets at midnight UTC. Pro removes all limits.'
 		}
 	];
 
@@ -136,15 +134,7 @@
 				<PricingCard plan="pro" {billingCycle} highlighted={true} />
 			</div>
 
-			<!-- Agency -->
-			<div class="card-wrapper" onclick={() => handleSelectPlan('annual')} role="button" tabindex="0"
-				onkeydown={(e) => e.key === 'Enter' && handleSelectPlan('annual')}>
-				{#if billingCycle === 'yearly'}
-					<div class="savings-banner savings-banner-annual">{yearlySavingsLabel.annual}</div>
-				{/if}
-				<PricingCard plan="annual" {billingCycle} highlighted={false} />
 			</div>
-		</div>
 
 		<p class="footnote">
 			All plans include a 7-day free trial on paid tiers. No credit card required for Free.
@@ -216,9 +206,9 @@
 	<!-- ── Bottom CTA ── -->
 	<section class="bottom-cta">
 		<div class="bottom-cta-inner">
-			<h2 class="bottom-cta-title">Ready to write like a human?</h2>
+			<h2 class="bottom-cta-title">Ready to humanize what AI writes?</h2>
 			<p class="bottom-cta-sub">
-				Join thousands of writers, students, and professionals who trust HumanizeAI.
+				Join thousands of writers, students, and professionals who trust HumanizeAIWrite.
 			</p>
 			<a href="/register" class="bottom-cta-btn">Create your free account</a>
 		</div>
@@ -227,7 +217,7 @@
 	<!-- ── Footer ── -->
 	<footer class="page-footer">
 		<span class="footer-copy">
-			&copy; 2026 Humanize<span class="logo-accent">AI</span>. All rights reserved.
+			&copy; 2026 HumanizeAIWrite. All rights reserved.
 		</span>
 		<div class="footer-links">
 			<a href="/terms" class="footer-link">Terms</a>
@@ -265,33 +255,6 @@
 			rgba(79, 70, 229, 0.07) 0%,
 			transparent 72%
 		);
-	}
-
-	/* ── Header ── */
-	.page-header {
-		position: sticky;
-		top: 0;
-		z-index: 50;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 16px 32px;
-		background: rgba(10, 10, 15, 0.8);
-		backdrop-filter: blur(12px);
-		border-bottom: 1px solid var(--color-bg-border);
-	}
-
-	.logo {
-		font-family: 'Instrument Serif', Georgia, serif;
-		font-size: 20px;
-		font-weight: 600;
-		color: var(--color-text-primary);
-		text-decoration: none;
-		letter-spacing: -0.01em;
-	}
-
-	.logo-accent {
-		color: var(--color-brand);
 	}
 
 	/* ── Hero ── */
@@ -385,9 +348,9 @@
 
 	.cards-grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: 20px;
-		max-width: 1000px;
+		max-width: 680px;
 		width: 100%;
 	}
 
@@ -409,10 +372,6 @@
 		transform: translateY(-3px);
 	}
 
-	.card-wrapper-highlighted {
-		margin-top: -12px;
-	}
-
 	.savings-banner {
 		position: absolute;
 		top: -12px;
@@ -426,11 +385,6 @@
 		font-size: 11px;
 		font-weight: 700;
 		letter-spacing: 0.04em;
-	}
-
-	.savings-banner-annual {
-		background: var(--color-brand);
-		color: white;
 	}
 
 	.footnote {

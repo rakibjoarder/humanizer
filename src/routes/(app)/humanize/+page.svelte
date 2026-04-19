@@ -184,7 +184,7 @@
 			justify-content: space-between;
 			gap: 12px;
 		">
-			<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; color: var(--color-text-primary);">Humanizing requires a Pro or Agency plan.</span>
+			<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; color: var(--color-text-primary);">Humanizing requires a Pro plan.</span>
 			<a href="/pricing" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 700; color: var(--color-brand); text-decoration: none; white-space: nowrap;">Upgrade to Pro →</a>
 		</div>
 	{/if}
