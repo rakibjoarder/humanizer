@@ -21,6 +21,9 @@ export const load: LayoutLoad = async ({ parent }) => {
 		.from('subscriptions')
 		.select('cancel_at_period_end, current_period_end, status')
 		.eq('user_id', user.id)
+		.in('status', ['active', 'trialing'])
+		.order('current_period_end', { ascending: false })
+		.limit(1)
 		.maybeSingle();
 
 	return { session, user, profile: profile ?? null, subscription: subscription ?? null };

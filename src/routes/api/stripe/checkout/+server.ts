@@ -38,7 +38,19 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		);
 	}
 
-	// 3. Fetch or create Stripe customer
+	// 3. Block if user already has an active subscription
+	const { data: existingSub } = await locals.supabase
+		.from('subscriptions')
+		.select('status, cancel_at_period_end')
+		.eq('user_id', user.id)
+		.in('status', ['active', 'trialing'])
+		.maybeSingle();
+
+	if (existingSub && !existingSub.cancel_at_period_end) {
+		return json({ error: 'You already have an active subscription. Manage it from your settings.' }, { status: 400 });
+	}
+
+	// 4. Fetch or create Stripe customer
 	let profile: Awaited<ReturnType<typeof getUserProfile>>;
 	try {
 		profile = await getUserProfile(locals.supabase, user.id);
@@ -68,7 +80,7 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		}
 	}
 
-	// 4. Create checkout session
+	// 5. Create checkout session
 	const origin = url.origin;
 
 	try {
