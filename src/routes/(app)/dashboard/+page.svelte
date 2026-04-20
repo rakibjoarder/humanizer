@@ -290,8 +290,8 @@
 		<!-- Header -->
 		<div style="
 			padding: 14px 20px;
-			background: var(--color-bg-sunk);
-			border-bottom: 1px solid var(--color-divider);
+			background: var(--color-brand-muted);
+			border-bottom: 1px solid rgba(16, 185, 129, 0.3);
 			display: flex;
 			align-items: center;
 			justify-content: space-between;

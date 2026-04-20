@@ -23,13 +23,38 @@
 	const checkIcon = 'M20 6 9 17l-5-5';
 	const alertIcon = 'M12 9v4 M12 17h.01 M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z';
 
-	// ── AI signal words for diff highlighting ──────────────────────────────────
-	const AI_TELLS = new Set([
-		'rapidly','evolving','landscape,','fundamentally','Furthermore,','multifaceted',
-		'comprehensive','Moreover,','seamless','integration','empowered','stakeholders',
-		'leverage','data-driven','unprecedented','Additionally,','paradigm','revolutionized',
-		'operational','efficiency.','transformative','crucial','synergy','ingenuity','innovation.'
-	]);
+	// ── AI signal phrases for diff highlighting ─────────────────────────────────
+	const AI_TELLS = new Set<string>(); // kept for DiffText compat, unused when phrases passed
+
+	const AI_PHRASES = [
+		// Connective filler
+		'it is important to note','it is worth noting','it should be noted',
+		'it is crucial to','it is essential to','it is vital to',
+		'in conclusion','to summarize','in summary','to conclude',
+		'in other words','it goes without saying','needless to say',
+		'as mentioned earlier','as previously stated','as noted above',
+		'first and foremost','last but not least',
+		'on the other hand','at the end of the day',
+		'in today\'s world','in the modern world','in today\'s society',
+		'in today\'s fast-paced','in the digital age','in recent years',
+		'it\'s worth noting','it\'s important to','it\'s essential to',
+		// Hedging
+		'by and large','for the most part','to a certain extent',
+		'in many ways','in some ways','in a sense',
+		// Common AI adjectives / nouns
+		'multifaceted','transformative','unprecedented','paradigm shift',
+		'seamlessly','leverage','synergy','stakeholders','holistic',
+		'proactive','actionable','streamline','optimize','empower',
+		'cutting-edge','state-of-the-art','data-driven','game-changer',
+		'innovative solution','robust framework','comprehensive approach',
+		'key takeaways','moving forward','going forward',
+		'delve into','dive into','tapestry','navigate','landscape',
+		'rapidly evolving','ever-evolving','fast-paced world',
+		// Padding openers
+		'Certainly!','Absolutely!','Of course!','Great question',
+		'I hope this helps','I hope this','Feel free to',
+		'As an AI','As a language model',
+	];
 
 	// ── Signal breakdown labels ────────────────────────────────────────────────
 	const signals = [
@@ -345,54 +370,72 @@
 					</div>
 
 				{:else if result}
-					<div class="detect-result-panel animate-fade-up">
-						<div class="detect-result-gauge-col">
-							<div class="detect-gauge-scale">
-								<!-- remount gauge each run so arc/number never show stale animation vs fresh bars -->
+					{@const aiPct  = Math.min(100, Math.max(0, Math.round(result.ai_probability    * 100)))}
+					{@const humPct = Math.min(100, Math.max(0, Math.round(result.human_probability * 100)))}
+					<div class="dr-panel animate-fade-up">
+
+						<!-- ── Verdict hero ── -->
+						<div class="dr-verdict" data-verdict={result.verdict}>
+							<div class="dr-verdict-icon" data-verdict={result.verdict}>
+								{#if result.verdict === 'ai'}
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={alertIcon}/></svg>
+								{:else}
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+								{/if}
+							</div>
+							<div>
+								<p class="dr-verdict-label">Verdict</p>
+								<p class="dr-verdict-text" data-verdict={result.verdict}>{verdictLabel(result.verdict)}</p>
+							</div>
+							<div style="margin-left: auto;">
+								<ClassificationBadge classification={result.classification} />
+							</div>
+						</div>
+
+						<!-- ── Gauge + scores ── -->
+						<div class="dr-body">
+							<div class="dr-gauge-wrap">
 								{#key resultSource === 'history' && data.savedDetection ? data.savedDetection.id : detId}
 									<ScoreGauge
 										aiProbability={result.ai_probability}
 										classification={result.classification}
-										size={220}
+										size={200}
 										animate={true}
 									/>
 								{/key}
 							</div>
-							<div class="detect-result-badges">
-								<ClassificationBadge classification={result.classification} />
-								<span class="detect-verdict-pill" data-verdict={result.verdict}>
-									Verdict: {verdictLabel(result.verdict)}
-								</span>
+
+							<div class="dr-scores">
+								<!-- AI score card -->
+								<div class="dr-score-card" data-type="ai">
+									<div class="dr-score-top">
+										<span class="dr-score-dot" style="background: var(--color-ai);"></span>
+										<span class="dr-score-name">AI-generated</span>
+									</div>
+									<p class="dr-score-num" style="color: var(--color-ai);">{aiPct}<span class="dr-score-unit">%</span></p>
+									<div class="dr-score-bar-track">
+										<div class="dr-score-bar-fill" style="width:{aiPct}%; background: var(--color-ai);"></div>
+									</div>
+								</div>
+
+								<!-- Human score card -->
+								<div class="dr-score-card" data-type="human">
+									<div class="dr-score-top">
+										<span class="dr-score-dot" style="background: var(--color-human);"></span>
+										<span class="dr-score-name">Human-written</span>
+									</div>
+									<p class="dr-score-num" style="color: var(--color-human);">{humPct}<span class="dr-score-unit">%</span></p>
+									<div class="dr-score-bar-track">
+										<div class="dr-score-bar-fill" style="width:{humPct}%; background: var(--color-human);"></div>
+									</div>
+								</div>
 							</div>
 						</div>
 
-						<div class="detect-result-meta-col">
-							<p class="detect-meta-heading">Confidence</p>
-							<div class="detect-prob-rows">
-								{#each [
-									{ label: 'AI score', value: result.ai_probability, color: 'var(--color-ai)' },
-									{ label: 'Human score', value: result.human_probability, color: 'var(--color-human)' }
-								] as row (row.label)}
-									{@const pct = Math.min(100, Math.max(0, Math.round(row.value * 100)))}
-									<div class="detect-prob-row">
-										<div class="detect-prob-row-head">
-											<span class="detect-prob-label">{row.label}</span>
-											<span class="detect-prob-value" style="color: {row.color};">{pct}%</span>
-										</div>
-										<div class="detect-prob-track">
-											<div
-												class="detect-prob-fill"
-												style="width: {pct}%; background: {row.color};"
-											></div>
-										</div>
-									</div>
-								{/each}
-							</div>
-
-							<div class="detect-result-actions">
-								<Button variant="secondary" size="sm" icon={wandIcon} onclick={handleHumanize}>Humanize this text</Button>
-								<Button variant="ghost" size="sm" icon={copied ? checkIcon : copyIcon} onclick={handleCopyReport}>{copied ? 'Copied!' : 'Copy report'}</Button>
-							</div>
+						<!-- ── Actions ── -->
+						<div class="dr-actions">
+							<Button variant="primary" size="sm" icon={wandIcon} onclick={handleHumanize}>Humanize this text</Button>
+							<Button variant="ghost" size="sm" icon={copied ? checkIcon : copyIcon} onclick={handleCopyReport}>{copied ? 'Copied!' : 'Copy report'}</Button>
 						</div>
 					</div>
 
@@ -417,7 +460,7 @@
 			box-shadow: inset 0 0 0 1px var(--color-bg-border);
 			overflow: hidden;
 		" class="animate-fade-up">
-			<div style="padding: 14px 20px; background: var(--color-bg-sunk); border-bottom: 1px solid var(--color-divider);">
+			<div style="padding: 14px 20px; background: var(--color-brand-muted); border-bottom: 1px solid rgba(16, 185, 129, 0.3);">
 				<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">Signal breakdown</span>
 			</div>
 			<div class="detail-grid">
@@ -441,7 +484,7 @@
 				<div class="detail-grid-passages">
 					<p class="detail-passages-title">Flagged phrases</p>
 					<div class="detail-passages-scroll">
-						<DiffText text={inputText.slice(0, 480)} flags={AI_TELLS} color="var(--color-ai)"/>
+						<DiffText text={inputText} flags={AI_TELLS} phrases={AI_PHRASES} color="var(--color-ai)"/>
 					</div>
 				</div>
 			</div>
@@ -573,179 +616,153 @@
 		font-weight: 600;
 	}
 
-	/* Result: gauge + meta — stack narrow, row when space allows */
-	.detect-result-panel {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: clamp(20px, 4vw, 28px);
-		align-items: start;
-		justify-items: center;
-		width: 100%;
-		min-width: 0;
-	}
-
-	@media (min-width: 560px) {
-		.detect-result-panel {
-			grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
-			justify-items: stretch;
-			align-items: start;
-			column-gap: clamp(16px, 3vw, 28px);
-		}
-
-		.detect-result-gauge-col {
-			justify-self: stretch;
-			max-width: 280px;
-			width: 100%;
-		}
-	}
-
-	.detect-result-gauge-col {
+	/* ── Redesigned result panel ─────────────────────────────────── */
+	.dr-panel {
 		display: flex;
 		flex-direction: column;
+		gap: 20px;
+		width: 100%;
+	}
+
+	/* Verdict hero */
+	.dr-verdict {
+		display: flex;
 		align-items: center;
 		gap: 14px;
-		width: 100%;
-		min-width: 0;
-	}
-
-	.detect-gauge-scale {
-		width: 100%;
-		display: flex;
-		justify-content: center;
-		line-height: 0;
-	}
-
-	.detect-gauge-scale :global(svg) {
-		width: min(100%, 260px);
-		height: auto;
-		max-width: 100%;
-	}
-
-	.detect-result-badges {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 10px;
-		width: 100%;
-		max-width: 320px;
-	}
-
-	.detect-verdict-pill {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--color-text-secondary);
+		padding: 16px 18px;
+		border-radius: 12px;
 		background: var(--color-bg-elevated);
-		padding: 6px 12px;
-		border-radius: 8px;
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		text-align: center;
-		width: fit-content;
-		max-width: 100%;
 	}
-
-	.detect-verdict-pill[data-verdict='ai'] {
-		color: var(--color-ai);
-		box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.35);
+	.dr-verdict[data-verdict='ai'] {
 		background: var(--color-ai-muted);
+		box-shadow: inset 0 0 0 1px rgba(239,68,68,0.3);
 	}
-
-	.detect-verdict-pill[data-verdict='human'] {
-		color: var(--color-human);
-		box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.35);
+	.dr-verdict[data-verdict='human'] {
 		background: var(--color-human-muted);
+		box-shadow: inset 0 0 0 1px rgba(34,197,94,0.3);
 	}
-
-	.detect-result-meta-col {
-		width: 100%;
-		min-width: 0;
+	.dr-verdict-icon {
+		width: 40px;
+		height: 40px;
+		border-radius: 10px;
 		display: flex;
-		flex-direction: column;
-		gap: 14px;
-	}
-
-	.detect-meta-heading {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 11px;
-		font-weight: 600;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		background: var(--color-bg-surface);
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		color: var(--color-text-muted);
-		letter-spacing: 0.1em;
+	}
+	.dr-verdict-icon[data-verdict='ai']    { color: var(--color-ai);    background: rgba(239,68,68,0.12);  box-shadow: none; }
+	.dr-verdict-icon[data-verdict='human'] { color: var(--color-human); background: rgba(34,197,94,0.12);  box-shadow: none; }
+	.dr-verdict-label {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
+		color: var(--color-text-muted);
+		margin: 0 0 2px;
+	}
+	.dr-verdict-text {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--color-text-primary);
 		margin: 0;
 	}
+	.dr-verdict-text[data-verdict='ai']    { color: var(--color-ai); }
+	.dr-verdict-text[data-verdict='human'] { color: var(--color-human); }
 
-	.detect-prob-rows {
+	/* Gauge + score cards row */
+	.dr-body {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 16px;
+		align-items: center;
+	}
+	@media (min-width: 480px) {
+		.dr-body {
+			flex-direction: row;
+			align-items: flex-start;
+		}
+	}
+	.dr-gauge-wrap {
+		flex-shrink: 0;
+		display: flex;
+		justify-content: center;
+	}
+	.dr-gauge-wrap :global(svg) {
+		width: min(180px, 48vw);
+		height: auto;
+	}
+	.dr-scores {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
 		width: 100%;
-	}
-
-	.detect-prob-row {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
 		min-width: 0;
 	}
-
-	.detect-prob-row-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 12px;
-		min-width: 0;
+	.dr-score-card {
+		padding: 14px 16px;
+		border-radius: 10px;
+		background: var(--color-bg-elevated);
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 	}
-
-	.detect-prob-label {
+	.dr-score-top {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 6px;
+	}
+	.dr-score-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+	.dr-score-name {
 		font-family: 'Space Grotesk', system-ui, sans-serif;
 		font-size: 11px;
 		font-weight: 600;
-		color: var(--color-text-muted);
-		letter-spacing: 0.06em;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		flex-shrink: 0;
+		color: var(--color-text-muted);
 	}
-
-	.detect-prob-value {
+	.dr-score-num {
 		font-family: 'JetBrains Mono', monospace;
-		font-size: 14px;
+		font-size: 32px;
 		font-weight: 700;
-		flex-shrink: 0;
+		line-height: 1;
+		margin: 0 0 10px;
 	}
-
-	.detect-prob-track {
-		height: 8px;
-		background: var(--color-bg-elevated);
+	.dr-score-unit {
+		font-size: 16px;
+		opacity: 0.7;
+	}
+	.dr-score-bar-track {
+		height: 6px;
 		border-radius: 99px;
-		overflow: hidden;
+		background: var(--color-bg-surface);
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		overflow: hidden;
 	}
-
-	.detect-prob-fill {
+	.dr-score-bar-fill {
 		height: 100%;
 		border-radius: 99px;
 		transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
-		min-width: 0;
+		opacity: 0.85;
 	}
 
-	.detect-result-actions {
+	/* Actions */
+	.dr-actions {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		width: 100%;
-		margin-top: 4px;
-	}
-
-	@media (max-width: 559px) {
-		.detect-result-actions {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.detect-result-actions :global(button) {
-			width: 100%;
-			justify-content: center;
-		}
+		padding-top: 4px;
+		border-top: 1px solid var(--color-bg-border);
 	}
 
 	.detail-grid {
@@ -779,7 +796,7 @@
 		border-radius: 10px;
 		padding: 14px 16px;
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		max-height: min(220px, 40vh);
+		max-height: min(480px, 60vh);
 		overflow-y: auto;
 		overflow-x: hidden;
 		-webkit-overflow-scrolling: touch;

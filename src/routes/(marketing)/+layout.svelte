@@ -72,7 +72,6 @@
 	);
 
 	/** Yearly Pro ≈ $99 → monthly equivalent for promo strip */
-	const yearlyMo = (99 / 12).toFixed(2);
 
 	/** Home promo: guests + Free only */
 	const showHomePromoBanner = $derived(
@@ -304,8 +303,8 @@
 		class="marketing-home-promo-banner"
 		style="
 			width: 100%;
-			background: var(--color-bg-sunk);
-			border-bottom: 1px solid var(--color-bg-border);
+			background: var(--color-brand-muted);
+			border-bottom: 1px solid rgba(16, 185, 129, 0.3);
 			padding: 12px 24px;
 			box-sizing: border-box;
 		"
@@ -337,7 +336,7 @@
 					viewBox="0 0 24 24"
 					fill="currentColor"
 					aria-hidden="true"
-					style="flex-shrink: 0; color: var(--color-text-muted); transform: rotate(45deg);"
+					style="flex-shrink: 0; color: var(--color-brand); transform: rotate(45deg);"
 				>
 					<rect x="9" y="9" width="6" height="6" rx="0.5" />
 				</svg>
@@ -350,7 +349,7 @@
 						color: var(--color-text-secondary);
 					"
 				>
-					Enjoy unlimited access starting at {'$'}{yearlyMo}/month. Cancel anytime.
+					Enjoy unlimited access starting at $9.99/month. Cancel anytime.
 				</p>
 			</div>
 			<button
@@ -362,19 +361,19 @@
 					font-weight: 600;
 					padding: 7px 16px;
 					border-radius: 999px;
-					border: 1px solid var(--color-bg-border);
-					background: var(--color-bg-surface);
-					color: var(--color-text-primary);
+					border: 1px solid var(--color-brand);
+					background: var(--color-brand);
+					color: #ffffff;
 					cursor: pointer;
 					flex-shrink: 0;
 					transition: background 150ms, border-color 150ms;
-					box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+					box-shadow: 0 1px 0 rgba(255,255,255,0.08);
 				"
 				onmouseenter={(e) => {
-					(e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-elevated)';
+					(e.currentTarget as HTMLButtonElement).style.background = 'var(--color-brand-hover)';
 				}}
 				onmouseleave={(e) => {
-					(e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-surface)';
+					(e.currentTarget as HTMLButtonElement).style.background = 'var(--color-brand)';
 				}}
 			>
 				Explore Premium
@@ -450,9 +449,8 @@
 
 <style>
 	.marketing-footer {
-		/* Elevated (not sunk) so the band reads clearly against page base in dark + light */
-		background: var(--color-bg-elevated);
-		border-top: 1px solid var(--color-bg-border-hi);
+		background: var(--color-brand-muted);
+		border-top: 1px solid rgba(16, 185, 129, 0.3);
 		padding: 48px 24px 28px;
 	}
 
@@ -511,7 +509,7 @@
 		max-width: 1200px;
 		margin: 40px auto 0;
 		padding-top: 24px;
-		border-top: 1px solid var(--color-bg-border-hi);
+		border-top: 1px solid rgba(16, 185, 129, 0.2);
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;

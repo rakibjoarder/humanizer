@@ -72,8 +72,8 @@
 	);
 
 	const yearlySavings = $derived(
-		billingCycle === 'yearly' && data.monthlyPrice > 0
-			? Math.max(0, data.monthlyPrice * 12 - data.yearlyPrice) || null
+		billingCycle === 'yearly' && data.monthlyPrice > 0 && data.monthlyPrice * 12 - data.yearlyPrice > 0
+			? (data.monthlyPrice * 12 - data.yearlyPrice).toFixed(2)
 			: null
 	);
 </script>

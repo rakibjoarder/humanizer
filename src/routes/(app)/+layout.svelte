@@ -107,95 +107,55 @@
 			{/each}
 		</div>
 
-		<!-- Right side: min-width keeps link column from shifting when CTAs differ in width -->
-		<div
-			style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-left: auto; flex-shrink: 0; min-width: 200px;"
-			class="app-nav-right"
-		>
+		<!-- Right rail -->
+		<div class="app-nav-right">
 			<ThemeToggle />
 			{#if user}
-				<!-- Plan badge -->
-				<span style="
-					font-family: 'JetBrains Mono', monospace;
-					font-size: 10px;
-					font-weight: 700;
-					letter-spacing: 0.1em;
-					text-transform: uppercase;
-					color: {planColor};
-					background: {planBg};
-					padding: 3px 8px;
-					border-radius: 5px;
-					box-shadow: inset 0 0 0 1px {planBorder};
-				">{planLabel}</span>
-
+				<span class="app-plan-badge" style="color:{planColor};background:{planBg};box-shadow:inset 0 0 0 1px {planBorder};">{planLabel}</span>
 				<NavUserMenu {supabase} {user} {profile} />
 			{:else}
-				<Button variant="ghost" size="sm" onclick={() => openLoginModal()}>Sign in</Button>
-				<Button variant="primary" size="sm" onclick={() => goto('/register')}>Get started</Button>
+				<span class="app-nav-auth-desktop">
+					<Button variant="ghost" size="sm" onclick={() => openLoginModal()}>Sign in</Button>
+					<Button variant="primary" size="sm" onclick={() => goto('/register')}>Get started</Button>
+				</span>
 			{/if}
 
-			<!-- Hamburger (mobile) -->
+			<!-- Hamburger -->
 			<button
 				class="app-hamburger"
 				onclick={() => (mobileOpen = !mobileOpen)}
 				aria-label="Toggle menu"
 				aria-expanded={mobileOpen}
-				style="
-					display: none;
-					flex-direction: column;
-					gap: 5px;
-					background: none;
-					border: none;
-					padding: 4px;
-					cursor: pointer;
-				"
 			>
-				<span style="display: block; width: 20px; height: 2px; background: var(--color-text-primary); border-radius: 2px; transition: transform 200ms, opacity 200ms; transform: {mobileOpen ? 'translateY(7px) rotate(45deg)' : 'none'};"></span>
-				<span style="display: block; width: 20px; height: 2px; background: var(--color-text-primary); border-radius: 2px; opacity: {mobileOpen ? 0 : 1}; transition: opacity 200ms;"></span>
-				<span style="display: block; width: 20px; height: 2px; background: var(--color-text-primary); border-radius: 2px; transition: transform 200ms; transform: {mobileOpen ? 'translateY(-7px) rotate(-45deg)' : 'none'};"></span>
+				<span class="app-ham-bar" style="transform:{mobileOpen ? 'translateY(7px) rotate(45deg)' : 'none'};"></span>
+				<span class="app-ham-bar" style="opacity:{mobileOpen ? 0 : 1};"></span>
+				<span class="app-ham-bar" style="transform:{mobileOpen ? 'translateY(-7px) rotate(-45deg)' : 'none'};"></span>
 			</button>
 		</div>
 	</nav>
 
-	<!-- Mobile menu -->
+	<!-- Mobile drawer -->
 	{#if mobileOpen}
-		<div style="
-			background: var(--color-bg-surface);
-			border-top: 1px solid var(--color-bg-border);
-			padding: 12px 16px 20px;
-		" class="app-mobile-menu">
+		<div class="app-mobile-menu">
 			{#each navLinks as link}
 				{@const active = isActive(link.href)}
 				<a
 					href={link.href}
 					onclick={() => (mobileOpen = false)}
-					style="
-						display: block;
-						padding: 10px 12px;
-						border-radius: 8px;
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 14px;
-						font-weight: {active ? '600' : '500'};
-						color: {active ? 'var(--color-brand)' : 'var(--color-text-secondary)'};
-						background: {active ? 'var(--color-brand-muted)' : 'transparent'};
-						text-decoration: none;
-						margin-bottom: 2px;
-					"
+					class="app-mobile-link"
+					style="font-weight:{active ? '600' : '500'};color:{active ? 'var(--color-brand)' : 'var(--color-text-secondary)'};background:{active ? 'var(--color-brand-muted)' : 'transparent'};"
 				>{link.label}</a>
 			{/each}
-			{#if user}
-				<div style="
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-					margin-top: 16px;
-					padding-top: 16px;
-					border-top: 1px solid var(--color-bg-border);
-				">
-					<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">{user.email}</span>
-					<button onclick={signOut} style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-ai); background: none; border: none; cursor: pointer; font-weight: 600;">Sign out</button>
-				</div>
-			{/if}
+
+			<div class="app-mobile-footer">
+				{#if user}
+					<span class="app-mobile-email">{user.email}</span>
+					<button onclick={signOut} class="app-mobile-signout">Sign out</button>
+				{:else}
+					<Button variant="ghost" size="md" onclick={() => { mobileOpen = false; openLoginModal(); }}>Sign in</Button>
+					<Button variant="primary" size="md" onclick={() => { mobileOpen = false; goto('/register'); }}>Get started</Button>
+				{/if}
+			</div>
 		</div>
 	{/if}
 </header>
@@ -206,9 +166,93 @@
 </main>
 
 <style>
+	.app-nav-right {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 10px;
+		margin-left: auto;
+		flex-shrink: 0;
+		min-width: 200px;
+	}
+
+	.app-plan-badge {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		padding: 3px 8px;
+		border-radius: 5px;
+	}
+
+	.app-hamburger {
+		display: none;
+		flex-direction: column;
+		gap: 5px;
+		background: none;
+		border: none;
+		padding: 4px;
+		cursor: pointer;
+	}
+
+	.app-ham-bar {
+		display: block;
+		width: 20px;
+		height: 2px;
+		background: var(--color-text-primary);
+		border-radius: 2px;
+		transition: transform 200ms, opacity 200ms;
+	}
+
+	.app-mobile-menu {
+		background: var(--color-bg-surface);
+		border-top: 1px solid var(--color-bg-border);
+		padding: 12px 16px 20px;
+	}
+
+	.app-mobile-link {
+		display: block;
+		padding: 10px 12px;
+		border-radius: 8px;
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 14px;
+		text-decoration: none;
+		margin-bottom: 2px;
+	}
+
+	.app-mobile-footer {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 16px;
+		padding-top: 16px;
+		border-top: 1px solid var(--color-bg-border);
+	}
+
+	.app-mobile-email {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 13px;
+		color: var(--color-text-muted);
+	}
+
+	.app-mobile-signout {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 13px;
+		color: var(--color-ai);
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-weight: 600;
+		padding: 0;
+		text-align: left;
+	}
+
 	@media (max-width: 768px) {
-		.app-nav-links { display: none !important; }
-		.app-nav-right { min-width: auto; }
-		.app-hamburger { display: flex !important; }
+		.app-nav-links        { display: none !important; }
+		.app-nav-right        { min-width: auto; gap: 8px; }
+		.app-nav-auth-desktop { display: none; }
+		.app-plan-badge       { display: none; }
+		.app-hamburger        { display: flex; }
 	}
 </style>

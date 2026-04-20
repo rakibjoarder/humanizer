@@ -15,8 +15,8 @@
 	align-items: center;
 	justify-content: space-between;
 	padding: 14px 20px;
-	border-bottom: 1px solid var(--color-divider);
-	background: var(--color-bg-sunk);
+	border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+	background: var(--color-brand-muted);
 	border-radius: 14px 14px 0 0;
 ">
 	<div style="display: flex; align-items: center; gap: 10px;">

@@ -387,8 +387,8 @@
 						display: flex;
 						flex-direction: column;
 						gap: 10px;
-						border-top: 1px solid var(--color-divider);
-						background: var(--color-bg-sunk);
+						border-top: 1px solid rgba(16, 185, 129, 0.3);
+						background: var(--color-brand-muted);
 					"
 				>
 					{#if !data.user}
@@ -996,8 +996,8 @@
 ════════════════════════════════════════════════════════════════════════════ -->
 <section
 	style="
-		background: var(--color-bg-sunk);
-		border-top: 1px solid var(--color-bg-border);
+		background: var(--color-brand-muted);
+		border-top: 1px solid rgba(16, 185, 129, 0.3);
 		padding: 56px 24px 64px;
 	"
 >

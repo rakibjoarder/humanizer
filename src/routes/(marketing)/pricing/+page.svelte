@@ -255,16 +255,6 @@
 		</div>
 	</section>
 
-	<!-- ── Footer ── -->
-	<footer class="page-footer">
-		<span class="footer-copy">
-			&copy; 2026 HumanizeAIWrite. All rights reserved.
-		</span>
-		<div class="footer-links">
-			<a href="/terms" class="footer-link">Terms</a>
-			<a href="/privacy" class="footer-link">Privacy</a>
-		</div>
-	</footer>
 </div>
 
 <style>
@@ -713,38 +703,4 @@
 		background: var(--color-brand-hover);
 	}
 
-	/* ── Footer ── */
-	.page-footer {
-		position: relative;
-		z-index: 1;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 24px 32px;
-		border-top: 1px solid var(--color-bg-border);
-		background: var(--color-bg-base);
-	}
-
-	.footer-copy {
-		font-family: 'DM Sans', system-ui, sans-serif;
-		font-size: 13px;
-		color: var(--color-text-muted);
-	}
-
-	.footer-links {
-		display: flex;
-		gap: 24px;
-	}
-
-	.footer-link {
-		font-family: 'DM Sans', system-ui, sans-serif;
-		font-size: 13px;
-		color: var(--color-text-muted);
-		text-decoration: none;
-		transition: color 150ms ease;
-	}
-
-	.footer-link:hover {
-		color: var(--color-text-secondary);
-	}
 </style>
