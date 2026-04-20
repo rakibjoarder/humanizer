@@ -136,14 +136,19 @@ async function handleSubscriptionUpdated(
 
 		supabase
 			.from('subscriptions')
-			.update({
-				plan,
-				status: subscription.status,
-				cancel_at_period_end: subscription.cancel_at_period_end,
-				current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-				current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
-			})
-			.eq('stripe_subscription_id', subscription.id)
+			.upsert(
+				{
+					user_id: profileData.id,
+					stripe_subscription_id: subscription.id,
+					stripe_customer_id: customerId,
+					plan,
+					status: subscription.status,
+					cancel_at_period_end: subscription.cancel_at_period_end,
+					current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+					current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
+				},
+				{ onConflict: 'stripe_subscription_id' }
+			)
 	]);
 }
 
