@@ -309,11 +309,11 @@
 		</div>
 
 		{#if profile?.plan === 'pro'}
-			<!-- Token balance -->
+			<!-- Credits balance -->
 			<div class="mb-4">
 				<div class="flex items-center justify-between mb-1.5">
 					<span class="text-sm font-medium" style="color: var(--color-text-secondary)">
-						Tokens remaining
+						Credits remaining
 					</span>
 					<span
 						class="text-sm font-semibold"
@@ -329,15 +329,15 @@
 					></div>
 				</div>
 				<p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-					Resets monthly with your Pro plan. 1 token = 1 humanization.
+					Resets monthly with your Pro plan. 1 credit = 1 humanization.
 				</p>
 			</div>
 
-			<!-- Token packs -->
+			<!-- Credit packs -->
 			{#if tokens <= 20}
 				<div>
 					<p class="text-xs font-medium mb-2" style="color: var(--color-text-secondary)">
-						{tokens === 0 ? 'Out of tokens — buy more to continue humanizing:' : 'Running low — top up your tokens:'}
+						{tokens === 0 ? 'Out of credits — buy more to continue humanizing:' : 'Running low — top up your credits:'}
 					</p>
 					<div class="grid grid-cols-3 gap-2">
 						{#each tokenPacks as pack}
@@ -350,7 +350,7 @@
 								<span class="text-sm font-bold" style="color: var(--color-text-primary)">
 									{#if tokenBuyLoading === pack.priceId}…{:else}+{pack.tokens}{/if}
 								</span>
-								<span class="text-[10px] mt-0.5" style="color: var(--color-text-muted)">tokens</span>
+								<span class="text-[10px] mt-0.5" style="color: var(--color-text-muted)">credits</span>
 								<span class="text-xs font-semibold mt-1" style="color: var(--color-brand)">${pack.price}</span>
 							</button>
 						{/each}

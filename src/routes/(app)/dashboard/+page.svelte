@@ -30,6 +30,7 @@
 		data: {
 			profile: Profile;
 			detectionsLimit: number;
+			credits: number;
 			totalDetections: number;
 			totalHumanizations: number;
 			wordsAnalyzed: number;
@@ -68,12 +69,18 @@
 	const showUpgradedBanner = $derived(page.url.searchParams.get('upgraded') === 'true');
 
 	// ── Stat boxes ─────────────────────────────────────────────────────────────
+	const creditsSub = $derived(
+		data.credits <= 10 ? 'low — top up in settings' : 'resets monthly'
+	);
+
 	const statBoxes = $derived([
 		{ label: 'Total detections',    value: data.totalDetections.toLocaleString(),    sub: 'all time' },
 		{ label: 'Humanizations',       value: data.totalHumanizations.toLocaleString(), sub: 'all time' },
 		{ label: 'Words processed',     value: formatWords(data.wordsAnalyzed),          sub: 'all time' },
 		{ label: 'Avg. AI probability', value: data.avgAiProbability !== null ? `${data.avgAiProbability}%` : '—', sub: 'across detections' },
-		{ label: 'Free detections used', value: data.detectionsLimit === -1 ? '∞' : `${data.totalDetections} / ${data.detectionsLimit}`, sub: planLabel },
+		data.profile.plan === 'pro'
+			? { label: 'Credits remaining', value: String(data.credits), sub: creditsSub }
+			: { label: 'Free detections used', value: `${data.totalDetections} / ${data.detectionsLimit}`, sub: planLabel },
 	]);
 
 	function formatWords(n: number): string {

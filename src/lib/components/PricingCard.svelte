@@ -46,17 +46,18 @@
 		},
 		pro: {
 			name: 'Pro',
-			monthlyPrice: 12,
+			monthlyPrice: 9.99,
 			yearlyPrice: 99,
 			yearlyMonthlyEquiv: 8,
-			wordsPerDay: 'Unlimited',
+			wordsPerDay: '100 credits/mo',
 			cta: 'Start Pro',
 			badge: 'Most Popular',
 			features: [
 				{ text: 'Unlimited detections', available: true },
 				{ text: 'Unlimited words per scan', available: true },
 				{ text: 'AI Detection', available: true },
-				{ text: 'Humanizer', available: true },
+				{ text: '100 humanization credits/month', available: true },
+				{ text: 'Buy extra credits anytime', available: true },
 				{ text: 'History & saved results', available: true },
 				{ text: 'Priority support', available: true }
 			]

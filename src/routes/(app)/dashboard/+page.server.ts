@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { getUserProfile } from '$lib/server/auth';
 import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
-import { stripe } from '$lib/server/stripe';
+import { stripe, PRO_TOKENS_PER_MONTH } from '$lib/server/stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 				await adminClient
 					.from('profiles')
-					.update({ plan: 'pro', stripe_customer_id: checkoutSession.customer as string })
+					.update({ plan: 'pro', stripe_customer_id: checkoutSession.customer as string, tokens: PRO_TOKENS_PER_MONTH })
 					.eq('id', user.id);
 
 				const subscriptionId =
@@ -155,6 +155,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		profile,
 		detectionsLimit,
+		credits: profile.tokens ?? 0,
 		totalDetections,
 		totalHumanizations,
 		wordsAnalyzed,

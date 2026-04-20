@@ -70,6 +70,10 @@
 			a: 'Once your 3 free detections are used, detection is paused until you upgrade. There is no daily reset — upgrade to Pro for unlimited access.'
 		},
 		{
+			q: 'What are humanization credits?',
+			a: 'Each Pro plan includes 100 humanization credits per month. 1 credit = 1 humanization. Credits reset on your monthly billing date. Need more? Buy credit packs anytime from your settings.'
+		},
+		{
 			q: 'Is my text stored or used to train models?',
 			a: 'No. Text submitted for detection or humanization is processed in memory and discarded immediately. We never store or train on your content.'
 		},

@@ -366,10 +366,10 @@
 		>
 			<div class="text-3xl mb-3">🪙</div>
 			<h3 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary)">
-				Out of tokens
+				Out of credits
 			</h3>
 			<p class="text-sm mb-5" style="color: var(--color-text-secondary)">
-				You've used all 100 tokens for this month. Buy more to keep humanizing, or wait until your plan renews.
+				You've used all 100 credits for this month. Buy more to keep humanizing, or wait until your plan renews.
 			</p>
 			<div class="flex gap-3">
 				<button
