@@ -1,17 +1,17 @@
 import { dev } from '$app/environment';
-import { UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN } from '$env/static/private';
 import { Redis } from '@upstash/redis';
+import { upstashRedisCredentials } from '$lib/server/upstashRedis';
 
 const COOKIE = 'hai_demo_detect';
 const REDIS_PREFIX = 'demo:detect:ip:';
 
-const redisConfigured =
-	UPSTASH_REDIS_REST_URL &&
-	!UPSTASH_REDIS_REST_URL.includes('placeholder') &&
-	UPSTASH_REDIS_REST_TOKEN &&
-	!UPSTASH_REDIS_REST_TOKEN.includes('placeholder');
+function redisFromEnv(): Redis | null {
+	const creds = upstashRedisCredentials();
+	if (!creds) return null;
+	return new Redis(creds);
+}
 
-const redis = redisConfigured ? new Redis({ url: UPSTASH_REDIS_REST_URL, token: UPSTASH_REDIS_REST_TOKEN }) : null;
+const redis = redisFromEnv();
 
 function parseDemoCookie(cookieHeader: string | null): boolean {
 	if (!cookieHeader) return false;

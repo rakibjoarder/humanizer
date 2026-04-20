@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
-import { UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN } from '$env/static/private';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { upstashRedisCredentials } from '$lib/server/upstashRedis';
 
 export interface RateLimitResult {
 	allowed: boolean;
@@ -11,21 +11,20 @@ export interface RateLimitResult {
 
 const PASS_THROUGH: RateLimitResult = { allowed: true, remaining: 999, reset: 0 };
 
-const isConfigured =
-	UPSTASH_REDIS_REST_URL &&
-	!UPSTASH_REDIS_REST_URL.includes('placeholder') &&
-	UPSTASH_REDIS_REST_TOKEN &&
-	!UPSTASH_REDIS_REST_TOKEN.includes('placeholder');
+const upstashCreds = upstashRedisCredentials();
+const isConfigured = upstashCreds != null;
 
 if (!isConfigured && !dev) {
-	console.error('[rateLimit] WARNING: Rate limiting is DISABLED. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable it.');
+	console.error(
+		'[rateLimit] WARNING: Rate limiting is DISABLED. Set Upstash REST URL + token (e.g. UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN, or HTTPS REDIS_URL + REDIS_TOKEN).'
+	);
 }
 
 let detectLimiter: Ratelimit | null = null;
 let humanizeLimiter: Ratelimit | null = null;
 
-if (isConfigured) {
-	const redis = new Redis({ url: UPSTASH_REDIS_REST_URL, token: UPSTASH_REDIS_REST_TOKEN });
+if (upstashCreds) {
+	const redis = new Redis(upstashCreds);
 	detectLimiter = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(20, '1 m'), prefix: 'rl:detect' });
 	humanizeLimiter = new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, '1 m'), prefix: 'rl:humanize' });
 }
