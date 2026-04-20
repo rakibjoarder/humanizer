@@ -23,7 +23,7 @@
 		{ label: 'Home', href: '/' },
 		{ label: 'Detect', href: '/detect' },
 		{ label: 'Humanize', href: '/humanize' },
-		{ label: 'Dashboard', href: '/dashboard' },
+		{ label: 'Blog', href: '/blog' },
 		{ label: 'Pricing', href: '/pricing' }
 	];
 
@@ -423,6 +423,16 @@
 		</div>
 
 		<div class="marketing-footer-col">
+			<h3 class="marketing-footer-heading">Resources</h3>
+			<nav class="marketing-footer-nav" aria-label="Resources">
+				<a href="/blog">Blog</a>
+				<a href="/blog/how-to-bypass-gptzero">Bypass GPTZero</a>
+				<a href="/blog/does-turnitin-detect-chatgpt">Turnitin & ChatGPT</a>
+				<a href="/blog/make-ai-text-undetectable">Undetectable AI Text</a>
+			</nav>
+		</div>
+
+		<div class="marketing-footer-col">
 			<h3 class="marketing-footer-heading">Legal</h3>
 			<nav class="marketing-footer-nav" aria-label="Legal">
 				<a href="/terms">Terms of Service</a>
@@ -449,7 +459,7 @@
 		max-width: 1200px;
 		margin: 0 auto;
 		display: grid;
-		grid-template-columns: 1.4fr repeat(3, 1fr);
+		grid-template-columns: 1.4fr repeat(4, 1fr);
 		gap: 32px 40px;
 		align-items: start;
 	}
