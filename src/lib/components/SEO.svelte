@@ -12,7 +12,7 @@
 
 	const SITE_NAME = 'HumanizeAIWrite';
 	const SITE_URL = 'https://humanizeaiwrite.com';
-	const DEFAULT_OG = `https://www.humanizeaiwrite.com/og-default.svg`;
+	const DEFAULT_OG = `https://www.humanizeaiwrite.com/og-default.png`;
 	const DEFAULT_DESCRIPTION =
 		'Instantly humanize AI-generated text. Bypass GPTZero, Turnitin, and other AI detectors. Free to try — no account needed.';
 
@@ -49,6 +49,7 @@
 	<meta property="og:description" content={description} />
 	<meta property="og:url" content={canonicalUrl} />
 	<meta property="og:image" content={ogImage} />
+	<meta property="og:image:type" content="image/png" />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta property="og:locale" content="en_US" />
