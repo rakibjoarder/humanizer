@@ -12,7 +12,8 @@
 
 	const SITE_NAME = 'HumanizeAIWrite';
 	const SITE_URL = 'https://humanizeaiwrite.com';
-	const DEFAULT_OG = `${SITE_URL}/og-default.png`;
+	// Vercel image optimization converts SVG → PNG/WebP automatically, making it compatible with Twitter/X
+	const DEFAULT_OG = `${SITE_URL}/_vercel/image?url=%2Fog-default.svg&w=1200&q=100`;
 	const DEFAULT_DESCRIPTION =
 		'Instantly humanize AI-generated text. Bypass GPTZero, Turnitin, and other AI detectors. Free to try — no account needed.';
 
