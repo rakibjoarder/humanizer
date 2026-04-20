@@ -17,7 +17,7 @@
 		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
-					{#each ['Date', 'User', 'Words'] as h}
+					{#each ['Date', 'User', 'Words', ''] as h}
 						<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;">{h}</th>
 					{/each}
 				</tr>
@@ -31,9 +31,12 @@
 							<a href="/admin/users/{h.user_id}" style="color: var(--color-brand); text-decoration: none;">{profile?.email ?? h.user_id}</a>
 						</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">{h.word_count ?? '—'}</td>
+						<td style="padding: 10px 14px;">
+							<a href="/admin/humanizations/{h.id}" style="font-size: 12px; color: var(--color-brand); text-decoration: none; font-weight: 600; white-space: nowrap;">View →</a>
+						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="3" style="padding: 32px; text-align: center; color: var(--color-text-muted);">No humanizations found.</td></tr>
+					<tr><td colspan="4" style="padding: 32px; text-align: center; color: var(--color-text-muted);">No humanizations found.</td></tr>
 				{/each}
 			</tbody>
 		</table>
