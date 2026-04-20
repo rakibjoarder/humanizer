@@ -1,8 +1,13 @@
 /** Shared product limits (safe to import from client or server). */
 
-export const FREE_DETECTION_LIFETIME = 2;
-/** Max words per detection scan for anonymous preview + logged-in Free tier */
-export const FREE_DETECTION_MAX_WORDS_PER_SCAN = 500;
+/** Max words per detection scan for anonymous preview + free users */
+export const FREE_DETECTION_MAX_WORDS_PER_SCAN = 150;
+
+/** Words allocated to newly registered free accounts */
+export const FREE_USER_WORDS = 150;
+
+/** Hard input limit (words) for both detection and humanization */
+export const MAX_INPUT_WORDS = 3000;
 
 export function countWords(text: string): number {
 	const t = text.trim();

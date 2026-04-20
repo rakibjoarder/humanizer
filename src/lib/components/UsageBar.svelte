@@ -7,7 +7,7 @@
 
 	let { used, limit, plan }: Props = $props();
 
-	const isUnlimited = $derived(plan === 'pro');
+	const isUnlimited = $derived(false);
 
 	const ratio = $derived(isUnlimited ? 0 : Math.min(used / limit, 1));
 
@@ -68,7 +68,7 @@
 
 	{#if !isUnlimited && ratio >= 1}
 		<p class="over-limit-msg" role="alert">
-			Daily limit reached. Upgrade to Pro for unlimited usage.
+			Daily limit reached. <a href="/settings" style="color:inherit;font-weight:600;">Top up or upgrade</a> for more words.
 		</p>
 	{:else if !isUnlimited && ratio >= 0.8}
 		<p class="near-limit-msg">

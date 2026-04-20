@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe } from '$lib/server/stripe';
+import { stripe, WORDS_PER_PLAN } from '$lib/server/stripe';
 import { getUserProfile } from '$lib/server/auth';
 
 // ── POST /api/stripe/checkout ─────────────────────────────────────────────────
@@ -41,13 +41,31 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 	// 3. Block if user already has an active subscription
 	const { data: existingSub } = await locals.supabase
 		.from('subscriptions')
-		.select('status, cancel_at_period_end')
+		.select('status, cancel_at_period_end, plan')
 		.eq('user_id', user.id)
 		.in('status', ['active', 'trialing'])
 		.maybeSingle();
 
 	if (existingSub && !existingSub.cancel_at_period_end) {
-		return json({ error: 'You already have an active subscription. Manage it from your settings.' }, { status: 400 });
+		// Check for profile/subscription desync: subscription is paid but profile still shows free.
+		// This happens when the webhook fired for the subscription table but not for profiles.
+		// Auto-fix it and tell the client to redirect to settings instead of showing an error.
+		const subPlan = existingSub.plan as string | null;
+		if (subPlan && subPlan !== 'free') {
+			const currentProfile = await getUserProfile(locals.supabase, user.id).catch(() => null);
+			if (currentProfile?.plan === 'free') {
+				const wordsBalance = WORDS_PER_PLAN[subPlan] ?? WORDS_PER_PLAN.basic;
+				await locals.supabase
+					.from('profiles')
+					.update({ plan: subPlan, words_balance: wordsBalance })
+					.eq('id', user.id);
+				return json({ synced: true, plan: subPlan }, { status: 200 });
+			}
+		}
+		return json(
+			{ error: 'You already have an active subscription. Manage it from your settings.' },
+			{ status: 400 }
+		);
 	}
 
 	// 4. Fetch or create Stripe customer
@@ -89,7 +107,7 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 			mode: 'subscription',
 			line_items: [{ price: priceId, quantity: 1 }],
 			success_url: `${origin}/dashboard?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
-			cancel_url: `${origin}/pricing`,
+			cancel_url: `${origin}/plans`,
 			allow_promotion_codes: true,
 			metadata: {
 				supabase_user_id: user.id,

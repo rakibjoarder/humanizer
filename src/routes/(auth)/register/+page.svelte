@@ -20,7 +20,7 @@
 		googleLoading = true;
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
-			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/` }
+			options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/humanize` }
 		});
 		if (authError) { error = authError.message; googleLoading = false; }
 	}

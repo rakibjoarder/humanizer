@@ -4,8 +4,8 @@
 	let { data } = $props();
 	let { profile, subscriptions, payments, events, activity, customerInfo, detections, humanizations } = $derived(data);
 
-	let creditInput = $state(profile.tokens);
-	let planInput = $state<'free' | 'pro'>(profile.plan);
+	let wordsInput = $state(profile.words_balance);
+	let planInput = $state<'free' | 'basic' | 'pro' | 'ultra'>(profile.plan);
 	let saving = $state(false);
 	let saveMsg = $state('');
 
@@ -16,7 +16,7 @@
 			const res = await fetch(`/api/admin/users/${profile.id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ tokens: Number(creditInput), plan: planInput })
+				body: JSON.stringify({ words_balance: Number(wordsInput), plan: planInput })
 			});
 			const json = await res.json();
 			if (!res.ok) { saveMsg = json.error ?? 'Failed to save.'; return; }
@@ -40,6 +40,13 @@
 	function fmtDate(s: string | null) {
 		if (!s) return '—';
 		return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+
+	function planColor(plan: string) {
+		if (plan === 'ultra') return { bg: '#7c3aed20', color: '#7c3aed' };
+		if (plan === 'pro') return { bg: 'var(--color-brand-muted)', color: 'var(--color-brand)' };
+		if (plan === 'basic') return { bg: '#3b82f620', color: '#3b82f6' };
+		return { bg: 'var(--color-bg-elevated)', color: 'var(--color-text-muted)' };
 	}
 </script>
 
@@ -67,6 +74,16 @@
 				<p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-primary); margin: 0; word-break: break-all;">{row.value}</p>
 			</div>
 		{/each}
+		<div>
+			<p style="font-family: 'Space Grotesk', system-ui; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); margin: 0 0 3px;">Plan</p>
+			<span style="font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: {planColor(profile.plan).bg}; color: {planColor(profile.plan).color};">{profile.plan}</span>
+		</div>
+		<div>
+			<p style="font-family: 'Space Grotesk', system-ui; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); margin: 0 0 3px;">Words Balance</p>
+			<p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-primary); margin: 0;">
+				{profile.words_balance === -1 ? '∞ unlimited' : (profile.words_balance ?? 0).toLocaleString()}
+			</p>
+		</div>
 	</div>
 
 	<!-- Customer Insights -->
@@ -86,7 +103,7 @@
 		</div>
 	{/if}
 
-	<!-- Edit: plan + credits -->
+	<!-- Edit: plan + words -->
 	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; padding: 24px;">
 		<h2 style="font-family: 'Space Grotesk', system-ui; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 18px;">Edit account</h2>
 
@@ -97,19 +114,21 @@
 					bind:value={planInput}
 					style="padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; cursor: pointer; background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
 				>
-					<option value="free">Free</option>
+					<option value="free">Free (no plan)</option>
+					<option value="basic">Basic</option>
 					<option value="pro">Pro</option>
+					<option value="ultra">Ultra</option>
 				</select>
 			</div>
 
 			<div>
-				<label style="font-family: 'Space Grotesk', system-ui; font-size: 12px; color: var(--color-text-muted); display: block; margin-bottom: 6px;">Credits</label>
+				<label style="font-family: 'Space Grotesk', system-ui; font-size: 12px; color: var(--color-text-muted); display: block; margin-bottom: 6px;">Words Balance (-1 = unlimited)</label>
 				<input
 					type="number"
-					min="0"
-					max="9999"
-					bind:value={creditInput}
-					style="width: 100px; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;"
+					min="-1"
+					max="9999999"
+					bind:value={wordsInput}
+					style="width: 140px; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;"
 				/>
 			</div>
 
@@ -125,7 +144,7 @@
 		</div>
 	</div>
 
-	<!-- Subscriptions (live from Stripe) -->
+	<!-- Subscriptions -->
 	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; padding: 24px;">
 		<h2 style="font-family: 'Space Grotesk', system-ui; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 18px;">
 			Subscriptions <span style="font-weight: 400; color: var(--color-text-muted); font-size: 11px;">(live from Stripe)</span>
@@ -158,19 +177,14 @@
 		{/if}
 	</div>
 
-	<!-- Payments / Top-ups (live from Stripe) -->
+	<!-- Payments -->
 	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
 		<div style="padding: 14px 20px; border-bottom: 1px solid var(--color-bg-border); display: flex; justify-content: space-between; align-items: center;">
 			<h2 style="font-family: 'Space Grotesk', system-ui; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">
 				Payments <span style="font-weight: 400; color: var(--color-text-muted); font-size: 11px;">(live from Stripe)</span>
 			</h2>
 			{#if profile.stripe_customer_id}
-				<a
-					href="https://dashboard.stripe.com/test/customers/{profile.stripe_customer_id}"
-					target="_blank"
-					rel="noopener"
-					style="font-family: 'Space Grotesk', system-ui; font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
-				>View in Stripe →</a>
+				<a href="https://dashboard.stripe.com/test/customers/{profile.stripe_customer_id}" target="_blank" rel="noopener" style="font-family: 'Space Grotesk', system-ui; font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none;">View in Stripe →</a>
 			{/if}
 		</div>
 
@@ -180,7 +194,7 @@
 			<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 				<thead>
 					<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
-						{#each ['Date', 'Description', 'Credits', 'Amount', 'Receipt'] as h}
+						{#each ['Date', 'Description', 'Words', 'Amount', 'Receipt'] as h}
 							<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em;">{h}</th>
 						{/each}
 					</tr>
@@ -190,8 +204,8 @@
 						<tr style="border-bottom: 1px solid var(--color-bg-border);">
 							<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); white-space: nowrap;">{fmtDate(p.created)}</td>
 							<td style="padding: 10px 14px; color: var(--color-text-primary);">{p.description}</td>
-							<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {p.credits ? 'var(--color-brand)' : 'var(--color-text-muted)'};">
-								{p.credits ? `+${p.credits}` : '—'}
+							<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {p.words ? 'var(--color-brand)' : 'var(--color-text-muted)'};">
+								{p.words ? `+${p.words.toLocaleString()}` : '—'}
 							</td>
 							<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">
 								${(p.amount / 100).toFixed(2)} {p.currency.toUpperCase()}
@@ -210,7 +224,7 @@
 		{/if}
 	</div>
 
-	<!-- Recent Activity (detections + humanizations) -->
+	<!-- Recent Activity -->
 	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
 		<div style="padding: 14px 20px; border-bottom: 1px solid var(--color-bg-border);">
 			<h2 style="font-family: 'Space Grotesk', system-ui; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">

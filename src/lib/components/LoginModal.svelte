@@ -19,7 +19,7 @@
 	let {
 		supabase,
 		variant = 'modal',
-		redirectAfter = '/',
+		redirectAfter = '/humanize',
 		onClose
 	}: Props = $props();
 

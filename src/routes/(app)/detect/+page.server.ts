@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { FREE_DETECTION_LIFETIME, FREE_DETECTION_MAX_WORDS_PER_SCAN } from '$lib/limits';
+import { FREE_DETECTION_MAX_WORDS_PER_SCAN } from '$lib/limits';
 
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,10 +13,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			user: null,
 			savedDetection: null,
 			plan: null as null,
+			wordsBalance: 0,
 			detectionsUsed: 0,
 			detectionsLimit: 0,
 			maxWordsPerScan: FREE_DETECTION_MAX_WORDS_PER_SCAN,
-			previewBlurb: 'One free preview scan without signing in (max 500 words).'
+			previewBlurb: `One free preview scan without signing in (max ${FREE_DETECTION_MAX_WORDS_PER_SCAN} words).`
 		};
 	}
 
@@ -51,11 +52,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const { data: profile } = await locals.supabase
 		.from('profiles')
-		.select('plan')
+		.select('plan, words_balance')
 		.eq('id', user.id)
 		.maybeSingle();
 
-	const plan = (profile?.plan as 'free' | 'pro' | undefined) ?? 'free';
+	const plan = (profile?.plan as 'free' | 'basic' | 'pro' | 'ultra' | undefined) ?? 'free';
+	const isPaidPlan = plan === 'basic' || plan === 'pro' || plan === 'ultra';
+	const wordsBalance = profile?.words_balance ?? 0;
 
 	const { count: detCount, error: countErr } = await locals.supabase
 		.from('detections')
@@ -75,20 +78,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.order('created_at', { ascending: false })
 		.limit(5);
 
-	const maxWordsPerScan =
-		plan === 'pro' ? null : FREE_DETECTION_MAX_WORDS_PER_SCAN;
+	const maxWordsPerScan = isPaidPlan ? null : FREE_DETECTION_MAX_WORDS_PER_SCAN;
 
 	return {
 		detections: detections ?? [],
 		user: { id: user.id },
 		savedDetection,
 		plan,
+		wordsBalance,
 		detectionsUsed: used,
-		detectionsLimit: plan === 'pro' ? null : FREE_DETECTION_LIFETIME,
+		detectionsLimit: null,
 		maxWordsPerScan,
-		previewBlurb:
-			plan === 'pro'
-				? null
-				: `Free plan: ${used} of ${FREE_DETECTION_LIFETIME} lifetime scans used · max ${FREE_DETECTION_MAX_WORDS_PER_SCAN} words per scan.`
+		previewBlurb: isPaidPlan
+			? null
+			: wordsBalance <= 0
+				? `You have no words remaining. Upgrade to get more.`
+				: `${wordsBalance} words remaining on free plan · max ${FREE_DETECTION_MAX_WORDS_PER_SCAN} words per scan.`
 	};
 };

@@ -8,7 +8,7 @@ import {
 	persistAnonymousDemo
 } from '$lib/server/demoDetect';
 import { checkRateLimit } from '$lib/server/rateLimit';
-import { checkQuota, incrementUsage } from '$lib/server/usage';
+import { incrementUsage } from '$lib/server/usage';
 import { getUserProfile } from '$lib/server/auth';
 
 // ── POST /api/detect ──────────────────────────────────────────────────────────
@@ -63,14 +63,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
-	const isPro = profile?.plan === 'pro';
-	if (!isPro && wordCount > FREE_DETECTION_MAX_WORDS_PER_SCAN) {
+	const isPaidPlan = profile?.plan === 'basic' || profile?.plan === 'pro' || profile?.plan === 'ultra';
+
+	// Free and anonymous users: cap at 150 words per scan
+	if (!isPaidPlan && wordCount > FREE_DETECTION_MAX_WORDS_PER_SCAN) {
 		return json(
 			{
-				error: `Text must be at most ${FREE_DETECTION_MAX_WORDS_PER_SCAN} words on Free and preview scans. Upgrade to Pro for longer documents.`
+				error: `Text must be at most ${FREE_DETECTION_MAX_WORDS_PER_SCAN} words on the free plan. Upgrade for up to 3,000 words.`
 			},
 			{ status: 400 }
 		);
+	}
+
+	// Words balance gate — applies to all logged-in users (paid and free)
+	if (isAuthed && (profile?.words_balance ?? 0) <= 0) {
+		return json({ error: 'out_of_words' }, { status: 402 });
 	}
 
 	// 5. Rate limit (IP-based)
@@ -107,7 +114,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				return json(
 					{
 						error:
-							'Your free preview scan is already used. Create a free account for 2 more detections (500 words each).',
+							'Your free preview is used. Create a free account to get 150 words to try.',
 						code: 'DEMO_EXHAUSTED'
 					},
 					{ status: 429 }
@@ -119,27 +126,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
-	// 7. Logged-in Free: lifetime detection quota (Pro unlimited)
-	if (isAuthed && user && profile) {
-		let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
-		try {
-			quotaResult = await checkQuota(locals.supabase, user.id, profile.plan);
-		} catch (err) {
-			console.error('[detect] Quota check failed:', err);
-			return json({ error: 'Failed to check usage quota.' }, { status: 500 });
-		}
-
-		if (!quotaResult.allowed) {
-			return json(
-				{
-					error: `Free plan limit reached. You've used all ${quotaResult.limit} lifetime detections. Upgrade to Pro for unlimited access.`,
-					used: quotaResult.used,
-					limit: quotaResult.limit
-				},
-				{ status: 429 }
-			);
-		}
-	}
+	// 7. (quota check replaced by words_balance gate above)
 
 	// 8. Call upstream detect API
 	let result: Awaited<ReturnType<typeof detectText>>;
@@ -150,8 +137,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Detection service is unavailable. Please try again later.' }, { status: 500 });
 	}
 
-	// 9. If authed: persist detection + increment usage
+	// 9. If authed: deduct words for all plans (paid + free), persist detection + increment usage
+	let newBalance: number | null = null;
 	if (isAuthed && user && profile) {
+		// Atomic word deduction for all logged-in users
+		const { data: deducted, error: deductErr } = await locals.supabase
+			.rpc('deduct_words', { p_user_id: user.id, p_words: wordCount });
+
+		if (deductErr || deducted === -1) {
+			return json({ error: 'out_of_words' }, { status: 402 });
+		}
+		newBalance = deducted;
+
 		// Fire-and-forget persistence — do not block the response
 		Promise.all([
 			locals.supabase.from('detections').insert({
@@ -186,7 +183,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			verdict: result.verdict,
 			ai_probability: result.ai_probability,
 			human_probability: result.human_probability,
-			classification: result.classification
+			classification: result.classification,
+			...(newBalance !== null ? { words_balance: newBalance } : {})
 		},
 		{ headers }
 	);

@@ -21,11 +21,11 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	if (!UUID_RE.test(params.id)) return json({ error: 'Invalid user ID.' }, { status: 400 });
 
 	const body = await request.json();
-	const { tokens, plan } = body as { tokens?: number; plan?: string };
+	const { words_balance, plan } = body as { words_balance?: number; plan?: string };
 
 	const update: Record<string, unknown> = {};
-	if (typeof tokens === 'number' && tokens >= 0) update.tokens = tokens;
-	if (plan === 'free' || plan === 'pro') update.plan = plan;
+	if (typeof words_balance === 'number' && words_balance >= -1) update.words_balance = words_balance;
+	if (plan === 'free' || plan === 'basic' || plan === 'pro' || plan === 'ultra') update.plan = plan;
 
 	if (Object.keys(update).length === 0) {
 		return json({ error: 'Nothing to update.' }, { status: 400 });

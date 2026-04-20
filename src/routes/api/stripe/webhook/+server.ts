@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe, PRO_TOKENS_PER_MONTH } from '$lib/server/stripe';
+import { stripe, WORDS_PER_PLAN } from '$lib/server/stripe';
 import { STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createClient } from '@supabase/supabase-js';
@@ -15,7 +15,6 @@ function getAdminClient() {
 // ── POST /api/stripe/webhook ──────────────────────────────────────────────────
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	// 1. Read raw body as Buffer (required for Stripe signature verification)
 	const rawBody = Buffer.from(await request.arrayBuffer());
 	const sig = request.headers.get('stripe-signature');
 
@@ -23,7 +22,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Missing stripe-signature header.' }, { status: 400 });
 	}
 
-	// 2. Verify webhook signature
 	let event: Stripe.Event;
 	try {
 		event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET.trim());
@@ -31,13 +29,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Invalid webhook signature.' }, { status: 400 });
 	}
 
-	// 3. Route by event type
 	try {
 		switch (event.type) {
 			case 'checkout.session.completed': {
 				const session = event.data.object as Stripe.Checkout.Session;
 				if (session.mode === 'payment') {
-					await handleTokenPackPurchase(session, getAdminClient());
+					await handleWordPackPurchase(session, getAdminClient());
 				} else {
 					await handleCheckoutSessionCompleted(session, getAdminClient());
 				}
@@ -64,12 +61,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				break;
 			}
 			default:
-				// Unhandled event type — acknowledge and ignore
 				break;
 		}
 	} catch (err) {
-		// Log but return 200 to prevent Stripe retries for internal errors
 		console.error(`[stripe/webhook] Error handling event ${event.type}:`, err);
+		// Return 500 so Stripe retries delivery instead of silently dropping the event.
+		return json({ error: 'Webhook handler failed.' }, { status: 500 });
 	}
 
 	return json({ received: true });
@@ -88,21 +85,19 @@ async function handleCheckoutSessionCompleted(
 
 	if (!userId || !subscriptionId) return;
 
-	// Fetch subscription to determine the plan
 	const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
 		expand: ['items.data.price.product']
 	});
 
 	const plan = resolvePlanFromSubscription(subscription);
+	const wordsBalance = WORDS_PER_PLAN[plan] ?? WORDS_PER_PLAN.basic;
 
 	await Promise.all([
-		// Update profile plan + grant tokens
 		supabase
 			.from('profiles')
-			.update({ plan, stripe_customer_id: session.customer as string, tokens: PRO_TOKENS_PER_MONTH })
+			.update({ plan, stripe_customer_id: session.customer as string, words_balance: wordsBalance })
 			.eq('id', userId),
 
-		// Upsert subscription record
 		supabase.from('subscriptions').upsert(
 			{
 				user_id: userId,
@@ -131,7 +126,6 @@ async function handleSubscriptionUpdated(
 
 	const plan = resolvePlanFromSubscription(subscription);
 
-	// Find user by stripe_customer_id
 	const { data: profileData } = await supabase
 		.from('profiles')
 		.select('id')
@@ -143,21 +137,19 @@ async function handleSubscriptionUpdated(
 	await Promise.all([
 		supabase.from('profiles').update({ plan }).eq('id', profileData.id),
 
-		supabase
-			.from('subscriptions')
-			.upsert(
-				{
-					user_id: profileData.id,
-					stripe_subscription_id: subscription.id,
-					stripe_customer_id: customerId,
-					plan,
-					status: subscription.status,
-					cancel_at_period_end: subscription.cancel_at_period_end,
-					current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-					current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
-				},
-				{ onConflict: 'stripe_subscription_id' }
-			)
+		supabase.from('subscriptions').upsert(
+			{
+				user_id: profileData.id,
+				stripe_subscription_id: subscription.id,
+				stripe_customer_id: customerId,
+				plan,
+				status: subscription.status,
+				cancel_at_period_end: subscription.cancel_at_period_end,
+				current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+				current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
+			},
+			{ onConflict: 'stripe_subscription_id' }
+		)
 	]);
 }
 
@@ -180,8 +172,7 @@ async function handleSubscriptionDeleted(
 	if (!profileData?.id) return;
 
 	await Promise.all([
-		// Downgrade to free plan + clear tokens
-		supabase.from('profiles').update({ plan: 'free', tokens: 0 }).eq('id', profileData.id),
+		supabase.from('profiles').update({ plan: 'free', words_balance: 150 }).eq('id', profileData.id),
 
 		supabase
 			.from('subscriptions')
@@ -210,7 +201,7 @@ async function handleInvoicePaid(
 	invoice: Stripe.Invoice,
 	supabase: import('@supabase/supabase-js').SupabaseClient
 ): Promise<void> {
-	// Only reset tokens for subscription renewals (not one-time payments)
+	// Only reset words for subscription renewals (not one-time payments)
 	if (invoice.billing_reason !== 'subscription_cycle') return;
 
 	const customerId = typeof invoice.customer === 'string'
@@ -221,39 +212,39 @@ async function handleInvoicePaid(
 
 	const { data: profileData } = await supabase
 		.from('profiles')
-		.select('id')
+		.select('id, plan')
 		.eq('stripe_customer_id', customerId)
 		.maybeSingle();
 
 	if (!profileData?.id) return;
 
+	const wordsBalance = WORDS_PER_PLAN[profileData.plan] ?? WORDS_PER_PLAN.basic;
+
 	await supabase
 		.from('profiles')
-		.update({ tokens: PRO_TOKENS_PER_MONTH })
+		.update({ words_balance: wordsBalance })
 		.eq('id', profileData.id);
 }
 
-async function handleTokenPackPurchase(
+async function handleWordPackPurchase(
 	session: Stripe.Checkout.Session,
 	supabase: import('@supabase/supabase-js').SupabaseClient
 ): Promise<void> {
 	const userId = session.metadata?.supabase_user_id;
-	const tokensToAdd = Number(session.metadata?.tokens ?? 0);
+	const wordsToAdd = Number(session.metadata?.words ?? 0);
 
-	if (!userId || !tokensToAdd) return;
+	if (!userId || !wordsToAdd) return;
 
-	// Atomic increment — avoids race condition when multiple webhooks fire concurrently
-	await supabase.rpc('add_tokens', { p_user_id: userId, p_amount: tokensToAdd });
+	await supabase.rpc('add_words', { p_user_id: userId, p_amount: wordsToAdd });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function resolvePlanFromSubscription(
 	subscription: Stripe.Subscription
-): 'free' | 'pro' {
-	// Check product metadata or nickname for plan name
+): 'free' | 'basic' | 'pro' | 'ultra' {
 	const item = subscription.items?.data?.[0];
-	if (!item) return 'free';
+	if (!item) return 'basic';
 
 	const price = item.price as Stripe.Price & { product?: Stripe.Product };
 	const product = typeof price.product === 'object' ? price.product : null;
@@ -262,11 +253,14 @@ function resolvePlanFromSubscription(
 	const priceNickname = (price.nickname ?? '').toLowerCase();
 	const combined = `${productName} ${priceNickname}`;
 
+	if (combined.includes('ultra')) return 'ultra';
 	if (combined.includes('pro')) return 'pro';
+	if (combined.includes('basic')) return 'basic';
 
-	// Fall back to metadata on the subscription itself
 	const metaPlan = subscription.metadata?.plan?.toLowerCase();
+	if (metaPlan === 'ultra') return 'ultra';
 	if (metaPlan === 'pro') return 'pro';
+	if (metaPlan === 'basic') return 'basic';
 
-	return 'pro'; // default for any paid subscription
+	return 'basic'; // default for any paid subscription
 }

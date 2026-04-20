@@ -26,6 +26,13 @@
 		params.set('page', String(p));
 		return `/admin/users?${params}`;
 	}
+
+	function planColor(plan: string) {
+		if (plan === 'ultra') return { bg: '#7c3aed20', color: '#7c3aed' };
+		if (plan === 'pro') return { bg: 'var(--color-brand-muted)', color: 'var(--color-brand)' };
+		if (plan === 'basic') return { bg: '#3b82f620', color: '#3b82f6' };
+		return { bg: 'var(--color-bg-elevated)', color: 'var(--color-text-muted)' };
+	}
 </script>
 
 <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1100px;">
@@ -43,33 +50,22 @@
 			placeholder="Search by email…"
 			bind:value={search}
 			onkeydown={(e) => e.key === 'Enter' && applyFilters()}
-			style="
-				flex: 1; max-width: 320px;
-				padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none;
-				background: var(--color-bg-surface); border: 1px solid var(--color-bg-border);
-				color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;
-			"
+			style="flex: 1; max-width: 320px; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
 		/>
 		<select
 			bind:value={planFilter}
 			onchange={applyFilters}
-			style="
-				padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; cursor: pointer;
-				background: var(--color-bg-surface); border: 1px solid var(--color-bg-border);
-				color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;
-			"
+			style="padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; cursor: pointer; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
 		>
 			<option value="">All plans</option>
-			<option value="free">Free</option>
+			<option value="free">Free (no plan)</option>
+			<option value="basic">Basic</option>
 			<option value="pro">Pro</option>
+			<option value="ultra">Ultra</option>
 		</select>
 		<button
 			onclick={applyFilters}
-			style="
-				padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
-				background: var(--color-brand); color: white; border: none;
-				font-family: 'Space Grotesk', system-ui;
-			"
+			style="padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--color-brand); color: white; border: none; font-family: 'Space Grotesk', system-ui;"
 		>Search</button>
 	</div>
 
@@ -78,7 +74,7 @@
 		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
-					{#each ['Email', 'Name', 'Plan', 'Credits', 'Stripe ID', 'Joined'] as h}
+					{#each ['Email', 'Name', 'Plan', 'Words', 'Stripe ID', 'Joined'] as h}
 						<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;">{h}</th>
 					{/each}
 					<th style="padding: 10px 14px;"></th>
@@ -90,13 +86,11 @@
 						<td style="padding: 10px 14px; color: var(--color-text-primary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{u.email}</td>
 						<td style="padding: 10px 14px; color: var(--color-text-secondary);">{u.full_name ?? '—'}</td>
 						<td style="padding: 10px 14px;">
-							<span style="
-								font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px;
-								background: {u.plan === 'pro' ? 'var(--color-brand-muted)' : 'var(--color-bg-elevated)'};
-								color: {u.plan === 'pro' ? 'var(--color-brand)' : 'var(--color-text-muted)'};
-							">{u.plan}</span>
+							<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: {planColor(u.plan).bg}; color: {planColor(u.plan).color};">{u.plan}</span>
 						</td>
-						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {u.tokens <= 10 ? '#f59e0b' : 'var(--color-text-secondary)'};">{u.tokens}</td>
+						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {(u.words_balance ?? 0) <= 500 && u.plan !== 'ultra' ? '#f59e0b' : 'var(--color-text-secondary)'};">
+							{u.words_balance === -1 ? '∞' : (u.words_balance ?? 0).toLocaleString()}
+						</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{u.stripe_customer_id ? u.stripe_customer_id.slice(0, 14) + '…' : '—'}</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); white-space: nowrap;">{fmtDate(u.created_at)}</td>
 						<td style="padding: 10px 14px;">

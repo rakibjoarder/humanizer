@@ -1,10 +1,14 @@
 import {
 	STRIPE_SECRET_KEY,
+	STRIPE_BASIC_MONTHLY_PRICE_ID,
+	STRIPE_BASIC_YEARLY_PRICE_ID,
 	STRIPE_PRO_MONTHLY_PRICE_ID,
 	STRIPE_PRO_YEARLY_PRICE_ID,
-	STRIPE_TOKEN_PACK_STARTER_PRICE_ID,
-	STRIPE_TOKEN_PACK_POPULAR_PRICE_ID,
-	STRIPE_TOKEN_PACK_POWER_PRICE_ID
+	STRIPE_ULTRA_MONTHLY_PRICE_ID,
+	STRIPE_ULTRA_YEARLY_PRICE_ID,
+	STRIPE_WORD_PACK_SMALL_PRICE_ID,
+	STRIPE_WORD_PACK_MEDIUM_PRICE_ID,
+	STRIPE_WORD_PACK_LARGE_PRICE_ID
 } from '$env/static/private';
 import Stripe from 'stripe';
 
@@ -16,41 +20,48 @@ export const stripe = new Stripe(STRIPE_SECRET_KEY.trim(), {
 
 // ── Plan configuration ────────────────────────────────────────────────────────
 
-export interface FreePlanConfig {
-	price: 0;
-}
-
 export interface PaidPlanConfig {
 	monthlyPriceId: string;
 	yearlyPriceId: string;
 }
 
-export interface TokenPack {
+export interface WordPack {
 	priceId: string;
-	tokens: number;
+	words: number;
 	price: number;
 	label: string;
 }
 
 export interface Plans {
-	free: FreePlanConfig;
+	basic: PaidPlanConfig;
 	pro: PaidPlanConfig;
+	ultra: PaidPlanConfig;
 }
 
 export const plans: Plans = {
-	free: {
-		price: 0
+	basic: {
+		monthlyPriceId: (STRIPE_BASIC_MONTHLY_PRICE_ID ?? '').trim(),
+		yearlyPriceId: (STRIPE_BASIC_YEARLY_PRICE_ID ?? '').trim()
 	},
 	pro: {
-		monthlyPriceId: STRIPE_PRO_MONTHLY_PRICE_ID.trim(),
-		yearlyPriceId: STRIPE_PRO_YEARLY_PRICE_ID.trim()
+		monthlyPriceId: (STRIPE_PRO_MONTHLY_PRICE_ID ?? '').trim(),
+		yearlyPriceId: (STRIPE_PRO_YEARLY_PRICE_ID ?? '').trim()
+	},
+	ultra: {
+		monthlyPriceId: (STRIPE_ULTRA_MONTHLY_PRICE_ID ?? '').trim(),
+		yearlyPriceId: (STRIPE_ULTRA_YEARLY_PRICE_ID ?? '').trim()
 	}
 };
 
-export const PRO_TOKENS_PER_MONTH = 100;
+/** Words granted per plan per billing cycle. */
+export const WORDS_PER_PLAN: Record<string, number> = {
+	basic: 4_500,
+	pro: 12_000,
+	ultra: 35_000
+};
 
-export const tokenPacks: TokenPack[] = [
-	{ priceId: STRIPE_TOKEN_PACK_STARTER_PRICE_ID.trim(), tokens: 50,  price: 3.99,  label: 'Starter' },
-	{ priceId: STRIPE_TOKEN_PACK_POPULAR_PRICE_ID.trim(), tokens: 100, price: 7.99,  label: 'Popular' },
-	{ priceId: STRIPE_TOKEN_PACK_POWER_PRICE_ID.trim(),   tokens: 500, price: 39.99, label: 'Power'   }
+export const wordPacks: WordPack[] = [
+	{ priceId: (STRIPE_WORD_PACK_SMALL_PRICE_ID ?? '').trim(),  words: 2_000,  price: 4.99,  label: 'Starter' },
+	{ priceId: (STRIPE_WORD_PACK_MEDIUM_PRICE_ID ?? '').trim(), words: 12_000, price: 14.99, label: 'Popular' },
+	{ priceId: (STRIPE_WORD_PACK_LARGE_PRICE_ID ?? '').trim(),  words: 40_000, price: 34.99, label: 'Power'   }
 ];

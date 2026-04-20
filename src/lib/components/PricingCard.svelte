@@ -1,5 +1,5 @@
 <script lang="ts">
-	type Plan = 'free' | 'pro';
+	type Plan = 'basic' | 'pro' | 'ultra';
 	type BillingCycle = 'monthly' | 'yearly';
 
 	interface Props {
@@ -21,44 +21,59 @@
 		monthlyPrice: number;
 		yearlyPrice: number;
 		yearlyMonthlyEquiv: number;
-		wordsPerDay: string;
+		wordsPerMonth: string;
 		cta: string;
 		badge?: string;
 		features: Feature[];
 	}
 
 	const plans: Record<Plan, PlanData> = {
-		free: {
-			name: 'Free',
-			monthlyPrice: 0,
-			yearlyPrice: 0,
-			yearlyMonthlyEquiv: 0,
-			wordsPerDay: '2 free detections',
-			cta: 'Get Started Free',
+		basic: {
+			name: 'Basic',
+			monthlyPrice: 9,
+			yearlyPrice: 86.40,
+			yearlyMonthlyEquiv: 7.20,
+			wordsPerMonth: '4,500 words/mo',
+			cta: 'Start Basic',
 			features: [
-				{ text: '2 free detections total', available: true },
-				{ text: '500 words per scan', available: true },
-				{ text: 'AI Detection', available: true },
-				{ text: 'Humanizer', available: false },
-				{ text: 'History & saved results', available: false },
+				{ text: '4,500 words per month', available: true },
+				{ text: 'Unlimited AI detections', available: true },
+				{ text: 'AI Humanizer', available: true },
+				{ text: 'History & saved results', available: true },
+				{ text: 'Buy extra word packs', available: true },
 				{ text: 'Email support', available: true }
 			]
 		},
 		pro: {
 			name: 'Pro',
-			monthlyPrice: 9.99,
-			yearlyPrice: 99,
-			yearlyMonthlyEquiv: 8,
-			wordsPerDay: '100 credits/mo',
+			monthlyPrice: 19,
+			yearlyPrice: 182.40,
+			yearlyMonthlyEquiv: 15.20,
+			wordsPerMonth: '12,000 words/mo',
 			cta: 'Start Pro',
 			badge: 'Most Popular',
 			features: [
-				{ text: 'Unlimited detections', available: true },
-				{ text: 'Unlimited words per scan', available: true },
-				{ text: 'AI Detection', available: true },
-				{ text: '100 humanization credits/month', available: true },
-				{ text: 'Buy extra credits anytime', available: true },
+				{ text: '12,000 words per month', available: true },
+				{ text: 'Unlimited AI detections', available: true },
+				{ text: 'AI Humanizer', available: true },
 				{ text: 'History & saved results', available: true },
+				{ text: 'Buy extra word packs', available: true },
+				{ text: 'Priority support', available: true }
+			]
+		},
+		ultra: {
+			name: 'Ultra',
+			monthlyPrice: 39,
+			yearlyPrice: 374.40,
+			yearlyMonthlyEquiv: 31.20,
+			wordsPerMonth: '35,000 words/mo',
+			cta: 'Start Ultra',
+			features: [
+				{ text: '35,000 words per month', available: true },
+				{ text: 'Unlimited AI detections', available: true },
+				{ text: 'AI Humanizer', available: true },
+				{ text: 'History & saved results', available: true },
+				{ text: 'Buy extra word packs', available: true },
 				{ text: 'Priority support', available: true }
 			]
 		}
@@ -67,13 +82,12 @@
 	const data = $derived(plans[plan]);
 
 	const displayPrice = $derived(
-		data.monthlyPrice === 0 ? 0 :
 		billingCycle === 'yearly' ? data.yearlyMonthlyEquiv : data.monthlyPrice
 	);
 
 	const yearlySavings = $derived(
-		billingCycle === 'yearly' && data.monthlyPrice > 0 && data.monthlyPrice * 12 - data.yearlyPrice > 0
-			? (data.monthlyPrice * 12 - data.yearlyPrice).toFixed(2)
+		billingCycle === 'yearly'
+			? (data.monthlyPrice * 12 - data.yearlyPrice).toFixed(0)
 			: null
 	);
 </script>
@@ -98,7 +112,7 @@
 			<span class="price-period">/mo</span>
 		</div>
 
-		{#if billingCycle === 'yearly' && data.yearlyPrice > 0}
+		{#if billingCycle === 'yearly'}
 			<p class="billed-yearly">
 				Billed ${data.yearlyPrice}/yr
 				{#if yearlySavings}
@@ -106,6 +120,8 @@
 				{/if}
 			</p>
 		{/if}
+
+		<p class="words-label">{data.wordsPerMonth}</p>
 	</header>
 
 	<ul class="features-list" role="list">
@@ -132,8 +148,8 @@
 	<footer class="card-footer">
 		<button
 			class="cta-button"
-			class:cta-primary={highlighted || plan === 'free'}
-			class:cta-ghost={!highlighted && plan !== 'free'}
+			class:cta-primary={highlighted}
+			class:cta-ghost={!highlighted}
 			type="button"
 			onclick={onselect}
 		>
@@ -201,7 +217,7 @@
 	.card-header {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 6px;
 	}
 
 	.plan-name {
@@ -257,6 +273,14 @@
 		color: var(--color-human);
 		font-size: 11px;
 		font-weight: 600;
+	}
+
+	.words-label {
+		font-family: 'DM Sans', system-ui, sans-serif;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--color-brand);
+		margin: 0;
 	}
 
 	.features-list {

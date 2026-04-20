@@ -4,34 +4,30 @@
 	import { goto } from '$app/navigation';
 
 	type BillingCycle = 'monthly' | 'yearly';
+	type PlanKey = 'basic' | 'pro' | 'ultra';
 
 	let { data } = $props();
 
-	const isPro = $derived(data.profile?.plan === 'pro');
-
 	let billingCycle = $state<BillingCycle>('monthly');
-	let checkoutLoading = $state(false);
+	let checkoutLoading = $state<PlanKey | null>(null);
 	let checkoutError = $state('');
 
-	const yearlySavingsLabel: Record<string, string> = {
-		pro: 'Save $45/year'
+	const yearlySavingsLabel: Record<PlanKey, string> = {
+		basic: 'Save $21.60/year',
+		pro: 'Save $45.60/year',
+		ultra: 'Save $93.60/year'
 	};
 
-	async function handleSelectPlan(planKey: string) {
-		if (planKey === 'free') {
-			goto('/register');
-			return;
-		}
-
+	async function handleSelectPlan(planKey: PlanKey) {
 		const priceId =
 			billingCycle === 'monthly'
-				? data.priceIds?.pro?.monthly
-				: data.priceIds?.pro?.yearly;
+				? data.priceIds?.[planKey]?.monthly
+				: data.priceIds?.[planKey]?.yearly;
 
 		if (!priceId) return;
 
 		checkoutError = '';
-		checkoutLoading = true;
+		checkoutLoading = planKey;
 
 		try {
 			const res = await fetch('/api/stripe/checkout', {
@@ -43,7 +39,6 @@
 			const json = await res.json();
 
 			if (res.status === 401) {
-				// Not logged in — send to login with return URL
 				goto('/?login=1&redirect=/pricing');
 				return;
 			}
@@ -57,7 +52,7 @@
 		} catch {
 			checkoutError = 'Network error. Please check your connection and try again.';
 		} finally {
-			checkoutLoading = false;
+			checkoutLoading = null;
 		}
 	}
 
@@ -67,28 +62,28 @@
 			a: 'Yes. Plan changes take effect immediately. Unused time on your current billing cycle is prorated.'
 		},
 		{
-			q: 'What happens when I use up my free detections?',
-			a: 'Once your 2 free detections are used, detection is paused until you upgrade. There is no daily reset — upgrade to Pro for unlimited access.'
+			q: 'What are words and how are they counted?',
+			a: 'Each word you humanize counts against your monthly word balance. The word count of the humanized output is deducted. Your balance resets on each billing cycle date.'
 		},
 		{
-			q: 'What are humanization credits?',
-			a: 'Each Pro plan includes 100 humanization credits per month. 1 credit = 1 humanization. Credits reset on your monthly billing date. Need more? Buy credit packs anytime from your settings.'
+			q: 'What happens when I run out of words?',
+			a: 'Humanization is paused until your balance resets at the next billing cycle. You can also top up instantly by purchasing a word pack from your settings.'
+		},
+		{
+			q: 'How many words does the Ultra plan include?',
+			a: 'Ultra gives you 35,000 words per month — the highest allocation across all plans. You can also top up with word packs at any time.'
 		},
 		{
 			q: 'Is my text stored or used to train models?',
 			a: 'No. Text submitted for detection or humanization is processed in memory and discarded immediately. We never store or train on your content.'
 		},
 		{
-			q: 'Do you offer a free trial for paid plans?',
-			a: 'All paid plans include a 7-day free trial. No credit card is required to start the Free plan.'
+			q: 'Do you offer a free trial?',
+			a: 'All paid plans include a 7-day free trial. No credit card is required to try the basic detection feature.'
 		},
 		{
 			q: 'What payment methods are accepted?',
 			a: 'We accept all major credit and debit cards via Stripe. Promotion codes are supported at checkout.'
-		},
-		{
-			q: 'How does the free plan work?',
-			a: 'The free plan gives you 3 detections total (no daily reset) with a 500-word limit per scan. Upgrade to Pro to remove all limits.'
 		}
 	];
 
@@ -101,88 +96,82 @@
 
 <SEO
 	title="Pricing — AI Humanizer Plans | HumanizeAIWrite"
-	description="Get unlimited AI detection and humanization credits. Pro plan from $9.99/month. Bypass GPTZero, Turnitin, and more. Cancel anytime."
+	description="Humanize AI-generated text. Basic 4,500 words/mo from $9, Pro 12,000 words/mo from $19, Ultra 35,000 words/mo from $39. Bypass GPTZero, Turnitin, and more."
 	canonical="https://humanizeaiwrite.com/pricing"
 />
 
-<!-- ── Page ─────────────────────────────────────────────────────────────── -->
 <div class="pricing-page">
-	<!-- Background glow -->
 	<div class="bg-glow" aria-hidden="true"></div>
 
 	<!-- ── Hero text ── -->
 	<section class="hero-section">
-		{#if isPro}
-			<h1 class="hero-title">You’re on Pro</h1>
-			<p class="hero-sub">
-				You already have unlimited detection and humanizing. Manage billing from account settings, or jump back
-				to the app.
-			</p>
-			<div class="pro-member-actions">
-				<a class="pro-member-btn pro-member-btn-primary" href="/dashboard">Open dashboard</a>
-				<a class="pro-member-btn pro-member-btn-secondary" href="/settings">Account &amp; billing</a>
-			</div>
-		{:else}
-			<h1 class="hero-title">Simple, transparent pricing</h1>
-			<p class="hero-sub">Start free. Upgrade when you need more power. Cancel any time.</p>
+		<h1 class="hero-title">Simple, transparent pricing</h1>
+		<p class="hero-sub">Pay per word, not per click. Upgrade or cancel any time.</p>
 
-			<!-- Billing toggle -->
-			<div class="billing-toggle" role="group" aria-label="Billing cycle">
-				<button
-					class="toggle-btn"
-					class:active={billingCycle === 'monthly'}
-					onclick={() => (billingCycle = 'monthly')}
-					aria-pressed={billingCycle === 'monthly'}
-				>
-					Monthly
-				</button>
-				<button
-					class="toggle-btn"
-					class:active={billingCycle === 'yearly'}
-					onclick={() => (billingCycle = 'yearly')}
-					aria-pressed={billingCycle === 'yearly'}
-				>
-					Yearly
-					<span class="savings-chip">Up to 33% off</span>
-				</button>
-			</div>
+		<!-- Billing toggle -->
+		<div class="billing-toggle" role="group" aria-label="Billing cycle">
+			<button
+				class="toggle-btn"
+				class:active={billingCycle === 'monthly'}
+				onclick={() => (billingCycle = 'monthly')}
+				aria-pressed={billingCycle === 'monthly'}
+			>
+				Monthly
+			</button>
+			<button
+				class="toggle-btn"
+				class:active={billingCycle === 'yearly'}
+				onclick={() => (billingCycle = 'yearly')}
+				aria-pressed={billingCycle === 'yearly'}
+			>
+				Yearly
+				<span class="savings-chip">Save 20%</span>
+			</button>
+		</div>
 
-			{#if billingCycle === 'yearly'}
-				<p class="yearly-note">Billed annually · Cancel any time</p>
-			{/if}
+		{#if billingCycle === 'yearly'}
+			<p class="yearly-note">Billed annually · Cancel any time</p>
 		{/if}
 	</section>
 
 	<!-- ── Pricing cards ── -->
-	{#if !isPro}
-		<section class="cards-section" aria-label="Pricing plans">
-			<div class="cards-grid">
-				<!-- Free -->
-				<div class="card-wrapper">
-					<PricingCard plan="free" {billingCycle} highlighted={false} onselect={() => handleSelectPlan('free')} />
-				</div>
+	<section class="cards-section" aria-label="Pricing plans">
+		<div class="cards-grid">
+			<!-- Basic -->
+			<div class="card-wrapper" class:loading={checkoutLoading === 'basic'}>
+				{#if billingCycle === 'yearly'}
+					<div class="savings-banner">{yearlySavingsLabel.basic}</div>
+				{/if}
+				<PricingCard plan="basic" {billingCycle} highlighted={false} onselect={() => checkoutLoading === null && handleSelectPlan('basic')} />
+			</div>
 
-				<!-- Pro -->
-				<div class="card-wrapper card-wrapper-highlighted" class:loading={checkoutLoading}>
-					{#if billingCycle === 'yearly'}
-						<div class="savings-banner">{yearlySavingsLabel.pro}</div>
-					{/if}
-					<PricingCard plan="pro" {billingCycle} highlighted={true} onselect={() => !checkoutLoading && handleSelectPlan('pro')} />
-				</div>
+			<!-- Pro (highlighted) -->
+			<div class="card-wrapper card-wrapper-highlighted" class:loading={checkoutLoading === 'pro'}>
+				{#if billingCycle === 'yearly'}
+					<div class="savings-banner">{yearlySavingsLabel.pro}</div>
+				{/if}
+				<PricingCard plan="pro" {billingCycle} highlighted={true} onselect={() => checkoutLoading === null && handleSelectPlan('pro')} />
+			</div>
 
-				</div>
+			<!-- Ultra -->
+			<div class="card-wrapper" class:loading={checkoutLoading === 'ultra'}>
+				{#if billingCycle === 'yearly'}
+					<div class="savings-banner">{yearlySavingsLabel.ultra}</div>
+				{/if}
+				<PricingCard plan="ultra" {billingCycle} highlighted={false} onselect={() => checkoutLoading === null && handleSelectPlan('ultra')} />
+			</div>
+		</div>
 
-			{#if checkoutError}
-				<p class="checkout-error">{checkoutError}</p>
-			{/if}
+		{#if checkoutError}
+			<p class="checkout-error">{checkoutError}</p>
+		{/if}
 
-			<p class="footnote">
-				All plans include a 7-day free trial on paid tiers. No credit card required for Free.
-			</p>
-		</section>
-	{/if}
+		<p class="footnote">
+			All plans include a 7-day free trial. No credit card required to explore.
+		</p>
+	</section>
 
-	<!-- ── Feature comparison highlights ── -->
+	<!-- ── Feature comparison ── -->
 	<section class="compare-section">
 		<h2 class="compare-title">Everything included in every plan</h2>
 		<div class="compare-grid">
@@ -198,6 +187,41 @@
 					<p class="compare-card-desc">{feat.desc}</p>
 				</div>
 			{/each}
+		</div>
+	</section>
+
+	<!-- ── Plan comparison table ── -->
+	<section class="table-section">
+		<h2 class="compare-title">Compare plans</h2>
+		<div class="plan-table-wrap">
+			<table class="plan-table">
+				<thead>
+					<tr>
+						<th class="feature-col">Feature</th>
+						<th>Basic</th>
+						<th class="highlighted-col">Pro</th>
+						<th>Ultra</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each [
+						['Monthly price', '$9', '$19', '$39'],
+						['Yearly price', '$86.40/yr', '$182.40/yr', '$374.40/yr'],
+						['Words per month', '4,500', '12,000', '35,000'],
+						['AI Detection', '✓', '✓', '✓'],
+						['AI Humanizer', '✓', '✓', '✓'],
+						['Word top-up packs', '✓', '✓', '✓'],
+						['History & saved results', '✓', '✓', '✓'],
+						['Support', 'Email', 'Priority', 'Priority'],
+					] as row}
+						<tr>
+							{#each row as cell, i}
+								<td class:feature-col={i === 0} class:highlighted-col={i === 2}>{cell}</td>
+							{/each}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
 	</section>
 
@@ -251,14 +275,12 @@
 			<p class="bottom-cta-sub">
 				Join thousands of writers, students, and professionals who trust HumanizeAIWrite.
 			</p>
-			<a href="/register" class="bottom-cta-btn">Create your free account</a>
+			<a href="/register" class="bottom-cta-btn">Get started today</a>
 		</div>
 	</section>
-
 </div>
 
 <style>
-	/* ── Base ── */
 	.pricing-page {
 		min-height: 100vh;
 		background: var(--color-bg-base);
@@ -366,53 +388,6 @@
 		margin: 0;
 	}
 
-	.pro-member-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 12px;
-		justify-content: center;
-		margin-top: 4px;
-	}
-
-	.pro-member-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 11px 22px;
-		border-radius: 10px;
-		font-family: 'DM Sans', system-ui, sans-serif;
-		font-size: 14px;
-		font-weight: 600;
-		text-decoration: none;
-		transition:
-			background 160ms ease,
-			border-color 160ms ease,
-			color 160ms ease;
-	}
-
-	.pro-member-btn-primary {
-		background: var(--color-brand);
-		color: #fff;
-		border: 1px solid var(--color-brand);
-	}
-
-	.pro-member-btn-primary:hover {
-		background: var(--color-brand-hover);
-		border-color: var(--color-brand-hover);
-	}
-
-	.pro-member-btn-secondary {
-		background: var(--color-bg-surface);
-		color: var(--color-text-primary);
-		border: 1px solid var(--color-bg-border);
-		box-shadow: var(--shadow-card);
-	}
-
-	.pro-member-btn-secondary:hover {
-		border-color: var(--color-bg-border-hi);
-		background: var(--color-bg-elevated);
-	}
-
 	/* ── Cards ── */
 	.cards-section {
 		position: relative;
@@ -426,13 +401,13 @@
 
 	.cards-grid {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: repeat(3, 1fr);
 		gap: 20px;
-		max-width: 680px;
+		max-width: 960px;
 		width: 100%;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 900px) {
 		.cards-grid {
 			grid-template-columns: 1fr;
 			max-width: 420px;
@@ -523,15 +498,11 @@
 	}
 
 	@media (max-width: 768px) {
-		.compare-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
+		.compare-grid { grid-template-columns: repeat(2, 1fr); }
 	}
 
 	@media (max-width: 480px) {
-		.compare-grid {
-			grid-template-columns: 1fr;
-		}
+		.compare-grid { grid-template-columns: 1fr; }
 	}
 
 	.compare-card {
@@ -544,10 +515,7 @@
 		border-radius: 12px;
 	}
 
-	.compare-icon {
-		font-size: 24px;
-		line-height: 1;
-	}
+	.compare-icon { font-size: 24px; line-height: 1; }
 
 	.compare-card-title {
 		font-family: 'DM Sans', system-ui, sans-serif;
@@ -565,6 +533,69 @@
 		line-height: 1.6;
 	}
 
+	/* ── Plan table ── */
+	.table-section {
+		position: relative;
+		z-index: 1;
+		padding: 64px 24px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 32px;
+	}
+
+	.plan-table-wrap {
+		width: 100%;
+		max-width: 720px;
+		overflow-x: auto;
+		border: 1px solid var(--color-bg-border);
+		border-radius: 14px;
+	}
+
+	.plan-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-family: 'DM Sans', system-ui, sans-serif;
+		font-size: 14px;
+	}
+
+	.plan-table th {
+		padding: 14px 20px;
+		text-align: center;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--color-text-secondary);
+		background: var(--color-bg-elevated);
+		border-bottom: 1px solid var(--color-bg-border);
+	}
+
+	.plan-table th.feature-col {
+		text-align: left;
+	}
+
+	.plan-table th.highlighted-col,
+	.plan-table td.highlighted-col {
+		background: var(--color-brand-muted);
+		color: var(--color-brand);
+	}
+
+	.plan-table td {
+		padding: 12px 20px;
+		text-align: center;
+		color: var(--color-text-primary);
+		border-bottom: 1px solid var(--color-divider);
+	}
+
+	.plan-table tr:last-child td {
+		border-bottom: none;
+	}
+
+	.plan-table td.feature-col {
+		text-align: left;
+		color: var(--color-text-secondary);
+		font-weight: 500;
+	}
+
 	/* ── FAQ ── */
 	.faq-section {
 		position: relative;
@@ -574,6 +605,8 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 40px;
+		background: var(--color-bg-surface);
+		border-top: 1px solid var(--color-bg-border);
 	}
 
 	.faq-title {
@@ -600,9 +633,7 @@
 		border-bottom: 1px solid var(--color-divider);
 	}
 
-	.faq-item:last-child {
-		border-bottom: none;
-	}
+	.faq-item:last-child { border-bottom: none; }
 
 	.faq-question {
 		width: 100%;
@@ -622,9 +653,7 @@
 		transition: background 150ms ease;
 	}
 
-	.faq-question:hover {
-		background: var(--color-bg-elevated);
-	}
+	.faq-question:hover { background: var(--color-bg-elevated); }
 
 	.faq-chevron {
 		flex-shrink: 0;
@@ -632,9 +661,7 @@
 		transition: transform 200ms ease;
 	}
 
-	.faq-chevron.rotated {
-		transform: rotate(180deg);
-	}
+	.faq-chevron.rotated { transform: rotate(180deg); }
 
 	.faq-answer {
 		padding: 0 24px 18px;
@@ -699,8 +726,5 @@
 		box-shadow: 0 0 28px rgba(16, 185, 129, 0.3);
 	}
 
-	.bottom-cta-btn:hover {
-		background: var(--color-brand-hover);
-	}
-
+	.bottom-cta-btn:hover { background: var(--color-brand-hover); }
 </style>

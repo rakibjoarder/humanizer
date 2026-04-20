@@ -1,34 +1,17 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import {
-		getLastVisitedActivityId,
-		setLastVisitedActivityId
-	} from '$lib/client/lastActivityVisit';
-	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
-	type Classification = 'LIKELY_AI' | 'POSSIBLY_AI' | 'POSSIBLY_HUMAN' | 'LIKELY_HUMAN';
-
-	interface ActivityItem {
-		id: string;
-		type: 'detect' | 'humanize';
-		word_count: number;
-		classification: string | null;
-		ai_probability: number | null;
-		created_at: string;
-	}
-
 	interface Profile {
-		plan: 'free' | 'pro';
+		plan: 'free' | 'basic' | 'pro' | 'ultra';
 		full_name: string | null;
 		email: string;
 	}
 
-	interface TokenPack {
+	interface WordPack {
 		priceId: string;
-		tokens: number;
+		words: number;
 		price: number;
 		label: string;
 	}
@@ -36,51 +19,50 @@
 	interface Props {
 		data: {
 			profile: Profile;
-			detectionsLimit: number;
-			credits: number;
-			tokenPacks: TokenPack[];
+			wordsBalance: number;
+			planWordsLimit: number;
+			wordPacks: WordPack[];
 			totalDetections: number;
 			totalHumanizations: number;
 			wordsAnalyzed: number;
 			avgAiProbability: number | null;
-			recentActivity: ActivityItem[];
 		};
 	}
 
 	let { data }: Props = $props();
 
-	const lastVisitedActivityId = $derived.by(() => {
-		if (!browser) return null;
-		void page.url.pathname;
-		return getLastVisitedActivityId();
+	const isPaidPlan = $derived(
+		data.profile.plan === 'basic' || data.profile.plan === 'pro' || data.profile.plan === 'ultra'
+	);
+	const planLabel = $derived(() => {
+		switch (data.profile.plan) {
+			case 'basic': return 'Basic';
+			case 'pro': return 'Pro';
+			case 'ultra': return 'Ultra';
+			default: return 'Free';
+		}
 	});
-
-	// ── Ring gauge math ────────────────────────────────────────────────────────
-	const RING_R = 54;
-	const RING_C = 2 * Math.PI * RING_R;
-
-	const usageRatio = $derived(
-		data.detectionsLimit === -1 ? 0 : Math.min(data.totalDetections / data.detectionsLimit, 1)
-	);
-	const ringOffset = $derived(RING_C - usageRatio * RING_C);
-	const ringColor = $derived(
-		data.detectionsLimit === -1 ? 'var(--color-brand)' :
-		usageRatio >= 1             ? 'var(--color-ai)' :
-		usageRatio >= 0.67          ? 'var(--color-possibly-ai)' :
-		'var(--color-brand)'
-	);
-
-	const planLabel = $derived(
-		data.profile.plan === 'pro' ? 'Pro · Monthly' : 'Free'
-	);
 
 	const showUpgradedBanner = $derived(page.url.searchParams.get('upgraded') === 'true');
 
-	// ── Stat boxes ─────────────────────────────────────────────────────────────
-	let creditBuyLoading = $state<string | null>(null);
+	// ── Words bar ──────────────────────────────────────────────────────────────
+	const wordsLimit = $derived(data.planWordsLimit);
+	const wordsUsedPct = $derived(
+		wordsLimit <= 0
+			? 0
+			: Math.min(100, ((wordsLimit - data.wordsBalance) / wordsLimit) * 100)
+	);
+	const wordsBarColor = $derived(
+		data.wordsBalance === 0 ? 'var(--color-ai)' :
+		data.wordsBalance <= wordsLimit * 0.2 ? '#f59e0b' :
+		'var(--color-brand)'
+	);
 
-	async function buyCredits(priceId: string) {
-		creditBuyLoading = priceId;
+	// ── Stat boxes ─────────────────────────────────────────────────────────────
+	let wordBuyLoading = $state<string | null>(null);
+
+	async function buyWords(priceId: string) {
+		wordBuyLoading = priceId;
 		try {
 			const res = await fetch('/api/stripe/tokens', {
 				method: 'POST',
@@ -93,12 +75,12 @@
 		} catch {
 			alert('Network error.');
 		} finally {
-			creditBuyLoading = null;
+			wordBuyLoading = null;
 		}
 	}
 
-	const creditsSub = $derived(
-		data.credits <= 10 ? 'low — top up in settings' : 'resets monthly'
+	const wordsSub = $derived(
+		data.wordsBalance <= 1000 ? 'low — top up in settings' : 'resets monthly'
 	);
 
 	const statBoxes = $derived([
@@ -106,35 +88,15 @@
 		{ label: 'Humanizations',       value: data.totalHumanizations.toLocaleString(), sub: 'all time' },
 		{ label: 'Words processed',     value: formatWords(data.wordsAnalyzed),          sub: 'all time' },
 		{ label: 'Avg. AI probability', value: data.avgAiProbability !== null ? `${data.avgAiProbability}%` : '—', sub: 'across detections' },
-		data.profile.plan === 'pro'
-			? { label: 'Credits remaining', value: String(data.credits), sub: creditsSub }
-			: { label: 'Free detections used', value: `${data.totalDetections} / ${data.detectionsLimit}`, sub: planLabel },
+		isPaidPlan
+			? { label: 'Words remaining', value: data.wordsBalance.toLocaleString(), sub: wordsSub }
+			: { label: 'Plan', value: 'Free', sub: 'upgrade to humanize' },
 	]);
 
 	function formatWords(n: number): string {
 		if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
 		if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
 		return n.toLocaleString();
-	}
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString('en-US', {
-			month: 'short', day: 'numeric',
-			hour: '2-digit', minute: '2-digit'
-		});
-	}
-
-	function isValidClassification(c: string | null): c is Classification {
-		return c === 'LIKELY_AI' || c === 'POSSIBLY_AI' || c === 'POSSIBLY_HUMAN' || c === 'LIKELY_HUMAN';
-	}
-
-	function activityHref(item: ActivityItem) {
-		return item.type === 'detect' ? `/detect?id=${item.id}` : `/humanize?id=${item.id}`;
-	}
-
-	function onActivityRowActivate(item: ActivityItem) {
-		setLastVisitedActivityId(item.id);
-		goto(activityHref(item));
 	}
 
 </script>
@@ -154,7 +116,7 @@
 			color: var(--color-human);
 		" class="animate-fade-up" role="alert">
 			<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-			You're now on the {planLabel}. Enjoy your upgraded features!
+			You're now on the {planLabel()} plan. Enjoy your upgraded features!
 		</div>
 	{/if}
 
@@ -178,83 +140,76 @@
 			align-items: center;
 			gap: 16px;
 		">
-			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0; align-self: flex-start;">Detections used</p>
-
-			<!-- Ring SVG -->
-			<svg width="150" height="150" viewBox="0 0 150 150" fill="none" aria-label="Detections used: {data.totalDetections} of {data.detectionsLimit === -1 ? 'unlimited' : data.detectionsLimit}">
-				<!-- Track -->
-				<circle cx="75" cy="75" r={RING_R} stroke="var(--color-bg-border)" stroke-width="10" fill="none"/>
-				<!-- Fill -->
-				<circle
-					cx="75" cy="75" r={RING_R}
-					stroke={ringColor}
-					stroke-width="10"
-					fill="none"
-					stroke-linecap="round"
-					stroke-dasharray={RING_C}
-					stroke-dashoffset={ringOffset}
-					transform="rotate(-90 75 75)"
-					style="transition: stroke-dashoffset 600ms ease-out, stroke 300ms ease;"
-				/>
-				<!-- Center: detections used -->
-				<text x="75" y="68" text-anchor="middle" dominant-baseline="middle"
-					font-family="'Newsreader', Georgia, serif" font-size="20" fill="var(--color-text-primary)">
-					{data.detectionsLimit === -1 ? '∞' : data.totalDetections.toLocaleString()}
-				</text>
-				<text x="75" y="88" text-anchor="middle" dominant-baseline="middle"
-					font-family="'JetBrains Mono', monospace" font-size="9" fill="var(--color-text-muted)" letter-spacing="0.06em">
-					{data.detectionsLimit === -1 ? 'UNLIMITED' : `/ ${data.detectionsLimit.toLocaleString()}`}
-				</text>
-			</svg>
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0; align-self: flex-start;">Words remaining</p>
 
 			<!-- Plan label -->
-			<p style="font-family: 'Newsreader', Georgia, serif; font-size: 24px; font-weight: 400; color: var(--color-text-primary); margin: 0;">{planLabel}</p>
+			<p style="font-family: 'Newsreader', Georgia, serif; font-size: 24px; font-weight: 400; color: var(--color-text-primary); margin: 0;">{planLabel()} Plan</p>
 
-			{#if data.detectionsLimit !== -1 && data.totalDetections >= data.detectionsLimit}
-				<p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-ai); margin: 0;">Free limit reached · Upgrade to Pro</p>
-			{/if}
+			{#if isPaidPlan}
+				<!-- Words balance display -->
+				<div style="text-align: center;">
+					<p style="font-family: 'Newsreader', Georgia, serif; font-size: 48px; line-height: 1; color: var(--color-text-primary); margin: 0;">
+						{data.wordsBalance.toLocaleString()}
+					</p>
+					<p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); margin: 4px 0 0; letter-spacing: 0.06em;">
+						of {wordsLimit.toLocaleString()} words
+					</p>
+				</div>
 
-			<Button variant="secondary" size="sm" onclick={() => goto('/settings')}>Manage plan →</Button>
-
-			{#if data.profile.plan === 'pro'}
-				<!-- Credits bar -->
+				<!-- Words bar -->
 				<div style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
 					<div style="display: flex; justify-content: space-between; align-items: center;">
-						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Credits</span>
-						<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {data.credits === 0 ? 'var(--color-ai)' : data.credits <= 20 ? '#f59e0b' : 'var(--color-brand)'};">{data.credits} / 100</span>
+						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Balance</span>
+						<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {wordsBarColor};">
+							{Math.round(100 - wordsUsedPct)}% left
+						</span>
 					</div>
 					<div style="width: 100%; height: 6px; border-radius: 99px; background: var(--color-bg-border); overflow: hidden;">
-						<div style="height: 100%; border-radius: 99px; width: {Math.min(100, data.credits)}%; background: {data.credits === 0 ? 'var(--color-ai)' : data.credits <= 20 ? '#f59e0b' : 'var(--color-brand)'}; transition: width 600ms ease;"></div>
+						<div style="height: 100%; border-radius: 99px; width: {100 - wordsUsedPct}%; background: {wordsBarColor}; transition: width 600ms ease;"></div>
 					</div>
 				</div>
 
 				<!-- Top-up packs -->
-				<div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
-					<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Top up credits</span>
-					<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">
-						{#each data.tokenPacks as pack}
-							<button
-								onclick={() => buyCredits(pack.priceId)}
-								disabled={creditBuyLoading !== null}
-								style="
-									display: flex; flex-direction: column; align-items: center;
-									padding: 10px 6px; border-radius: 10px; cursor: pointer;
-									background: var(--color-bg-elevated);
-									border: 1px solid var(--color-bg-border);
-									transition: border-color 150ms ease, background 150ms ease;
-									opacity: {creditBuyLoading !== null ? '0.6' : '1'};
-								"
-							>
-								<span style="font-family: 'Newsreader', Georgia, serif; font-size: 18px; color: var(--color-text-primary);">
-									{creditBuyLoading === pack.priceId ? '…' : `+${pack.tokens}`}
-								</span>
-								<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--color-text-muted); margin-top: 2px;">credits</span>
-								<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-brand); margin-top: 4px;">${pack.price}</span>
-							</button>
-						{/each}
+				{#if true}
+					<div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Top up words</span>
+						<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">
+							{#each data.wordPacks as pack}
+								<button
+									onclick={() => buyWords(pack.priceId)}
+									disabled={wordBuyLoading !== null}
+									style="
+										display: flex; flex-direction: column; align-items: center;
+										padding: 10px 6px; border-radius: 10px; cursor: pointer;
+										background: var(--color-bg-elevated);
+										border: 1px solid var(--color-bg-border);
+										transition: border-color 150ms ease, background 150ms ease;
+										opacity: {wordBuyLoading !== null ? '0.6' : '1'};
+									"
+								>
+									<span style="font-family: 'Newsreader', Georgia, serif; font-size: 16px; color: var(--color-text-primary);">
+										{wordBuyLoading === pack.priceId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}
+									</span>
+									<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--color-text-muted); margin-top: 2px;">words</span>
+									<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-brand); margin-top: 4px;">${pack.price}</span>
+								</button>
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/if}
+			{:else}
+				<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted); text-align: center; margin: 0;">
+					Upgrade to start humanizing AI text.
+				</p>
+				<a href="/pricing" style="
+					display: inline-block; padding: 10px 20px;
+					background: var(--color-brand); color: white;
+					border-radius: 10px; font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 14px; font-weight: 600; text-decoration: none;
+				">View plans →</a>
 			{/if}
+
+			<Button variant="secondary" size="sm" onclick={() => goto('/settings')}>Manage plan →</Button>
 		</div>
 
 		<!-- Stat boxes -->
@@ -277,143 +232,9 @@
 		</div>
 	</div>
 
-	<!-- ── Recent activity ── -->
-	<div
-		id="recent-activity"
-		style="
-		background: var(--color-bg-surface);
-		border-radius: 14px;
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		overflow: hidden;
-	"
-	>
-		<!-- Header -->
-		<div style="
-			padding: 14px 20px;
-			background: var(--color-brand-muted);
-			border-bottom: 1px solid rgba(16, 185, 129, 0.3);
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-		">
-			<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.1em; text-transform: uppercase;">Recent activity</span>
-			<button
-				type="button"
-				style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-brand); background: none; border: none; cursor: pointer; font-weight: 600;"
-				onclick={() => goto('/activity')}
-			>View all</button>
-		</div>
-
-		{#if data.recentActivity.length === 0}
-			<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 56px 24px; text-align: center;">
-				<div style="width: 48px; height: 48px; border-radius: 12px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border); display: flex; align-items: center; justify-content: center;">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/>
-					</svg>
-				</div>
-				<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0;">No activity yet. Start by analyzing some text!</p>
-				<a href="/detect" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); text-decoration: none;">Go to Detect →</a>
-			</div>
-		{:else}
-			<div style="overflow-x: auto;">
-				<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px;">
-					<thead>
-						<tr style="border-bottom: 1px solid var(--color-divider);">
-							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;">Date</th>
-							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Type</th>
-							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Words</th>
-							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Result</th>
-							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;"></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.recentActivity as item (item.id)}
-							<tr
-								class="activity-row"
-								class:activity-row-last={item.id === lastVisitedActivityId}
-								style="border-bottom: 1px solid var(--color-divider); cursor: pointer;"
-								role="link"
-								tabindex="0"
-								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}"
-								onclick={() => onActivityRowActivate(item)}
-								onkeydown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										onActivityRowActivate(item);
-									}
-								}}
-							>
-								<!-- Date -->
-								<td style="padding: 12px 16px; white-space: nowrap;">
-									<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{formatDate(item.created_at)}</span>
-								</td>
-								<!-- Type -->
-								<td style="padding: 12px 16px;">
-									<span style="
-										display: inline-flex; align-items: center; gap: 6px;
-										font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-										padding: 3px 10px; border-radius: 99px;
-										background: {item.type === 'detect' ? 'var(--color-brand-muted)' : 'var(--color-human-muted)'};
-										color: {item.type === 'detect' ? 'var(--color-brand)' : 'var(--color-human)'};
-										box-shadow: inset 0 0 0 1px {item.type === 'detect' ? 'var(--color-brand)' : 'var(--color-human)'};
-									">
-										{item.type === 'detect' ? 'Detect' : 'Humanize'}
-									</span>
-								</td>
-								<!-- Words -->
-								<td style="padding: 12px 16px;">
-									<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">{item.word_count.toLocaleString()}</span>
-								</td>
-								<!-- Result -->
-								<td style="padding: 12px 16px;">
-									{#if item.type === 'detect' && isValidClassification(item.classification)}
-										<ClassificationBadge classification={item.classification} size="sm"/>
-									{:else if item.type === 'humanize'}
-										<span style="
-											display: inline-flex; align-items: center;
-											font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-											padding: 3px 10px; border-radius: 99px;
-											background: var(--color-human-muted); color: var(--color-human);
-											box-shadow: inset 0 0 0 1px var(--color-human);
-										">Humanized</span>
-									{:else}
-										<span style="color: var(--color-text-dim);">—</span>
-									{/if}
-								</td>
-								<!-- Arrow -->
-								<td style="padding: 12px 16px;">
-									<a
-										href={activityHref(item)}
-										style="color: var(--color-text-muted); text-decoration: none; display: inline-flex;"
-										aria-label="Open {item.type} in new tab"
-										onclick={(e) => {
-											e.stopPropagation();
-											setLastVisitedActivityId(item.id);
-										}}
-									>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14 M13 6l6 6-6 6"/></svg>
-									</a>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	</div>
 </div>
 
 <style>
-	.activity-row:hover {
-		background: var(--color-bg-elevated);
-	}
-	.activity-row-last {
-		background: var(--color-brand-muted);
-		box-shadow: inset 3px 0 0 var(--color-brand);
-	}
-	.activity-row-last:hover {
-		background: var(--color-bg-elevated);
-	}
 	@media (max-width: 960px) {
 		.dash-top { grid-template-columns: 1fr !important; }
 	}

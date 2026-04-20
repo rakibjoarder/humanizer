@@ -58,7 +58,9 @@
 	}
 
 	const planLabel = $derived(
-		profile?.plan === 'pro' ? 'Pro' : 'Free'
+		profile?.plan === 'ultra' ? 'Ultra' :
+		profile?.plan === 'pro' ? 'Pro' :
+		profile?.plan === 'basic' ? 'Basic' : 'Free'
 	);
 
 	const planColor = $derived(
@@ -297,90 +299,6 @@
 		</div>
 	{/if}
 </header>
-
-{#if showHomePromoBanner}
-	<div
-		class="marketing-home-promo-banner"
-		style="
-			width: 100%;
-			background: var(--color-brand-muted);
-			border-bottom: 1px solid rgba(16, 185, 129, 0.3);
-			padding: 12px 24px;
-			box-sizing: border-box;
-		"
-	>
-		<div
-			style="
-				max-width: 1200px;
-				margin: 0 auto;
-				width: 100%;
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				gap: 16px;
-				flex-wrap: wrap;
-			"
-		>
-			<div
-				style="
-					display: flex;
-					align-items: center;
-					gap: 10px;
-					min-width: 0;
-					flex: 1 1 240px;
-				"
-			>
-				<svg
-					width="12"
-					height="12"
-					viewBox="0 0 24 24"
-					fill="currentColor"
-					aria-hidden="true"
-					style="flex-shrink: 0; color: var(--color-brand); transform: rotate(45deg);"
-				>
-					<rect x="9" y="9" width="6" height="6" rx="0.5" />
-				</svg>
-				<p
-					style="
-						margin: 0;
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 13px;
-						line-height: 1.4;
-						color: var(--color-text-secondary);
-					"
-				>
-					Enjoy unlimited access starting at $9.99/month. Cancel anytime.
-				</p>
-			</div>
-			<button
-				type="button"
-				onclick={() => goto('/pricing')}
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 12px;
-					font-weight: 600;
-					padding: 7px 16px;
-					border-radius: 999px;
-					border: 1px solid var(--color-brand);
-					background: var(--color-brand);
-					color: #ffffff;
-					cursor: pointer;
-					flex-shrink: 0;
-					transition: background 150ms, border-color 150ms;
-					box-shadow: 0 1px 0 rgba(255,255,255,0.08);
-				"
-				onmouseenter={(e) => {
-					(e.currentTarget as HTMLButtonElement).style.background = 'var(--color-brand-hover)';
-				}}
-				onmouseleave={(e) => {
-					(e.currentTarget as HTMLButtonElement).style.background = 'var(--color-brand)';
-				}}
-			>
-				Explore Premium
-			</button>
-		</div>
-	</div>
-{/if}
 
 <!-- Page content -->
 {@render children()}

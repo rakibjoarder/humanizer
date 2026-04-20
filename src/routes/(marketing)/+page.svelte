@@ -100,7 +100,9 @@
 			'there'
 	);
 
-	const isPro = $derived(data.profile?.plan === 'pro');
+	const isPro = $derived(
+		data.profile?.plan === 'basic' || data.profile?.plan === 'pro' || data.profile?.plan === 'ultra'
+	);
 
 	const homeWordCount = $derived(countWords(homeInput));
 
@@ -144,11 +146,7 @@
 		const reader = new FileReader();
 		reader.onload = () => {
 			const text = typeof reader.result === 'string' ? reader.result : '';
-			if (!data.user) {
-				homeInput = trimToMaxWords(text, FREE_DETECTION_MAX_WORDS_PER_SCAN);
-			} else {
-				homeInput = text.slice(0, 50000);
-			}
+			homeInput = trimToMaxWords(text, data.user ? 50000 : FREE_DETECTION_MAX_WORDS_PER_SCAN);
 		};
 		reader.readAsText(file);
 		input.value = '';
@@ -156,11 +154,8 @@
 
 	function onComposerInput(e: Event) {
 		const el = e.currentTarget as HTMLTextAreaElement;
-		let v = el.value;
-		if (!data.user) {
-			v = trimToMaxWords(v, FREE_DETECTION_MAX_WORDS_PER_SCAN);
-		}
-		homeInput = v;
+		const cap = data.user ? 50000 : FREE_DETECTION_MAX_WORDS_PER_SCAN;
+		homeInput = trimToMaxWords(el.value, cap);
 	}
 
 	onMount(() => {
@@ -962,7 +957,7 @@
 								background: var(--color-human-muted);
 								color: var(--color-human);
 								border: 1px solid var(--color-human);
-							">Save 33%</span>
+							">Save 20%</span>
 						</button>
 					</div>
 				</div>
@@ -970,20 +965,25 @@
 
 			<div style="
 				display: grid;
-				grid-template-columns: repeat(2, 1fr);
+				grid-template-columns: repeat(3, 1fr);
 				gap: 20px;
-				max-width: 680px;
+				max-width: 960px;
 				margin: 0 auto;
 				align-items: start;
 			" class="pricing-grid">
 				<Reveal delay={0}>
-					<a href="/register" style="display: block; text-decoration: none;">
-						<PricingCard plan="free" {billingCycle} highlighted={false} />
+					<a href="/pricing" style="display: block; text-decoration: none;">
+						<PricingCard plan="basic" {billingCycle} highlighted={false} />
 					</a>
 				</Reveal>
 				<Reveal delay={80}>
 					<a href="/pricing" style="display: block; text-decoration: none; padding-top: 16px;">
 						<PricingCard plan="pro" {billingCycle} highlighted={true} />
+					</a>
+				</Reveal>
+				<Reveal delay={160}>
+					<a href="/pricing" style="display: block; text-decoration: none;">
+						<PricingCard plan="ultra" {billingCycle} highlighted={false} />
 					</a>
 				</Reveal>
 			</div>

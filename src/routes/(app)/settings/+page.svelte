@@ -102,12 +102,12 @@
 	}
 
 	let subscription = $derived(data.subscription);
-	let tokenPacks = $derived(data.tokenPacks);
-	let tokens = $derived(profile?.tokens ?? 0);
-	let tokenBuyLoading = $state<string | null>(null);
+	let wordPacks = $derived(data.wordPacks);
+	let wordsBalance = $derived(profile?.words_balance ?? 0);
+	let wordBuyLoading = $state<string | null>(null);
 
-	async function buyTokenPack(priceId: string) {
-		tokenBuyLoading = priceId;
+	async function buyWordPack(priceId: string) {
+		wordBuyLoading = priceId;
 		try {
 			const res = await fetch('/api/stripe/tokens', {
 				method: 'POST',
@@ -123,26 +123,45 @@
 		} catch {
 			alert('Failed to reach payment service.');
 		} finally {
-			tokenBuyLoading = null;
+			wordBuyLoading = null;
 		}
 	}
 
-	let planLabel = $derived(
-		profile?.plan === 'pro' ? 'Pro' : 'Free'
+	const isPaidPlan = $derived(
+		profile?.plan === 'basic' || profile?.plan === 'pro' || profile?.plan === 'ultra'
 	);
+	const planLabel = $derived(() => {
+		switch (profile?.plan) {
+			case 'basic': return 'Basic';
+			case 'pro': return 'Pro';
+			case 'ultra': return 'Ultra';
+			default: return 'Free';
+		}
+	});
 
-	let planDescription = $derived(
-		profile?.plan === 'pro'
-			? 'Unlimited detections and humanizations per day.'
-			: '2 free detections total · 500 words per scan.'
-	);
+	const planDescription = $derived(() => {
+		switch (profile?.plan) {
+			case 'basic': return '4,500 words per month · Unlimited detections.';
+			case 'pro': return '12,000 words per month · Unlimited detections.';
+			case 'ultra': return '35,000 words per month · Unlimited detections.';
+			default: return 'No active plan · Upgrade to humanize AI text.';
+		}
+	});
 
-	let cancelDate = $derived(
+	const cancelDate = $derived(
 		subscription?.cancel_at_period_end && subscription?.current_period_end
 			? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
 					year: 'numeric', month: 'long', day: 'numeric'
 				})
 			: null
+	);
+
+	// Word limit for progress bar
+	const PLAN_WORD_LIMITS: Record<string, number> = { basic: 4500, pro: 12000, ultra: 35000 };
+	const wordLimit = $derived(PLAN_WORD_LIMITS[profile?.plan ?? ''] ?? 0);
+	const wordUsedPct = $derived(
+		wordLimit <= 0 ? 0 :
+		Math.min(100, ((wordLimit - wordsBalance) / wordLimit) * 100)
 	);
 </script>
 
@@ -167,32 +186,20 @@
 		<h2 class="text-base font-semibold mb-4" style="color: var(--color-text-primary)">Profile</h2>
 
 		{#if profileSuccess}
-			<div
-				class="mb-4 px-4 py-3 rounded-lg text-sm border"
-				style="background: #22c55e15; border-color: #22c55e40; color: #22c55e"
-			>
+			<div class="mb-4 px-4 py-3 rounded-lg text-sm border" style="background: #22c55e15; border-color: #22c55e40; color: #22c55e">
 				Profile updated successfully.
 			</div>
 		{/if}
 
 		{#if profileError}
-			<div
-				class="mb-4 px-4 py-3 rounded-lg text-sm border"
-				style="background: #ef444415; border-color: #ef444440; color: #ef4444"
-			>
+			<div class="mb-4 px-4 py-3 rounded-lg text-sm border" style="background: #ef444415; border-color: #ef444440; color: #ef4444">
 				{profileError}
 			</div>
 		{/if}
 
 		<form onsubmit={updateProfile} class="space-y-4">
 			<div>
-				<label
-					class="block text-sm font-medium mb-1.5"
-					style="color: var(--color-text-secondary)"
-					for="fullName"
-				>
-					Full Name
-				</label>
+				<label class="block text-sm font-medium mb-1.5" style="color: var(--color-text-secondary)" for="fullName">Full Name</label>
 				<input
 					id="fullName"
 					type="text"
@@ -201,179 +208,109 @@
 					onfocus={inputFocus}
 					onblur={inputBlur}
 					class="settings-input w-full px-3.5 py-2.5 rounded-lg text-sm outline-none transition-all"
-					style="
-						background: var(--color-bg-elevated);
-						border: 1px solid var(--color-bg-border);
-						color: var(--color-text-primary);
-					"
+					style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border); color: var(--color-text-primary);"
 				/>
 			</div>
 
 			<div>
-				<label
-					class="block text-sm font-medium mb-1.5"
-					style="color: var(--color-text-secondary)"
-					for="email-display"
-				>
-					Email
-				</label>
+				<label class="block text-sm font-medium mb-1.5" style="color: var(--color-text-secondary)" for="email-display">Email</label>
 				<input
 					id="email-display"
 					type="email"
 					value={user?.email ?? ''}
 					readonly
 					class="w-full px-3.5 py-2.5 rounded-lg text-sm cursor-not-allowed"
-					style="
-						background: var(--color-bg-elevated);
-						border: 1px solid var(--color-bg-border);
-						color: var(--color-text-muted);
-						opacity: 0.7;
-					"
+					style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border); color: var(--color-text-muted); opacity: 0.7;"
 				/>
-				<p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-					Email cannot be changed here. Contact support if needed.
-				</p>
+				<p class="mt-1 text-xs" style="color: var(--color-text-muted)">Email cannot be changed here. Contact support if needed.</p>
 			</div>
 
 			<div class="flex justify-end">
-				<button
-					type="submit"
-					disabled={profileLoading}
-					class="btn-brand px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-				>
-					{#if profileLoading}
-						Saving…
-					{:else}
-						Save changes
-					{/if}
+				<button type="submit" disabled={profileLoading} class="btn-brand px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+					{profileLoading ? 'Saving…' : 'Save changes'}
 				</button>
 			</div>
 		</form>
 	</section>
 
 	<!-- Billing section -->
-	<section
-		class="rounded-xl border p-6"
-		style="background: var(--color-bg-surface); border-color: var(--color-bg-border)"
-	>
+	<section class="rounded-xl border p-6" style="background: var(--color-bg-surface); border-color: var(--color-bg-border)">
 		<h2 class="text-base font-semibold mb-1" style="color: var(--color-text-primary)">Billing</h2>
-		<p class="text-sm mb-5" style="color: var(--color-text-secondary)">
-			Manage your subscription and payment details.
-		</p>
+		<p class="text-sm mb-5" style="color: var(--color-text-secondary)">Manage your subscription and payment details.</p>
 
-		<div
-			class="flex items-center justify-between p-4 rounded-lg mb-5"
-			style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)"
-		>
+		<div class="flex items-center justify-between p-4 rounded-lg mb-5" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
 			<div>
 				<div class="flex items-center gap-2 mb-0.5">
-					<span class="text-sm font-semibold" style="color: var(--color-text-primary)">
-						{planLabel} Plan
-					</span>
-					{#if profile?.plan !== 'free'}
-						<span
-							class="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-							style={cancelDate
-								? 'background: #f59e0b20; color: #f59e0b'
-								: 'background: var(--color-brand-muted); color: var(--color-brand)'}
-						>
+					<span class="text-sm font-semibold" style="color: var(--color-text-primary)">{planLabel()} Plan</span>
+					{#if isPaidPlan}
+						<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={cancelDate ? 'background: #f59e0b20; color: #f59e0b' : 'background: var(--color-brand-muted); color: var(--color-brand)'}>
 							{cancelDate ? 'Cancelling' : 'Active'}
 						</span>
 					{/if}
 				</div>
-				<p class="text-xs" style="color: var(--color-text-muted)">{planDescription}</p>
+				<p class="text-xs" style="color: var(--color-text-muted)">{planDescription()}</p>
 				{#if cancelDate}
-					<p class="text-xs mt-1" style="color: #f59e0b">
-						Cancels on {cancelDate}
-					</p>
+					<p class="text-xs mt-1" style="color: #f59e0b">Cancels on {cancelDate}</p>
 				{/if}
 			</div>
 
-			{#if profile?.plan === 'free'}
-				<a href="/pricing" class="btn-brand shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold">
-					Upgrade
-				</a>
+			{#if !isPaidPlan}
+				<a href="/pricing" class="btn-brand shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold">Upgrade</a>
 			{:else}
-				<button
-					onclick={openBillingPortal}
-					disabled={billingLoading}
-					class="btn-outline shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-				>
-					{#if billingLoading}
-						Opening…
-					{:else}
-						Manage Billing
-					{/if}
+				<button onclick={openBillingPortal} disabled={billingLoading} class="btn-outline shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+					{billingLoading ? 'Opening…' : 'Manage Billing'}
 				</button>
 			{/if}
 		</div>
 
-		{#if profile?.plan === 'pro'}
-			<!-- Credits balance -->
-			<div class="mb-4">
+		{#if isPaidPlan}
+			<!-- Words balance -->
+			<div class="mb-5">
 				<div class="flex items-center justify-between mb-1.5">
-					<span class="text-sm font-medium" style="color: var(--color-text-secondary)">
-						Credits remaining
-					</span>
-					<span
-						class="text-sm font-semibold"
-						style="color: {tokens === 0 ? '#ef4444' : tokens <= 20 ? '#f59e0b' : 'var(--color-brand)'}"
-					>
-						{tokens} / 100
+					<span class="text-sm font-medium" style="color: var(--color-text-secondary)">Words remaining</span>
+					<span class="text-sm font-semibold" style="color: {wordsBalance === 0 ? '#ef4444' : wordsBalance <= wordLimit * 0.2 ? '#f59e0b' : 'var(--color-brand)'}">
+						{wordsBalance.toLocaleString()} / {wordLimit.toLocaleString()}
 					</span>
 				</div>
 				<div class="w-full h-2 rounded-full" style="background: var(--color-bg-elevated)">
-					<div
-						class="h-2 rounded-full transition-all"
-						style="width: {Math.min(100, (tokens / 100) * 100)}%; background: {tokens === 0 ? '#ef4444' : tokens <= 20 ? '#f59e0b' : 'var(--color-brand)'}"
-					></div>
+					<div class="h-2 rounded-full transition-all" style="width: {Math.max(0, 100 - wordUsedPct)}%; background: {wordsBalance === 0 ? '#ef4444' : wordsBalance <= wordLimit * 0.2 ? '#f59e0b' : 'var(--color-brand)'}"></div>
 				</div>
-				<p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-					Resets monthly with your Pro plan. 1 credit = 1 humanization.
-				</p>
+				<p class="mt-1 text-xs" style="color: var(--color-text-muted)">Resets monthly with your plan.</p>
 			</div>
 
-			<!-- Credit packs -->
-			{#if tokens <= 20}
-				<div>
-					<p class="text-xs font-medium mb-2" style="color: var(--color-text-secondary)">
-						{tokens === 0 ? 'Out of credits — buy more to continue humanizing:' : 'Running low — top up your credits:'}
-					</p>
-					<div class="grid grid-cols-3 gap-2">
-						{#each tokenPacks as pack}
-							<button
-								onclick={() => buyTokenPack(pack.priceId)}
-								disabled={tokenBuyLoading !== null}
-								class="flex flex-col items-center p-3 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-								style="background: var(--color-bg-elevated); border-color: var(--color-bg-border)"
-							>
-								<span class="text-sm font-bold" style="color: var(--color-text-primary)">
-									{#if tokenBuyLoading === pack.priceId}…{:else}+{pack.tokens}{/if}
-								</span>
-								<span class="text-[10px] mt-0.5" style="color: var(--color-text-muted)">credits</span>
-								<span class="text-xs font-semibold mt-1" style="color: var(--color-brand)">${pack.price}</span>
-							</button>
-						{/each}
-					</div>
+			<!-- Word packs -->
+			<div>
+				<p class="text-xs font-medium mb-2" style="color: var(--color-text-secondary)">
+					{wordsBalance === 0 ? 'Out of words — buy more to continue:' : 'Top up your word balance:'}
+				</p>
+				<div class="grid grid-cols-3 gap-2">
+					{#each wordPacks as pack}
+						<button
+							onclick={() => buyWordPack(pack.priceId)}
+							disabled={wordBuyLoading !== null}
+							class="flex flex-col items-center p-3 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+							style="background: var(--color-bg-elevated); border-color: var(--color-bg-border)"
+						>
+							<span class="text-sm font-bold" style="color: var(--color-text-primary)">
+								{wordBuyLoading === pack.priceId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}
+							</span>
+							<span class="text-[10px] mt-0.5" style="color: var(--color-text-muted)">words</span>
+							<span class="text-xs font-semibold mt-1" style="color: var(--color-brand)">${pack.price}</span>
+						</button>
+					{/each}
 				</div>
-			{/if}
+			</div>
 		{/if}
 	</section>
 
 	<!-- Danger zone -->
-	<section
-		class="rounded-xl border p-6"
-		style="border-color: #ef444430; background: var(--color-bg-surface)"
-	>
+	<section class="rounded-xl border p-6" style="border-color: #ef444430; background: var(--color-bg-surface)">
 		<h2 class="text-base font-semibold mb-1" style="color: #ef4444">Danger Zone</h2>
 		<p class="text-sm mb-5" style="color: var(--color-text-secondary)">
 			Permanently delete your account and all associated data. This action cannot be undone.
 		</p>
 
-		<button
-			onclick={() => (showDeleteModal = true)}
-			class="btn-danger px-4 py-2 rounded-lg text-sm font-medium border transition-all"
-		>
+		<button onclick={() => (showDeleteModal = true)} class="btn-danger px-4 py-2 rounded-lg text-sm font-medium border transition-all">
 			Delete account
 		</button>
 	</section>
@@ -381,29 +318,15 @@
 
 <!-- Delete account modal -->
 {#if showDeleteModal}
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center p-4"
-		style="background: rgba(0,0,0,0.7)"
-		role="dialog"
-		aria-modal="true"
-	>
-		<div
-			class="w-full max-w-md rounded-2xl border p-6"
-			style="background: var(--color-bg-surface); border-color: var(--color-bg-border)"
-		>
-			<h3 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary)">
-				Delete your account?
-			</h3>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.7)" role="dialog" aria-modal="true">
+		<div class="w-full max-w-md rounded-2xl border p-6" style="background: var(--color-bg-surface); border-color: var(--color-bg-border)">
+			<h3 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary)">Delete your account?</h3>
 			<p class="text-sm mb-5" style="color: var(--color-text-secondary)">
-				This will permanently delete your account, all detections, humanizations, and usage history.
-				Type your email address to confirm.
+				This will permanently delete your account, all detections, humanizations, and usage history. Type your email address to confirm.
 			</p>
 
 			{#if deleteError}
-				<div
-					class="mb-4 px-4 py-3 rounded-lg text-sm border"
-					style="background: #ef444415; border-color: #ef444440; color: #ef4444"
-				>
+				<div class="mb-4 px-4 py-3 rounded-lg text-sm border" style="background: #ef444415; border-color: #ef444440; color: #ef4444">
 					{deleteError}
 				</div>
 			{/if}
@@ -413,34 +336,15 @@
 				bind:value={deleteConfirm}
 				placeholder={user?.email ?? 'your@email.com'}
 				class="w-full px-3.5 py-2.5 rounded-lg text-sm outline-none mb-5"
-				style="
-					background: var(--color-bg-elevated);
-					border: 1px solid #ef444440;
-					color: var(--color-text-primary);
-				"
+				style="background: var(--color-bg-elevated); border: 1px solid #ef444440; color: var(--color-text-primary);"
 			/>
 
 			<div class="flex gap-3">
-				<button
-					onclick={() => {
-						showDeleteModal = false;
-						deleteConfirm = '';
-						deleteError = '';
-					}}
-					class="btn-outline flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all"
-				>
+				<button onclick={() => { showDeleteModal = false; deleteConfirm = ''; deleteError = ''; }} class="btn-outline flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all">
 					Cancel
 				</button>
-				<button
-					onclick={deleteAccount}
-					disabled={deleteLoading || deleteConfirm !== user?.email}
-					class="btn-delete flex-1 py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-				>
-					{#if deleteLoading}
-						Deleting…
-					{:else}
-						Yes, delete my account
-					{/if}
+				<button onclick={deleteAccount} disabled={deleteLoading || deleteConfirm !== user?.email} class="btn-delete flex-1 py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+					{deleteLoading ? 'Deleting…' : 'Yes, delete my account'}
 				</button>
 			</div>
 		</div>
@@ -448,38 +352,15 @@
 {/if}
 
 <style>
-	.btn-brand {
-		background: var(--color-brand);
-		color: white;
-	}
-	.btn-brand:hover:not(:disabled) {
-		background: var(--color-brand-hover);
-	}
+	.btn-brand { background: var(--color-brand); color: white; }
+	.btn-brand:hover:not(:disabled) { background: var(--color-brand-hover); }
 
-	.btn-outline {
-		background: transparent;
-		border-color: var(--color-bg-border);
-		color: var(--color-text-secondary);
-	}
-	.btn-outline:hover:not(:disabled) {
-		background: var(--color-bg-elevated);
-		color: var(--color-text-primary);
-	}
+	.btn-outline { background: transparent; border-color: var(--color-bg-border); color: var(--color-text-secondary); }
+	.btn-outline:hover:not(:disabled) { background: var(--color-bg-elevated); color: var(--color-text-primary); }
 
-	.btn-danger {
-		background: transparent;
-		border: 1px solid #ef444440;
-		color: #ef4444;
-	}
-	.btn-danger:hover {
-		background: #ef444415;
-	}
+	.btn-danger { background: transparent; border: 1px solid #ef444440; color: #ef4444; }
+	.btn-danger:hover { background: #ef444415; }
 
-	.btn-delete {
-		background: #ef4444;
-		color: white;
-	}
-	.btn-delete:hover:not(:disabled) {
-		background: #dc2626;
-	}
+	.btn-delete { background: #ef4444; color: white; }
+	.btn-delete:hover:not(:disabled) { background: #dc2626; }
 </style>

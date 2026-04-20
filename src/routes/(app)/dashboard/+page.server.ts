@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { getUserProfile } from '$lib/server/auth';
 import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
-import { stripe, PRO_TOKENS_PER_MONTH, tokenPacks } from '$lib/server/stripe';
+import { stripe, WORDS_PER_PLAN, wordPacks } from '$lib/server/stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
@@ -14,11 +14,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	// Verify Stripe checkout session on upgrade redirect and immediately update the plan.
-	// Uses service-role client so the write succeeds regardless of RLS policies.
 	const stripeSessionId = url.searchParams.get('session_id');
 	if (stripeSessionId) {
 		try {
-			const checkoutSession = await stripe.checkout.sessions.retrieve(stripeSessionId);
+			const checkoutSession = await stripe.checkout.sessions.retrieve(stripeSessionId, {
+				expand: ['subscription.items.data.price.product']
+			});
 			if (
 				checkoutSession.payment_status === 'paid' &&
 				checkoutSession.metadata?.supabase_user_id === user.id
@@ -27,9 +28,29 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					auth: { autoRefreshToken: false, persistSession: false }
 				});
 
+				// Resolve plan from subscription
+				let plan: string = 'basic';
+				const sub = checkoutSession.subscription as import('stripe').Stripe.Subscription & {
+					items: { data: Array<{ price: import('stripe').Stripe.Price & { product: import('stripe').Stripe.Product } }> };
+				} | null;
+				if (sub) {
+					const productName = (typeof sub.items?.data?.[0]?.price?.product === 'object'
+						? (sub.items.data[0].price.product as import('stripe').Stripe.Product).name
+						: '') ?? '';
+					if (productName.toLowerCase().includes('ultra')) plan = 'ultra';
+					else if (productName.toLowerCase().includes('pro')) plan = 'pro';
+					else if (productName.toLowerCase().includes('basic')) plan = 'basic';
+				}
+
+				const wordsBalance = WORDS_PER_PLAN[plan] ?? WORDS_PER_PLAN.basic;
+
 				await adminClient
 					.from('profiles')
-					.update({ plan: 'pro', stripe_customer_id: checkoutSession.customer as string, tokens: PRO_TOKENS_PER_MONTH })
+					.update({
+						plan,
+						stripe_customer_id: checkoutSession.customer as string,
+						words_balance: wordsBalance
+					})
 					.eq('id', user.id);
 
 				const subscriptionId =
@@ -44,14 +65,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 							user_id: user.id,
 							stripe_subscription_id: subscriptionId,
 							stripe_customer_id: checkoutSession.customer as string,
-							plan: 'pro',
+							plan,
 							status: subscription.status,
-							current_period_start: new Date(
-								subscription.current_period_start * 1000
-							).toISOString(),
-							current_period_end: new Date(
-								subscription.current_period_end * 1000
-							).toISOString()
+							current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+							current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
 						},
 						{ onConflict: 'stripe_subscription_id' }
 					);
@@ -63,9 +80,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	}
 
 	const profile = await getUserProfile(locals.supabase, user.id);
-
-	// ── Detection quota ───────────────────────────────────────────────────────
-	const detectionsLimit = profile.plan === 'free' ? 2 : -1;
 
 	// ── Aggregate stats ───────────────────────────────────────────────────────
 	const [detectionsCountRes, humanizationsCountRes, wordsAnalyzedRes] = await Promise.all([
@@ -92,7 +106,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		0
 	);
 
-	// ── Avg AI probability from all detections ────────────────────────────────
 	const { data: probRows } = await locals.supabase
 		.from('detections')
 		.select('ai_probability')
@@ -120,7 +133,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			.limit(20)
 	]);
 
-	// Merge and sort by created_at descending, take top 20
 	type ActivityItem = {
 		id: string;
 		type: 'detect' | 'humanize';
@@ -152,11 +164,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 		.slice(0, 20);
 
+	const planWordsLimit = WORDS_PER_PLAN[profile.plan] ?? 0;
+
 	return {
 		profile,
-		detectionsLimit,
-		credits: profile.tokens ?? 0,
-		tokenPacks,
+		wordsBalance: profile.words_balance ?? 0,
+		planWordsLimit,
+		wordPacks,
 		totalDetections,
 		totalHumanizations,
 		wordsAnalyzed,

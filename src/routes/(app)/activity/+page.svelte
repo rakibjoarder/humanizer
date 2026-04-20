@@ -10,11 +10,26 @@
 	import type { ActivityItem } from './+page.server';
 
 	type Classification = 'LIKELY_AI' | 'POSSIBLY_AI' | 'POSSIBLY_HUMAN' | 'LIKELY_HUMAN';
+	type TypeFilter = 'all' | 'detect' | 'humanize';
+	type SortOrder = 'newest' | 'oldest';
 
 	interface Props {
 		data: { activity: ActivityItem[] };
 	}
 	let { data }: Props = $props();
+
+	let typeFilter = $state<TypeFilter>('all');
+	let sortOrder = $state<SortOrder>('newest');
+
+	const filteredActivity = $derived(
+		data.activity
+			.filter(item => typeFilter === 'all' || item.type === typeFilter)
+			.slice()
+			.sort((a, b) => {
+				const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+				return sortOrder === 'newest' ? -diff : diff;
+			})
+	);
 
 	const lastVisitedActivityId = $derived.by(() => {
 		if (!browser) return null;
@@ -46,20 +61,64 @@
 </script>
 
 <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 20px;">
-	<p style="margin: 0;">
-		<a
-			href="/dashboard#recent-activity"
-			style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
-		>← Dashboard</a>
-	</p>
-
 	<div>
 		<h1 style="font-family: 'Newsreader', Georgia, serif; font-size: 34px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 6px; letter-spacing: -0.02em;">
 			Activity log
 		</h1>
 		<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0;">
-			All saved detections and humanizations (newest first). Open a row to view details.
+			All saved detections and humanizations. Open a row to view details.
 		</p>
+	</div>
+
+	<!-- Filter + sort controls -->
+	<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+		<!-- Type filter -->
+		<div style="display: inline-flex; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 9px; padding: 3px; gap: 2px;">
+			{#each ([['all', 'All'], ['detect', 'Detect'], ['humanize', 'Humanize']] as [TypeFilter, string][]) as [val, label]}
+				<button
+					onclick={() => (typeFilter = val)}
+					style="
+						padding: 5px 14px;
+						border-radius: 6px;
+						border: none;
+						font-family: 'Space Grotesk', system-ui, sans-serif;
+						font-size: 12px;
+						font-weight: 600;
+						cursor: pointer;
+						transition: all 130ms;
+						background: {typeFilter === val ? 'var(--color-bg-elevated)' : 'transparent'};
+						color: {typeFilter === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
+						box-shadow: {typeFilter === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
+					"
+				>{label}</button>
+			{/each}
+		</div>
+
+		<!-- Sort -->
+		<div style="display: inline-flex; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 9px; padding: 3px; gap: 2px;">
+			{#each ([['newest', 'Newest first'], ['oldest', 'Oldest first']] as [SortOrder, string][]) as [val, label]}
+				<button
+					onclick={() => (sortOrder = val)}
+					style="
+						padding: 5px 14px;
+						border-radius: 6px;
+						border: none;
+						font-family: 'Space Grotesk', system-ui, sans-serif;
+						font-size: 12px;
+						font-weight: 600;
+						cursor: pointer;
+						transition: all 130ms;
+						background: {sortOrder === val ? 'var(--color-bg-elevated)' : 'transparent'};
+						color: {sortOrder === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
+						box-shadow: {sortOrder === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
+					"
+				>{label}</button>
+			{/each}
+		</div>
+
+		<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-text-muted); margin-left: auto;">
+			{filteredActivity.length} {filteredActivity.length === 1 ? 'item' : 'items'}
+		</span>
 	</div>
 
 	<div style="
@@ -68,12 +127,16 @@
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		overflow: hidden;
 	">
-		{#if data.activity.length === 0}
+		{#if filteredActivity.length === 0}
 			<div style="padding: 48px 24px; text-align: center;">
 				<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0 0 12px;">
-					No activity yet.
+					{data.activity.length === 0 ? 'No activity yet.' : 'No items match the current filter.'}
 				</p>
-				<a href="/detect" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); text-decoration: none;">Go to Detect →</a>
+				{#if data.activity.length === 0}
+					<a href="/detect" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); text-decoration: none;">Go to Detect →</a>
+				{:else}
+					<button onclick={() => { typeFilter = 'all'; sortOrder = 'newest'; }} style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); background: none; border: none; cursor: pointer; text-decoration: none;">Clear filters</button>
+				{/if}
 			</div>
 		{:else}
 			<div style="overflow-x: auto;">
@@ -88,7 +151,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each data.activity as item (item.id)}
+						{#each filteredActivity as item (item.id)}
 							<tr
 								class="activity-row"
 								class:activity-row-last={item.id === lastVisitedActivityId}

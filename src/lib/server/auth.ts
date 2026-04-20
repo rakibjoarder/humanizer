@@ -4,12 +4,14 @@ import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export type PlanName = 'free' | 'basic' | 'pro' | 'ultra';
+
 export interface Profile {
 	id: string;
 	email: string;
 	full_name: string | null;
-	plan: 'free' | 'pro';
-	tokens: number;
+	plan: PlanName;
+	words_balance: number;
 	stripe_customer_id: string | null;
 	created_at: string;
 }
@@ -23,11 +25,6 @@ export interface AuthResult {
 
 /**
  * Require an authenticated session.
- *
- * Uses the `safeGetSession` helper already set up in `hooks.server.ts` so the
- * JWT is always verified via `getUser()`.
- *
- * Throws a 303 redirect that opens the login modal (see `redirectToLoginModal`).
  */
 export async function requireAuth(
 	locals: import('@sveltejs/kit').RequestEvent['locals'],
@@ -47,8 +44,6 @@ export async function requireAuth(
 
 /**
  * Fetch the user's profile row from the `profiles` table.
- *
- * Throws if the row cannot be found or if the query fails.
  */
 export async function getUserProfile(
 	supabase: SupabaseClient,
@@ -56,7 +51,7 @@ export async function getUserProfile(
 ): Promise<Profile> {
 	const { data, error } = await supabase
 		.from('profiles')
-		.select('id, email, full_name, plan, tokens, stripe_customer_id, created_at')
+		.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
 		.eq('id', userId)
 		.single();
 

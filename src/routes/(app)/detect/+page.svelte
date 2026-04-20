@@ -5,7 +5,8 @@
 	import { openLoginModal } from '$lib/stores/loginModal';
 	import type { PageData } from './$types';
 	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
-	import { detectText, type DetectResult } from '$lib/client/api';
+	import { detectText, OutOfWordsError, type DetectResult } from '$lib/client/api';
+	import { wordsBalanceStore } from '$lib/stores/wordsBalance';
 	import ScoreGauge from '$lib/components/ScoreGauge.svelte';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import TextEditor from '$lib/components/TextEditor.svelte';
@@ -13,7 +14,7 @@
 	import DiffText from '$lib/components/DiffText.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import SEO from '$lib/components/SEO.svelte';
-	import { countWords } from '$lib/limits';
+	import { countWords, MAX_INPUT_WORDS } from '$lib/limits';
 
 	// ── Icon paths ──────────────────────────────────────────────────────────────
 	const scanIcon  = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
@@ -78,10 +79,11 @@
 	let savedHydratedId = $state<string | null>(null);
 
 	// ── State ──────────────────────────────────────────────────────────────────
-	let inputText = $state('');
-	let isLoading = $state(false);
-	let result    = $state<DetectResult | null>(null);
-	let error     = $state<string | null>(null);
+	let inputText   = $state('');
+	let isLoading   = $state(false);
+	let result      = $state<DetectResult | null>(null);
+	let error       = $state<string | null>(null);
+	let outOfWords  = $state(false);
 	let copied    = $state(false);
 	let detId     = $state('');
 	let detMs     = $state(0);
@@ -163,9 +165,10 @@
 	const wordCount = $derived(
 		inputText.trim().length === 0 ? 0 : inputText.trim().split(/\s+/).filter(Boolean).length
 	);
-	const maxWordsCap = $derived(data.maxWordsPerScan ?? Number.POSITIVE_INFINITY);
+	const maxWordsCap = $derived(Math.min(data.maxWordsPerScan ?? MAX_INPUT_WORDS, MAX_INPUT_WORDS));
+	const overLimit = $derived(wordCount > maxWordsCap);
 	const canSubmit = $derived(
-		inputText.length >= 50 && wordCount > 0 && wordCount <= maxWordsCap && !isLoading
+		inputText.length >= 50 && wordCount > 0 && !overLimit && !isLoading
 	);
 
 	// Mock signal values derived from ai_probability
@@ -183,6 +186,7 @@
 		if (!canSubmit) return;
 		isLoading = true;
 		error = null;
+		outOfWords = false;
 		result = null;
 		const t0 = Date.now();
 		try {
@@ -190,8 +194,13 @@
 			resultSource = 'live';
 			detId = 'det_' + Math.random().toString(36).slice(2, 8).toUpperCase();
 			detMs = Date.now() - t0;
+			if (result.words_balance !== undefined) wordsBalanceStore.set(result.words_balance);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong.';
+			if (err instanceof OutOfWordsError) {
+				outOfWords = true;
+			} else {
+				error = err instanceof Error ? err.message : 'Something went wrong.';
+			}
 		} finally {
 			isLoading = false;
 		}
@@ -292,7 +301,9 @@
 		">
 			<CardHeader icon={scanIcon} label="Input">
 				{#snippet right()}
-					<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{wordCount} words</span>
+					<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {overLimit ? '#ef4444' : 'var(--color-text-muted)'}; font-weight: {overLimit ? 700 : 400};">
+						{wordCount.toLocaleString()} / {maxWordsCap.toLocaleString()} words
+					</span>
 				{/snippet}
 			</CardHeader>
 
@@ -301,9 +312,39 @@
 					bind:value={inputText}
 					placeholder="Paste your text here to analyze…"
 					minChars={50}
-					maxWords={data.maxWordsPerScan ?? undefined}
-					maxChars={data.plan === 'pro' ? 50000 : 20000}
+					maxWords={maxWordsCap}
+					maxChars={(data.plan === 'basic' || data.plan === 'pro' || data.plan === 'ultra') ? 50000 : 20000}
 				/>
+
+				{#if overLimit}
+					<div style="
+						display: flex; align-items: flex-start; gap: 10px;
+						padding: 12px 14px;
+						background: #ef444418;
+						border-radius: 9px;
+						box-shadow: inset 0 0 0 1px rgba(239,68,68,0.35);
+					" role="alert">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;" aria-hidden="true"><path d={alertIcon}/></svg>
+						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #ef4444; line-height: 1.5;">
+							Input exceeds {maxWordsCap.toLocaleString()}-word limit. Please shorten your text.
+						</span>
+					</div>
+				{/if}
+
+				{#if outOfWords}
+					<div style="
+						display: flex; align-items: flex-start; gap: 10px;
+						padding: 12px 14px;
+						background: #7c3aed18;
+						border-radius: 9px;
+						box-shadow: inset 0 0 0 1px rgba(124,58,237,0.35);
+					" role="alert">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;" aria-hidden="true"><path d={alertIcon}/></svg>
+						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #7c3aed; line-height: 1.5;">
+							You've run out of words. <a href="/settings" style="font-weight: 600; color: #7c3aed; text-decoration: underline;">Top up your balance</a> to continue.
+						</span>
+					</div>
+				{/if}
 
 				{#if error}
 					<div style="
@@ -327,6 +368,7 @@
 							inputText = '';
 							result = null;
 							error = null;
+							outOfWords = false;
 							resultSource = 'none';
 							savedHydratedId = null;
 							await goto('/detect', { replaceState: true, noScroll: true });

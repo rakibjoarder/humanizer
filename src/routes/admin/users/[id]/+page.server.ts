@@ -27,7 +27,7 @@ export interface StripePayment {
 	amount: number;
 	currency: string;
 	description: string;
-	credits: number | null;
+	words: number | null;
 	created: string;
 	receiptUrl: string | null;
 }
@@ -82,7 +82,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		{ data: recentHumanizations }
 	] = await Promise.all([
 		db.from('profiles')
-			.select('id, email, full_name, plan, tokens, stripe_customer_id, created_at')
+			.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
 			.eq('id', params.id)
 			.single(),
 		db.from('detections').select('id', { count: 'exact', head: true }).eq('user_id', params.id),
@@ -100,7 +100,6 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	if (profile.stripe_customer_id) {
 		await Promise.all([
-			// Customer details + insights
 			stripe.customers.retrieve(profile.stripe_customer_id)
 				.then((c) => {
 					if (c.deleted) return;
@@ -118,7 +117,6 @@ export const load: PageServerLoad = async ({ params }) => {
 					};
 				}).catch(() => {}),
 
-			// Subscriptions
 			stripe.subscriptions.list({ customer: profile.stripe_customer_id, limit: 10 })
 				.then((r) => {
 					subscriptions = r.data.map((s) => ({
@@ -133,11 +131,10 @@ export const load: PageServerLoad = async ({ params }) => {
 					}));
 				}).catch(() => {}),
 
-			// One-time payments (top-ups) + spending insights
 			stripe.charges.list({ customer: profile.stripe_customer_id, limit: 100 })
 				.then((r) => {
 					const paid = r.data.filter((c) => c.paid && !c.refunded);
-					const topUps = paid.filter((c) => c.metadata?.tokens);
+					const topUps = paid.filter((c) => c.metadata?.words);
 					const sorted = [...paid].sort((a, b) => a.created - b.created);
 
 					if (customerInfo && paid.length > 0) {
@@ -151,14 +148,13 @@ export const load: PageServerLoad = async ({ params }) => {
 						id: c.id,
 						amount: c.amount,
 						currency: c.currency,
-						description: c.description ?? (c.metadata?.tokens ? `+${c.metadata.tokens} credits` : 'Payment'),
-						credits: c.metadata?.tokens ? Number(c.metadata.tokens) : null,
+						description: c.description ?? (c.metadata?.words ? `+${Number(c.metadata.words).toLocaleString()} words` : 'Payment'),
+						words: c.metadata?.words ? Number(c.metadata.words) : null,
 						created: new Date(c.created * 1000).toISOString(),
 						receiptUrl: c.receipt_url
 					}));
 				}).catch(() => {}),
 
-			// Stripe events for this customer
 			stripe.events.list({ limit: 30 })
 				.then((r) => {
 					events = r.data

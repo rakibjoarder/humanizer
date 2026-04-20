@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe, tokenPacks } from '$lib/server/stripe';
+import { stripe, wordPacks } from '$lib/server/stripe';
 import { getUserProfile } from '$lib/server/auth';
 
 // ── POST /api/stripe/tokens ───────────────────────────────────────────────────
@@ -25,9 +25,9 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		return json({ error: 'Missing required field: priceId.' }, { status: 400 });
 	}
 
-	const pack = tokenPacks.find((p) => p.priceId === priceId);
+	const pack = wordPacks.find((p) => p.priceId === priceId);
 	if (!pack) {
-		return json({ error: 'Invalid token pack.' }, { status: 400 });
+		return json({ error: 'Invalid word pack.' }, { status: 400 });
 	}
 
 	let profile: Awaited<ReturnType<typeof getUserProfile>>;
@@ -37,8 +37,9 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		return json({ error: 'Failed to fetch user profile.' }, { status: 500 });
 	}
 
-	if (profile.plan !== 'pro') {
-		return json({ error: 'Token packs are only available for Pro users.' }, { status: 403 });
+	const isPaidPlan = profile.plan === 'basic' || profile.plan === 'pro' || profile.plan === 'ultra';
+	if (!isPaidPlan) {
+		return json({ error: 'Word packs are only available for paid plan users.' }, { status: 403 });
 	}
 
 	const origin = url.origin;
@@ -48,11 +49,11 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 			customer: profile.stripe_customer_id ?? undefined,
 			mode: 'payment',
 			line_items: [{ price: priceId, quantity: 1 }],
-			success_url: `${origin}/settings?tokens_added=true`,
+			success_url: `${origin}/settings?words_added=true`,
 			cancel_url: `${origin}/settings`,
 			metadata: {
 				supabase_user_id: user.id,
-				tokens: String(pack.tokens)
+				words: String(pack.words)
 			}
 		});
 

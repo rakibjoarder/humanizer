@@ -4,7 +4,9 @@
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
-	import { humanizeText, OutOfTokensError, type HumanizeResult } from '$lib/client/api';
+	import { humanizeText, OutOfWordsError, type HumanizeResult } from '$lib/client/api';
+	import { MAX_INPUT_WORDS } from '$lib/limits';
+	import { wordsBalanceStore } from '$lib/stores/wordsBalance';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
 	import TextEditor from '$lib/components/TextEditor.svelte';
@@ -42,18 +44,18 @@
 	let isLoading       = $state(false);
 	let result          = $state<HumanizeResult | null>(null);
 	let error           = $state<string | null>(null);
-	let outOfTokens     = $state(false);
+	let outOfWords      = $state(false);
 	let copied          = $state(false);
 	let elapsedSeconds  = $state(0);
 	let progress        = $state(0);
 	let elapsedInterval: ReturnType<typeof setInterval> | null = null;
 	let progressInterval: ReturnType<typeof setInterval> | null = null;
 
-	const isFree = $derived(data.plan === 'free');
 
 	const inputWordCount = $derived(
 		inputText.trim().length === 0 ? 0 : inputText.trim().split(/\s+/).filter(Boolean).length
 	);
+	const overLimit = $derived(inputWordCount > MAX_INPUT_WORDS);
 	const outputWordCount = $derived(
 		result ? result.humanized_text.trim().split(/\s+/).filter(Boolean).length : 0
 	);
@@ -94,8 +96,7 @@
 				if (!stored) return;
 				localStorage.removeItem('humanize_prefill');
 				inputText = stored;
-				// Match Humanize button: min 10 chars; Pro only (free tier shows upgrade — no API call)
-				if (stored.trim().length < 10 || isFree) return;
+				if (stored.trim().length < 10) return;
 				await tick();
 				await handleHumanize();
 			} catch {
@@ -105,7 +106,7 @@
 	});
 
 	async function handleHumanize() {
-		if (isLoading || isFree) return;
+		if (isLoading) return;
 		isLoading = true;
 		error = null;
 		result = null;
@@ -122,9 +123,10 @@
 			result = await humanizeText(inputText);
 			resultSource = 'live';
 			progress = 100;
+			if (result.words_balance !== undefined) wordsBalanceStore.set(result.words_balance);
 		} catch (err) {
-			if (err instanceof OutOfTokensError) {
-				outOfTokens = true;
+			if (err instanceof OutOfWordsError) {
+				outOfWords = true;
 			} else {
 				error = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
 			}
@@ -191,23 +193,6 @@
 		<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0;">Rewrite AI-generated text to read naturally.</p>
 	</div>
 
-	{#if isFree}
-		<div style="
-			margin: 20px 0;
-			padding: 14px 18px;
-			background: var(--color-brand-muted);
-			border-radius: 10px;
-			box-shadow: inset 0 0 0 1px var(--color-brand);
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 12px;
-		">
-			<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; color: var(--color-text-primary);">Humanizing requires a Pro plan.</span>
-			<a href="/pricing" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 700; color: var(--color-brand); text-decoration: none; white-space: nowrap;">Upgrade to Pro →</a>
-		</div>
-	{/if}
-
 	<!-- ── Input card ── -->
 	<div style="
 		background: var(--color-bg-surface);
@@ -219,25 +204,59 @@
 	">
 		<CardHeader icon={wandIcon} label="Input">
 			{#snippet right()}
-				<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{inputWordCount} words</span>
+				<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {overLimit ? '#ef4444' : 'var(--color-text-muted)'}; font-weight: {overLimit ? 700 : 400};">
+					{inputWordCount.toLocaleString()} / {MAX_INPUT_WORDS.toLocaleString()} words
+				</span>
 			{/snippet}
 		</CardHeader>
 
-		<div style="padding: 20px;">
-			<div style="margin-bottom: 16px;">
-				<TextEditor
-					bind:value={inputText}
-					placeholder="Paste or type the text you want to sound more natural…"
-					minChars={10}
-				/>
-			</div>
+		<div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+			<TextEditor
+				bind:value={inputText}
+				placeholder="Paste or type the text you want to sound more natural…"
+				minChars={10}
+			/>
+
+			{#if overLimit}
+				<div style="
+					display: flex; align-items: flex-start; gap: 10px;
+					padding: 12px 14px;
+					background: #ef444418;
+					border-radius: 9px;
+					box-shadow: inset 0 0 0 1px rgba(239,68,68,0.35);
+				" role="alert">
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;" aria-hidden="true">
+						<path d="M12 9v4 M12 17h.01 M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+					</svg>
+					<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #ef4444; line-height: 1.5;">
+						Input exceeds {MAX_INPUT_WORDS.toLocaleString()}-word limit. Please shorten your text.
+					</span>
+				</div>
+			{/if}
+
+			{#if outOfWords}
+				<div style="
+					display: flex; align-items: flex-start; gap: 10px;
+					padding: 12px 14px;
+					background: #7c3aed18;
+					border-radius: 9px;
+					box-shadow: inset 0 0 0 1px rgba(124,58,237,0.35);
+				" role="alert">
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;" aria-hidden="true">
+						<path d="M12 9v4 M12 17h.01 M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+					</svg>
+					<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #7c3aed; line-height: 1.5;">
+						You've run out of words. <a href="/plans" style="font-weight: 600; color: #7c3aed; text-decoration: underline;">Top up your balance</a> to continue.
+					</span>
+				</div>
+			{/if}
 
 			<div style="display: flex; gap: 8px; flex-wrap: wrap;">
 				<Button
 					variant="primary"
 					size="md"
 					icon={wandIcon}
-					disabled={isFree || isLoading || inputText.trim().length < 10}
+					disabled={isLoading || inputText.trim().length < 10 || overLimit}
 					loading={isLoading}
 					onclick={handleHumanize}
 				>Humanize</Button>
@@ -360,7 +379,7 @@
 	</div>
 </div>
 
-{#if outOfTokens}
+{#if outOfWords}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center p-4"
 		style="background: rgba(0,0,0,0.7)"
@@ -371,27 +390,27 @@
 			class="w-full max-w-sm rounded-2xl border p-6 text-center"
 			style="background: var(--color-bg-surface); border-color: var(--color-bg-border)"
 		>
-			<div class="text-3xl mb-3">🪙</div>
+			<div class="text-3xl mb-3">📝</div>
 			<h3 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary)">
-				Out of credits
+				Out of words
 			</h3>
 			<p class="text-sm mb-5" style="color: var(--color-text-secondary)">
-				You've used all 100 credits for this month. Buy more to keep humanizing, or wait until your plan renews.
+				You've used all your words for this month. Buy a word pack to keep humanizing, or wait until your plan renews.
 			</p>
 			<div class="flex gap-3">
 				<button
-					onclick={() => (outOfTokens = false)}
+					onclick={() => (outOfWords = false)}
 					class="flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all"
 					style="background: transparent; border-color: var(--color-bg-border); color: var(--color-text-secondary)"
 				>
 					Not now
 				</button>
 				<a
-					href="/settings"
+					href="/plans"
 					class="flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all"
 					style="background: var(--color-brand); color: white"
 				>
-					Buy tokens
+					Top up words
 				</a>
 			</div>
 		</div>

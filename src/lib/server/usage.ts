@@ -1,9 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { FREE_DETECTION_LIFETIME } from '$lib/limits';
+import type { PlanName } from '$lib/server/auth';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-export type Plan = 'free' | 'pro';
 
 export interface QuotaResult {
 	allowed: boolean;
@@ -14,6 +12,7 @@ export interface QuotaResult {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const UNLIMITED = -1;
+const FREE_DETECTION_LIFETIME = 2;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,15 +25,15 @@ function todayUtc(): string {
 /**
  * Check whether the user is allowed to run another detection.
  *
- * - free plan: 3 total detections (lifetime, no reset)
- * - pro: unlimited
+ * - free (unsubscribed): 2 total lifetime detections
+ * - basic / pro / ultra: unlimited
  */
 export async function checkQuota(
 	supabase: SupabaseClient,
 	userId: string,
-	plan: Plan
+	plan: PlanName
 ): Promise<QuotaResult> {
-	if (plan === 'pro') {
+	if (plan !== 'free') {
 		return { allowed: true, used: 0, limit: UNLIMITED };
 	}
 
@@ -48,16 +47,11 @@ export async function checkQuota(
 	}
 
 	const used = count ?? 0;
-	const limit = FREE_DETECTION_LIFETIME;
-
-	return { allowed: used < limit, used, limit };
+	return { allowed: used < FREE_DETECTION_LIFETIME, used, limit: FREE_DETECTION_LIFETIME };
 }
 
 /**
  * Increment the words-used counter for today.
- *
- * Uses an upsert so the first call creates the row and subsequent calls
- * add to the existing total.
  */
 export async function incrementUsage(
 	supabase: SupabaseClient,
@@ -66,8 +60,6 @@ export async function incrementUsage(
 ): Promise<void> {
 	const date = todayUtc();
 
-	// Read the current value first so we can compute the new total.
-	// (Supabase JS v2 does not support increment via upsert natively.)
 	const { data: existing, error: readError } = await supabase
 		.from('usage_logs')
 		.select('words_used')
@@ -83,11 +75,7 @@ export async function incrementUsage(
 	const newTotal = currentWords + wordCount;
 
 	const { error: upsertError } = await supabase.from('usage_logs').upsert(
-		{
-			user_id: userId,
-			date,
-			words_used: newTotal
-		},
+		{ user_id: userId, date, words_used: newTotal },
 		{ onConflict: 'user_id,date' }
 	);
 

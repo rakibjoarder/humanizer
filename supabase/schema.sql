@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   email             TEXT        NOT NULL,
   full_name         TEXT,
   plan              TEXT        NOT NULL DEFAULT 'free',
+  words_balance     INTEGER     NOT NULL DEFAULT 0,
   stripe_customer_id TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -165,12 +166,13 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, plan)
+  INSERT INTO public.profiles (id, email, full_name, plan, words_balance)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    'free'
+    'free',
+    0
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

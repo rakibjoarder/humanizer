@@ -1,12 +1,20 @@
 import type { PageServerLoad } from './$types';
-import { STRIPE_PRO_MONTHLY_PRICE_ID, STRIPE_PRO_YEARLY_PRICE_ID } from '$env/static/private';
+import { plans } from '$lib/server/stripe';
 
 export const load: PageServerLoad = async () => {
 	return {
 		priceIds: {
+			basic: {
+				monthly: plans.basic.monthlyPriceId,
+				yearly: plans.basic.yearlyPriceId
+			},
 			pro: {
-				monthly: STRIPE_PRO_MONTHLY_PRICE_ID.trim(),
-				yearly: STRIPE_PRO_YEARLY_PRICE_ID.trim()
+				monthly: plans.pro.monthlyPriceId,
+				yearly: plans.pro.yearlyPriceId
+			},
+			ultra: {
+				monthly: plans.ultra.monthlyPriceId,
+				yearly: plans.ultra.yearlyPriceId
 			}
 		}
 	};

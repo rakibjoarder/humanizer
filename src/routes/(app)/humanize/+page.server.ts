@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		redirectToLoginModal(url);
 	}
 
-	let plan: 'free' | 'pro' = 'free';
+	let plan: 'free' | 'basic' | 'pro' | 'ultra' = 'free';
 
 	try {
 		const profile = await getUserProfile(locals.supabase, user.id);

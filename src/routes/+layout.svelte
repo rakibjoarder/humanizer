@@ -26,11 +26,11 @@
 		const clean = `${u.pathname}${u.search}${u.hash}`;
 
 		if (data.user) {
-			void goto(safe ?? (clean || '/'), { replaceState: true, noScroll: true });
+			void goto(safe ?? '/humanize', { replaceState: true, noScroll: true });
 			return;
 		}
 
-		openLoginModal(safe);
+		openLoginModal(safe ?? '/humanize');
 		void goto(clean || '/', { replaceState: true, noScroll: true });
 	});
 

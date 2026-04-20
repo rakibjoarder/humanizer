@@ -2,8 +2,9 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { humanizeText } from '$lib/server/api';
 import { checkRateLimit } from '$lib/server/rateLimit';
-import { checkQuota, incrementUsage } from '$lib/server/usage';
+import { incrementUsage } from '$lib/server/usage';
 import { getUserProfile } from '$lib/server/auth';
+import { countWords } from '$lib/limits';
 
 // ── POST /api/humanize ────────────────────────────────────────────────────────
 
@@ -32,20 +33,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (text.length > 50_000) {
-		return json(
-			{ error: 'Text must not exceed 50,000 characters.' },
-			{ status: 400 }
-		);
+		return json({ error: 'Text must not exceed 50,000 characters.' }, { status: 400 });
 	}
 
 	// 3. Require auth
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
-		return json(
-			{ error: 'You must be logged in to humanize text.' },
-			{ status: 401 }
-		);
+		return json({ error: 'You must be logged in to humanize text.' }, { status: 401 });
 	}
 
 	// 4. Rate limit (IP-based)
@@ -75,7 +70,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 5. Fetch profile + check quota
+	// 5. Fetch profile + check plan
 	let profile: Awaited<ReturnType<typeof getUserProfile>>;
 	try {
 		profile = await getUserProfile(locals.supabase, user.id);
@@ -84,37 +79,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Failed to fetch user profile.' }, { status: 500 });
 	}
 
-	// Free plan users cannot use the humanizer
-	if (profile.plan === 'free') {
-		return json(
-			{ error: 'Humanization requires a Pro plan. Please upgrade to continue.' },
-			{ status: 403 }
-		);
-	}
+	const inputWordCount = countWords(text);
 
-	// Token check (optimistic — atomic deduction happens after humanize succeeds)
-	if ((profile.tokens ?? 0) <= 0) {
-		return json({ error: 'out_of_tokens' }, { status: 402 });
-	}
-
-
-	let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
-	try {
-		quotaResult = await checkQuota(locals.supabase, user.id, profile.plan);
-	} catch (err) {
-		console.error('[humanize] Quota check failed:', err);
-		return json({ error: 'Failed to check usage quota.' }, { status: 500 });
-	}
-
-	if (!quotaResult.allowed) {
-		return json(
-			{
-				error: `Could not run humanizer: quota check failed.`,
-				used: quotaResult.used,
-				limit: quotaResult.limit
-			},
-			{ status: 429 }
-		);
+	// Words balance check — applies to all plans (free and paid)
+	if ((profile.words_balance ?? 0) < inputWordCount) {
+		return json({ error: 'out_of_words' }, { status: 402 });
 	}
 
 	// 6. Call upstream humanize API
@@ -129,12 +98,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 7. Atomic token deduction — returns -1 if already 0 (race condition safe)
-	const { data: newTokens, error: deductErr } = await locals.supabase
-		.rpc('deduct_token', { p_user_id: user.id });
+	// 7. Atomic word deduction
+	const { data: newBalance, error: deductErr } = await locals.supabase
+		.rpc('deduct_words', { p_user_id: user.id, p_words: result.word_count });
 
-	if (deductErr || newTokens === -1) {
-		return json({ error: 'out_of_tokens' }, { status: 402 });
+	if (deductErr || newBalance === -1) {
+		return json({ error: 'out_of_words' }, { status: 402 });
 	}
 
 	// 8. Persist humanization + increment usage (fire-and-forget)
@@ -153,6 +122,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	// 9. Return result
 	return json({
 		humanized_text: result.humanized_text,
-		word_count: result.word_count
+		word_count: result.word_count,
+		words_balance: newBalance
 	});
 };
