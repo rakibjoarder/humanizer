@@ -17,6 +17,9 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const adminList = ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase());
 	if (!adminList.includes(user.email?.toLowerCase() ?? '')) error(403, 'Forbidden');
 
+	const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+	if (!UUID_RE.test(params.id)) return json({ error: 'Invalid user ID.' }, { status: 400 });
+
 	const body = await request.json();
 	const { tokens, plan } = body as { tokens?: number; plan?: string };
 

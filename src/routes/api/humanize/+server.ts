@@ -92,10 +92,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// Token check
+	// Token check (optimistic — atomic deduction happens after humanize succeeds)
 	if ((profile.tokens ?? 0) <= 0) {
 		return json({ error: 'out_of_tokens' }, { status: 402 });
 	}
+
 
 	let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
 	try {
@@ -128,7 +129,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 7. Persist humanization + increment usage + deduct token
+	// 7. Atomic token deduction — returns -1 if already 0 (race condition safe)
+	const { data: newTokens, error: deductErr } = await locals.supabase
+		.rpc('deduct_token', { p_user_id: user.id });
+
+	if (deductErr || newTokens === -1) {
+		return json({ error: 'out_of_tokens' }, { status: 402 });
+	}
+
+	// 8. Persist humanization + increment usage (fire-and-forget)
 	Promise.all([
 		locals.supabase.from('humanizations').insert({
 			user_id: user.id,
@@ -136,16 +145,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			output_text: result.humanized_text,
 			word_count: result.word_count
 		}),
-		incrementUsage(locals.supabase, user.id, result.word_count),
-		locals.supabase
-			.from('profiles')
-			.update({ tokens: Math.max(0, (profile.tokens ?? 1) - 1) })
-			.eq('id', user.id)
+		incrementUsage(locals.supabase, user.id, result.word_count)
 	]).catch((err) => {
 		console.error('[humanize] Failed to persist humanization / update usage:', err);
 	});
 
-	// 8. Return result
+	// 9. Return result
 	return json({
 		humanized_text: result.humanized_text,
 		word_count: result.word_count

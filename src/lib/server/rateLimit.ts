@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN } from '$env/static/private';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
@@ -15,6 +16,10 @@ const isConfigured =
 	!UPSTASH_REDIS_REST_URL.includes('placeholder') &&
 	UPSTASH_REDIS_REST_TOKEN &&
 	!UPSTASH_REDIS_REST_TOKEN.includes('placeholder');
+
+if (!isConfigured && !dev) {
+	console.error('[rateLimit] WARNING: Rate limiting is DISABLED. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable it.');
+}
 
 let detectLimiter: Ratelimit | null = null;
 let humanizeLimiter: Ratelimit | null = null;

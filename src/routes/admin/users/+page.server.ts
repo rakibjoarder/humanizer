@@ -11,7 +11,7 @@ function adminClient() {
 
 export const load: PageServerLoad = async ({ url }) => {
 	const db = adminClient();
-	const search = url.searchParams.get('q') ?? '';
+	const search = (url.searchParams.get('q') ?? '').slice(0, 100);
 	const plan = url.searchParams.get('plan') ?? '';
 	const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'));
 	const perPage = 25;

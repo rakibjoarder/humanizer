@@ -35,7 +35,7 @@ export async function anonymousDemoAlreadyUsed(
 
 export function demoDetectCookieHeader(): string {
 	const secure = !dev ? '; Secure' : '';
-	return `${COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 400}${secure}`;
+	return `${COOKIE}=1; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 400}${secure}`;
 }
 
 export async function persistAnonymousDemo(ip: string): Promise<void> {

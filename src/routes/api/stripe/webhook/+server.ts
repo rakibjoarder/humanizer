@@ -242,19 +242,8 @@ async function handleTokenPackPurchase(
 
 	if (!userId || !tokensToAdd) return;
 
-	// Fetch current tokens then add
-	const { data: profile } = await supabase
-		.from('profiles')
-		.select('tokens')
-		.eq('id', userId)
-		.single();
-
-	const current = (profile?.tokens as number) ?? 0;
-
-	await supabase
-		.from('profiles')
-		.update({ tokens: current + tokensToAdd })
-		.eq('id', userId);
+	// Atomic increment — avoids race condition when multiple webhooks fire concurrently
+	await supabase.rpc('add_tokens', { p_user_id: userId, p_amount: tokensToAdd });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

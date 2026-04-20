@@ -5,7 +5,9 @@ export const load: PageLoad = async ({ parent, url }) => {
 	const { session } = await parent();
 
 	if (session) {
-		const redirectTo = url.searchParams.get('redirect') ?? '/';
+		const raw = url.searchParams.get('redirect') ?? '/';
+		// Only allow relative redirects to prevent open-redirect attacks
+		const redirectTo = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 		redirect(303, redirectTo);
 	}
 
