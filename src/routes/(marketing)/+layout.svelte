@@ -429,6 +429,7 @@
 				<a href="/blog/how-to-bypass-gptzero">Bypass GPTZero</a>
 				<a href="/blog/does-turnitin-detect-chatgpt">Turnitin & ChatGPT</a>
 				<a href="/blog/make-ai-text-undetectable">Undetectable AI Text</a>
+				<a href="/blog/what-to-look-for-in-an-ai-humanizer">Choosing a Humanizer</a>
 			</nav>
 		</div>
 
