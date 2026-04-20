@@ -5,7 +5,9 @@
 	const navLinks = [
 		{ href: '/admin', label: 'Overview' },
 		{ href: '/admin/users', label: 'Users' },
-		{ href: '/admin/subscriptions', label: 'Subscriptions' }
+		{ href: '/admin/subscriptions', label: 'Subscriptions' },
+		{ href: '/admin/detections', label: 'Detections' },
+		{ href: '/admin/humanizations', label: 'Humanizations' }
 	];
 </script>
 
