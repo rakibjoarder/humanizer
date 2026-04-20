@@ -276,7 +276,7 @@
 </script>
 
 <SEO
-	title="AI Text Humanizer — Bypass AI Detection Instantly | HumanizeAIWrite"
+	title="AI Humanizer — Bypass AI Detection | HumanizeAIWrite"
 	description="Make AI text undetectable. Bypass GPTZero, Turnitin, and other AI detectors in seconds. Free AI detector + humanizer for students, writers, and professionals."
 	canonical="https://humanizeaiwrite.com"
 	jsonLd={homeJsonLd}
