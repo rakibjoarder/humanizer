@@ -3,9 +3,33 @@
 
 	let { data } = $props();
 	let verdictFilter = $state(data.verdict);
+	let dateFilter = $state(data.dateRange);
+	let search = $state(data.search);
 
 	function applyFilter() {
-		goto(`/admin/detections?verdict=${verdictFilter}`);
+		const p = new URLSearchParams();
+		if (verdictFilter !== 'all') p.set('verdict', verdictFilter);
+		if (dateFilter !== 'all') p.set('date', dateFilter);
+		if (search) p.set('q', search);
+		goto(`/admin/detections?${p.toString()}`);
+	}
+
+	function clearFilters() {
+		verdictFilter = 'all';
+		dateFilter = 'all';
+		search = '';
+		goto('/admin/detections');
+	}
+
+	let hasFilters = $derived(verdictFilter !== 'all' || dateFilter !== 'all' || search !== '');
+
+	function pageUrl(p: number) {
+		const params = new URLSearchParams();
+		if (verdictFilter !== 'all') params.set('verdict', verdictFilter);
+		if (dateFilter !== 'all') params.set('date', dateFilter);
+		if (search) params.set('q', search);
+		params.set('page', String(p));
+		return `/admin/detections?${params.toString()}`;
 	}
 
 	function fmtDate(s: string) {
@@ -24,27 +48,41 @@
 		if (v === 'Mixed') return '#f59e0b20';
 		return 'var(--color-bg-elevated)';
 	}
+
+	const inputStyle = "padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;";
 </script>
 
 <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1100px;">
 	<div>
 		<h1 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 4px;">Detections</h1>
-		<p style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted); margin: 0;">{data.total.toLocaleString()} total</p>
+		<p style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted); margin: 0;">{data.total.toLocaleString()} results</p>
 	</div>
 
-	<!-- Filter -->
-	<div style="display: flex; gap: 10px;">
-		<select
-			bind:value={verdictFilter}
-			onchange={applyFilter}
-			style="padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; cursor: pointer; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
-		>
+	<!-- Filters -->
+	<form onsubmit={(e) => { e.preventDefault(); applyFilter(); }} style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+		<input
+			type="text"
+			placeholder="Search by email…"
+			bind:value={search}
+			style="{inputStyle} width: 220px;"
+		/>
+		<select bind:value={verdictFilter} onchange={applyFilter} style="{inputStyle} cursor: pointer;">
 			<option value="all">All verdicts</option>
 			<option value="AI">AI</option>
 			<option value="Human">Human</option>
 			<option value="Mixed">Mixed</option>
 		</select>
-	</div>
+		<select bind:value={dateFilter} onchange={applyFilter} style="{inputStyle} cursor: pointer;">
+			<option value="all">All time</option>
+			<option value="7d">Last 7 days</option>
+			<option value="30d">Last 30 days</option>
+			<option value="90d">Last 90 days</option>
+		</select>
+		<button type="submit" style="padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--color-brand); color: white; border: none; cursor: pointer; font-family: 'Space Grotesk', system-ui;">Search</button>
+		{#if hasFilters}
+			<button type="button" onclick={clearFilters} style="padding: 8px 14px; border-radius: 8px; font-size: 13px; color: var(--color-text-muted); background: transparent; border: 1px solid var(--color-bg-border); cursor: pointer; font-family: 'Space Grotesk', system-ui;">Clear</button>
+		{/if}
+	</form>
 
 	<!-- Table -->
 	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
@@ -86,11 +124,11 @@
 	{#if data.pages > 1}
 		<div style="display: flex; gap: 8px; align-items: center; font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted);">
 			{#if data.page > 1}
-				<a href="/admin/detections?verdict={data.verdict}&page={data.page - 1}" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--color-bg-border); color: var(--color-text-primary); text-decoration: none;">← Prev</a>
+				<a href={pageUrl(data.page - 1)} style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--color-bg-border); color: var(--color-text-primary); text-decoration: none;">← Prev</a>
 			{/if}
 			<span>Page {data.page} of {data.pages}</span>
 			{#if data.page < data.pages}
-				<a href="/admin/detections?verdict={data.verdict}&page={data.page + 1}" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--color-bg-border); color: var(--color-text-primary); text-decoration: none;">Next →</a>
+				<a href={pageUrl(data.page + 1)} style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--color-bg-border); color: var(--color-text-primary); text-decoration: none;">Next →</a>
 			{/if}
 		</div>
 	{/if}
