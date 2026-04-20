@@ -1,0 +1,71 @@
+<script lang="ts">
+	let { data } = $props();
+	const { stats, recentUsers } = data;
+
+	function fmt(n: number) { return n.toLocaleString(); }
+	function fmtDate(s: string) {
+		return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+</script>
+
+<div style="display: flex; flex-direction: column; gap: 28px; max-width: 1000px;">
+	<div>
+		<h1 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 4px;">Overview</h1>
+		<p style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted); margin: 0;">Platform stats at a glance.</p>
+	</div>
+
+	<!-- Stat cards -->
+	<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px;">
+		{#each [
+			{ label: 'Total Users',     value: fmt(stats.totalUsers) },
+			{ label: 'Pro Users',       value: fmt(stats.proUsers) },
+			{ label: 'Free Users',      value: fmt(stats.freeUsers) },
+			{ label: 'Detections',      value: fmt(stats.totalDetections) },
+			{ label: 'Humanizations',   value: fmt(stats.totalHumanizations) }
+		] as s}
+			<div style="
+				background: var(--color-bg-surface); border: 1px solid var(--color-bg-border);
+				border-radius: 12px; padding: 18px 16px;
+			">
+				<p style="font-family: 'Space Grotesk', system-ui; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); margin: 0 0 6px;">{s.label}</p>
+				<p style="font-family: 'Newsreader', Georgia, serif; font-size: 30px; color: var(--color-text-primary); margin: 0;">{s.value}</p>
+			</div>
+		{/each}
+	</div>
+
+	<!-- Recent signups -->
+	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
+		<div style="padding: 14px 20px; border-bottom: 1px solid var(--color-bg-border); display: flex; justify-content: space-between; align-items: center;">
+			<span style="font-family: 'Space Grotesk', system-ui; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.08em; text-transform: uppercase;">Recent signups</span>
+			<a href="/admin/users" style="font-family: 'Space Grotesk', system-ui; font-size: 12px; color: var(--color-brand); text-decoration: none; font-weight: 600;">View all →</a>
+		</div>
+		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
+			<thead>
+				<tr style="border-bottom: 1px solid var(--color-bg-border);">
+					<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em;">Email</th>
+					<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em;">Plan</th>
+					<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em;">Credits</th>
+					<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em;">Joined</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each recentUsers as u}
+					<tr style="border-bottom: 1px solid var(--color-bg-border);">
+						<td style="padding: 10px 16px; color: var(--color-text-primary);">
+							<a href="/admin/users/{u.id}" style="color: var(--color-brand); text-decoration: none;">{u.email}</a>
+						</td>
+						<td style="padding: 10px 16px;">
+							<span style="
+								font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px;
+								background: {u.plan === 'pro' ? 'var(--color-brand-muted)' : 'var(--color-bg-elevated)'};
+								color: {u.plan === 'pro' ? 'var(--color-brand)' : 'var(--color-text-muted)'};
+							">{u.plan}</span>
+						</td>
+						<td style="padding: 10px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">{u.tokens}</td>
+						<td style="padding: 10px 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{fmtDate(u.created_at)}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+</div>
