@@ -2,7 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
-	let { profile, subscription, detections, humanizations } = $derived(data);
+	let { profile, subscriptions, detections, humanizations } = $derived(data);
 
 	let creditInput = $state(profile.tokens);
 	let planInput = $state<'free' | 'pro'>(profile.plan);
@@ -99,28 +99,36 @@
 		</div>
 	</div>
 
-	<!-- Subscription -->
+	<!-- Subscriptions (live from Stripe) -->
 	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; padding: 24px;">
-		<h2 style="font-family: 'Space Grotesk', system-ui; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 18px;">Subscription</h2>
+		<h2 style="font-family: 'Space Grotesk', system-ui; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 18px;">
+			Subscriptions <span style="font-weight: 400; color: var(--color-text-muted); font-size: 11px;">(live from Stripe)</span>
+		</h2>
 
-		{#if subscription}
-			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-				{#each [
-					{ label: 'Subscription ID', value: subscription.stripe_subscription_id ?? '—' },
-					{ label: 'Status', value: subscription.status ?? '—' },
-					{ label: 'Plan', value: subscription.plan ?? '—' },
-					{ label: 'Cancels at end', value: subscription.cancel_at_period_end ? 'Yes' : 'No' },
-					{ label: 'Period start', value: fmtDate(subscription.current_period_start) },
-					{ label: 'Period end', value: fmtDate(subscription.current_period_end) }
-				] as row}
-					<div>
-						<p style="font-family: 'Space Grotesk', system-ui; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); margin: 0 0 3px;">{row.label}</p>
-						<p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-primary); margin: 0;">{row.value}</p>
-					</div>
-				{/each}
-			</div>
+		{#if subscriptions.length === 0}
+			<p style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted); margin: 0;">No subscriptions found in Stripe.</p>
 		{:else}
-			<p style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted); margin: 0;">No active subscription.</p>
+			{#each subscriptions as sub}
+				<div style="border: 1px solid var(--color-bg-border); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+						{#each [
+							{ label: 'Subscription ID', value: sub.id },
+							{ label: 'Status',           value: sub.status },
+							{ label: 'Interval',         value: sub.interval ?? '—' },
+							{ label: 'Amount',           value: sub.price != null ? `$${(sub.price / 100).toFixed(2)}` : '—' },
+							{ label: 'Cancels at end',   value: sub.cancel_at_period_end ? 'Yes' : 'No' },
+							{ label: 'Period start',     value: fmtDate(sub.current_period_start) },
+							{ label: 'Period end',       value: fmtDate(sub.current_period_end) },
+							{ label: 'Created',          value: fmtDate(sub.created) }
+						] as row}
+							<div>
+								<p style="font-family: 'Space Grotesk', system-ui; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); margin: 0 0 3px;">{row.label}</p>
+								<p style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-primary); margin: 0; word-break: break-all;">{row.value}</p>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/each}
 		{/if}
 	</div>
 </div>
