@@ -1,7 +1,13 @@
-<svelte:head>
-	<title>Terms of Service · HumanizeAIWrite</title>
-	<meta name="description" content="Terms of Service for HumanizeAIWrite — AI detection and humanizing tools." />
-</svelte:head>
+<script>
+	import SEO from '$lib/components/SEO.svelte';
+</script>
+
+<SEO
+	title="Terms of Service | HumanizeAIWrite"
+	description="Terms of Service for HumanizeAIWrite — the AI text humanizer and detector."
+	canonical="https://humanizeaiwrite.com/terms"
+	noindex={true}
+/>
 
 <div class="legal-page">
 	<div class="legal-inner">

@@ -10,6 +10,7 @@
 	import TextEditor from '$lib/components/TextEditor.svelte';
 	import CardHeader from '$lib/components/CardHeader.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import SEO from '$lib/components/SEO.svelte';
 
 	const wandIcon    = 'm15 4-2 2-2-2 M18 7l-2 2-2-2 M21 3v3 M3 21l9-9 M14 7l7 7-4 4-7-7z';
 	const sparkleIcon = 'M12 3 13.5 9 19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1L12 3z';
@@ -154,6 +155,12 @@
 		handleHumanize();
 	}
 </script>
+
+<SEO
+	title="AI Text Humanizer — Make AI Writing Undetectable | HumanizeAIWrite"
+	description="Instantly humanize AI-generated text. Bypass GPTZero, Turnitin, and AI detectors. Paste ChatGPT or Claude output — get natural human-sounding writing back."
+	canonical="https://humanizeaiwrite.com/humanize"
+/>
 
 <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px;">
 	<!-- Page header -->

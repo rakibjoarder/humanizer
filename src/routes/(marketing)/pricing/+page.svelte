@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PricingCard from '$lib/components/PricingCard.svelte';
+	import SEO from '$lib/components/SEO.svelte';
 	import { goto } from '$app/navigation';
 
 	type BillingCycle = 'monthly' | 'yearly';
@@ -97,6 +98,12 @@
 		openFaq = openFaq === i ? null : i;
 	}
 </script>
+
+<SEO
+	title="Pricing — AI Humanizer Plans | HumanizeAIWrite"
+	description="Get unlimited AI detection and humanization credits. Pro plan from $9.99/month. Bypass GPTZero, Turnitin, and more. Cancel anytime."
+	canonical="https://humanizeaiwrite.com/pricing"
+/>
 
 <!-- ── Page ─────────────────────────────────────────────────────────────── -->
 <div class="pricing-page">

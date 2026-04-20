@@ -12,6 +12,7 @@
 	import CardHeader from '$lib/components/CardHeader.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import SEO from '$lib/components/SEO.svelte';
 	import { countWords } from '$lib/limits';
 
 	// ── Icon paths ──────────────────────────────────────────────────────────────
@@ -206,6 +207,12 @@
 		inputText = "In today's rapidly evolving digital landscape, the fundamentally transformative power of AI-driven technologies has revolutionized operational efficiency. Furthermore, comprehensive data-driven paradigms have empowered stakeholders to leverage unprecedented synergy, fostering seamless integration across multifaceted workflows. Moreover, this transformative approach ensures that organizations can maintain crucial competitive advantages.";
 	}
 </script>
+
+<SEO
+	title="AI Detector — Check If Text Is AI-Generated | HumanizeAIWrite"
+	description="Free AI content detector. Instantly check if text was written by ChatGPT, Claude, or other AI. Get AI probability score and verdict."
+	canonical="https://humanizeaiwrite.com/detect"
+/>
 
 <div class="detect-page">
 	<!-- Page header -->

@@ -1,7 +1,13 @@
-<svelte:head>
-	<title>Privacy Policy · HumanizeAIWrite</title>
-	<meta name="description" content="Privacy Policy for HumanizeAIWrite — how we handle your account and text." />
-</svelte:head>
+<script>
+	import SEO from '$lib/components/SEO.svelte';
+</script>
+
+<SEO
+	title="Privacy Policy | HumanizeAIWrite"
+	description="Privacy Policy for HumanizeAIWrite — how we collect, use, and protect your data."
+	canonical="https://humanizeaiwrite.com/privacy"
+	noindex={true}
+/>
 
 <div class="legal-page">
 	<div class="legal-inner">

@@ -10,6 +10,77 @@
 	} from '$lib/limits';
 	import Reveal from '$lib/components/Reveal.svelte';
 	import PricingCard from '$lib/components/PricingCard.svelte';
+	import SEO from '$lib/components/SEO.svelte';
+
+	const homeJsonLd = {
+		'@context': 'https://schema.org',
+		'@graph': [
+			{
+				'@type': 'WebSite',
+				'@id': 'https://humanizeaiwrite.com/#website',
+				url: 'https://humanizeaiwrite.com',
+				name: 'HumanizeAIWrite',
+				description: 'AI text humanizer — bypass AI detection for essays, assignments, and content.',
+				potentialAction: {
+					'@type': 'SearchAction',
+					target: { '@type': 'EntryPoint', urlTemplate: 'https://humanizeaiwrite.com/detect?q={search_term_string}' },
+					'query-input': 'required name=search_term_string'
+				}
+			},
+			{
+				'@type': 'SoftwareApplication',
+				name: 'HumanizeAIWrite',
+				applicationCategory: 'UtilitiesApplication',
+				operatingSystem: 'Web',
+				url: 'https://humanizeaiwrite.com',
+				description: 'Humanize AI-generated text to bypass GPTZero, Turnitin, and other AI detectors instantly.',
+				offers: {
+					'@type': 'Offer',
+					price: '9.99',
+					priceCurrency: 'USD',
+					availability: 'https://schema.org/InStock',
+					priceValidUntil: '2026-12-31'
+				},
+				aggregateRating: {
+					'@type': 'AggregateRating',
+					ratingValue: '4.8',
+					reviewCount: '320'
+				},
+				featureList: [
+					'Bypass GPTZero AI detection',
+					'Bypass Turnitin AI detection',
+					'Humanize ChatGPT text',
+					'AI essay humanizer for students',
+					'Make AI writing undetectable'
+				]
+			},
+			{
+				'@type': 'FAQPage',
+				mainEntity: [
+					{
+						'@type': 'Question',
+						name: 'Can HumanizeAIWrite bypass Turnitin AI detection?',
+						acceptedAnswer: { '@type': 'Answer', text: 'Yes. Our humanizer rewrites AI-generated text to closely mimic natural human writing patterns, making it significantly harder for Turnitin\'s AI detector to flag.' }
+					},
+					{
+						'@type': 'Question',
+						name: 'Does it work with ChatGPT, Claude, and other AI outputs?',
+						acceptedAnswer: { '@type': 'Answer', text: 'Yes — paste text from ChatGPT, Claude, Gemini, or any AI tool and our engine rewrites it into natural human-style prose.' }
+					},
+					{
+						'@type': 'Question',
+						name: 'Is my text kept private?',
+						acceptedAnswer: { '@type': 'Answer', text: 'Yes. We do not sell or share your text with third parties. Submitted text is used solely to produce your humanized output.' }
+					},
+					{
+						'@type': 'Question',
+						name: 'How many free detections do I get?',
+						acceptedAnswer: { '@type': 'Answer', text: 'Free accounts get 2 lifetime AI detections. Upgrade to Pro for unlimited detections and 100 humanization credits per month.' }
+					}
+				]
+			}
+		]
+	};
 
 	let { data } = $props();
 
@@ -203,6 +274,13 @@
 		openFaq = openFaq === i ? null : i;
 	}
 </script>
+
+<SEO
+	title="AI Text Humanizer — Bypass AI Detection Instantly | HumanizeAIWrite"
+	description="Make AI text undetectable. Bypass GPTZero, Turnitin, and other AI detectors in seconds. Free AI detector + humanizer for students, writers, and professionals."
+	canonical="https://humanizeaiwrite.com"
+	jsonLd={homeJsonLd}
+/>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      HUB — greeting + composer + suggestions
