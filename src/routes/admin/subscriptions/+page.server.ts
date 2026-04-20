@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { stripe } from '$lib/server/stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
@@ -10,24 +11,49 @@ function adminClient() {
 }
 
 export const load: PageServerLoad = async ({ url }) => {
-	const db = adminClient();
-	const status = url.searchParams.get('status') ?? '';
-	const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'));
-	const perPage = 25;
+	const statusFilter = url.searchParams.get('status') ?? 'active';
 
-	let query = db
-		.from('subscriptions')
-		.select(`
-			stripe_subscription_id, plan, status, cancel_at_period_end,
-			current_period_start, current_period_end,
-			profiles!inner(email, tokens)
-		`, { count: 'exact' })
-		.order('current_period_end', { ascending: false })
-		.range((page - 1) * perPage, page * perPage - 1);
+	// Fetch subscriptions from Stripe
+	const result = await stripe.subscriptions.list({
+		limit: 100,
+		status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'canceled' | 'past_due' | 'trialing') ,
+		expand: ['data.customer']
+	});
 
-	if (status) query = query.eq('status', status);
+	const stripeSubs = result.data;
 
-	const { data: subs, count } = await query;
+	// Get customer IDs to look up emails from Supabase
+	const customerIds = stripeSubs
+		.map((s) => (typeof s.customer === 'object' ? s.customer.id : s.customer))
+		.filter(Boolean);
 
-	return { subs: subs ?? [], total: count ?? 0, page, perPage, status };
+	let emailMap: Record<string, string> = {};
+	if (customerIds.length > 0) {
+		const db = adminClient();
+		const { data: profiles } = await db
+			.from('profiles')
+			.select('email, stripe_customer_id')
+			.in('stripe_customer_id', customerIds);
+
+		emailMap = Object.fromEntries(
+			(profiles ?? []).map((p) => [p.stripe_customer_id, p.email])
+		);
+	}
+
+	const subscriptions = stripeSubs.map((s) => {
+		const customerId = typeof s.customer === 'object' ? s.customer.id : s.customer;
+		return {
+			id: s.id,
+			customerId,
+			email: emailMap[customerId] ?? customerId,
+			status: s.status,
+			cancel_at_period_end: s.cancel_at_period_end,
+			interval: s.items.data[0]?.price.recurring?.interval ?? '—',
+			amount: s.items.data[0]?.price.unit_amount ?? null,
+			current_period_end: new Date(s.current_period_end * 1000).toISOString(),
+			created: new Date(s.created * 1000).toISOString()
+		};
+	});
+
+	return { subscriptions, total: subscriptions.length, status: statusFilter };
 };
