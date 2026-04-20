@@ -134,7 +134,7 @@
 	let planDescription = $derived(
 		profile?.plan === 'pro'
 			? 'Unlimited detections and humanizations per day.'
-			: '3 free detections total · 500 words per scan.'
+			: '2 free detections total · 500 words per scan.'
 	);
 
 	let cancelDate = $derived(

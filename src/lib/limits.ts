@@ -1,6 +1,6 @@
 /** Shared product limits (safe to import from client or server). */
 
-export const FREE_DETECTION_LIFETIME = 3;
+export const FREE_DETECTION_LIFETIME = 2;
 /** Max words per detection scan for anonymous preview + logged-in Free tier */
 export const FREE_DETECTION_MAX_WORDS_PER_SCAN = 500;
 

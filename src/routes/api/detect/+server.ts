@@ -107,7 +107,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				return json(
 					{
 						error:
-							'Your free preview scan is already used. Create a free account for 3 more detections (500 words each).',
+							'Your free preview scan is already used. Create a free account for 2 more detections (500 words each).',
 						code: 'DEMO_EXHAUSTED'
 					},
 					{ status: 429 }

@@ -67,7 +67,7 @@
 		},
 		{
 			q: 'What happens when I use up my free detections?',
-			a: 'Once your 3 free detections are used, detection is paused until you upgrade. There is no daily reset — upgrade to Pro for unlimited access.'
+			a: 'Once your 2 free detections are used, detection is paused until you upgrade. There is no daily reset — upgrade to Pro for unlimited access.'
 		},
 		{
 			q: 'What are humanization credits?',

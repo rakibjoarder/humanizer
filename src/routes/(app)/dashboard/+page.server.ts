@@ -65,7 +65,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const profile = await getUserProfile(locals.supabase, user.id);
 
 	// ── Detection quota ───────────────────────────────────────────────────────
-	const detectionsLimit = profile.plan === 'free' ? 3 : -1;
+	const detectionsLimit = profile.plan === 'free' ? 2 : -1;
 
 	// ── Aggregate stats ───────────────────────────────────────────────────────
 	const [detectionsCountRes, humanizationsCountRes, wordsAnalyzedRes] = await Promise.all([

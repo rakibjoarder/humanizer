@@ -33,10 +33,10 @@
 			monthlyPrice: 0,
 			yearlyPrice: 0,
 			yearlyMonthlyEquiv: 0,
-			wordsPerDay: '3 free detections',
+			wordsPerDay: '2 free detections',
 			cta: 'Get Started Free',
 			features: [
-				{ text: '3 free detections total', available: true },
+				{ text: '2 free detections total', available: true },
 				{ text: '500 words per scan', available: true },
 				{ text: 'AI Detection', available: true },
 				{ text: 'Humanizer', available: false },
