@@ -4,7 +4,7 @@
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
-	import { humanizeText, type HumanizeResult } from '$lib/client/api';
+	import { humanizeText, OutOfTokensError, type HumanizeResult } from '$lib/client/api';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
 	import TextEditor from '$lib/components/TextEditor.svelte';
@@ -41,6 +41,7 @@
 	let isLoading       = $state(false);
 	let result          = $state<HumanizeResult | null>(null);
 	let error           = $state<string | null>(null);
+	let outOfTokens     = $state(false);
 	let copied          = $state(false);
 	let elapsedSeconds  = $state(0);
 	let progress        = $state(0);
@@ -121,7 +122,11 @@
 			resultSource = 'live';
 			progress = 100;
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+			if (err instanceof OutOfTokensError) {
+				outOfTokens = true;
+			} else {
+				error = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+			}
 		} finally {
 			isLoading = false;
 			if (elapsedInterval) { clearInterval(elapsedInterval); elapsedInterval = null; }
@@ -347,6 +352,44 @@
 		</div>
 	</div>
 </div>
+
+{#if outOfTokens}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-4"
+		style="background: rgba(0,0,0,0.7)"
+		role="dialog"
+		aria-modal="true"
+	>
+		<div
+			class="w-full max-w-sm rounded-2xl border p-6 text-center"
+			style="background: var(--color-bg-surface); border-color: var(--color-bg-border)"
+		>
+			<div class="text-3xl mb-3">🪙</div>
+			<h3 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary)">
+				Out of tokens
+			</h3>
+			<p class="text-sm mb-5" style="color: var(--color-text-secondary)">
+				You've used all 100 tokens for this month. Buy more to keep humanizing, or wait until your plan renews.
+			</p>
+			<div class="flex gap-3">
+				<button
+					onclick={() => (outOfTokens = false)}
+					class="flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all"
+					style="background: transparent; border-color: var(--color-bg-border); color: var(--color-text-secondary)"
+				>
+					Not now
+				</button>
+				<a
+					href="/settings"
+					class="flex-1 py-2.5 rounded-lg text-sm font-semibold text-center transition-all"
+					style="background: var(--color-brand); color: white"
+				>
+					Buy tokens
+				</a>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	@keyframes shimmer {

@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe } from '$lib/server/stripe';
+import { stripe, PRO_TOKENS_PER_MONTH } from '$lib/server/stripe';
 import { STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createClient } from '@supabase/supabase-js';
@@ -36,7 +36,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		switch (event.type) {
 			case 'checkout.session.completed': {
 				const session = event.data.object as Stripe.Checkout.Session;
-				await handleCheckoutSessionCompleted(session, getAdminClient());
+				if (session.mode === 'payment') {
+					await handleTokenPackPurchase(session, getAdminClient());
+				} else {
+					await handleCheckoutSessionCompleted(session, getAdminClient());
+				}
 				break;
 			}
 			case 'customer.subscription.updated': {
@@ -52,6 +56,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			case 'invoice.payment_failed': {
 				const invoice = event.data.object as Stripe.Invoice;
 				await handleInvoicePaymentFailed(invoice, getAdminClient());
+				break;
+			}
+			case 'invoice.paid': {
+				const invoice = event.data.object as Stripe.Invoice;
+				await handleInvoicePaid(invoice, getAdminClient());
 				break;
 			}
 			default:
@@ -87,10 +96,10 @@ async function handleCheckoutSessionCompleted(
 	const plan = resolvePlanFromSubscription(subscription);
 
 	await Promise.all([
-		// Update profile plan
+		// Update profile plan + grant tokens
 		supabase
 			.from('profiles')
-			.update({ plan, stripe_customer_id: session.customer as string })
+			.update({ plan, stripe_customer_id: session.customer as string, tokens: PRO_TOKENS_PER_MONTH })
 			.eq('id', userId),
 
 		// Upsert subscription record
@@ -171,8 +180,8 @@ async function handleSubscriptionDeleted(
 	if (!profileData?.id) return;
 
 	await Promise.all([
-		// Downgrade to free plan
-		supabase.from('profiles').update({ plan: 'free' }).eq('id', profileData.id),
+		// Downgrade to free plan + clear tokens
+		supabase.from('profiles').update({ plan: 'free', tokens: 0 }).eq('id', profileData.id),
 
 		supabase
 			.from('subscriptions')
@@ -195,6 +204,57 @@ async function handleInvoicePaymentFailed(
 		.from('subscriptions')
 		.update({ status: 'past_due' })
 		.eq('stripe_subscription_id', subscriptionId);
+}
+
+async function handleInvoicePaid(
+	invoice: Stripe.Invoice,
+	supabase: import('@supabase/supabase-js').SupabaseClient
+): Promise<void> {
+	// Only reset tokens for subscription renewals (not one-time payments)
+	if (invoice.billing_reason !== 'subscription_cycle') return;
+
+	const customerId = typeof invoice.customer === 'string'
+		? invoice.customer
+		: (invoice.customer as Stripe.Customer)?.id;
+
+	if (!customerId) return;
+
+	const { data: profileData } = await supabase
+		.from('profiles')
+		.select('id')
+		.eq('stripe_customer_id', customerId)
+		.maybeSingle();
+
+	if (!profileData?.id) return;
+
+	await supabase
+		.from('profiles')
+		.update({ tokens: PRO_TOKENS_PER_MONTH })
+		.eq('id', profileData.id);
+}
+
+async function handleTokenPackPurchase(
+	session: Stripe.Checkout.Session,
+	supabase: import('@supabase/supabase-js').SupabaseClient
+): Promise<void> {
+	const userId = session.metadata?.supabase_user_id;
+	const tokensToAdd = Number(session.metadata?.tokens ?? 0);
+
+	if (!userId || !tokensToAdd) return;
+
+	// Fetch current tokens then add
+	const { data: profile } = await supabase
+		.from('profiles')
+		.select('tokens')
+		.eq('id', userId)
+		.single();
+
+	const current = (profile?.tokens as number) ?? 0;
+
+	await supabase
+		.from('profiles')
+		.update({ tokens: current + tokensToAdd })
+		.eq('id', userId);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

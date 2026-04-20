@@ -102,6 +102,30 @@
 	}
 
 	let subscription = $derived(data.subscription);
+	let tokenPacks = $derived(data.tokenPacks);
+	let tokens = $derived(profile?.tokens ?? 0);
+	let tokenBuyLoading = $state<string | null>(null);
+
+	async function buyTokenPack(priceId: string) {
+		tokenBuyLoading = priceId;
+		try {
+			const res = await fetch('/api/stripe/tokens', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ priceId })
+			});
+			const json = await res.json();
+			if (json.url) {
+				window.location.href = json.url;
+			} else {
+				alert(json.error ?? 'Could not start purchase. Please try again.');
+			}
+		} catch {
+			alert('Failed to reach payment service.');
+		} finally {
+			tokenBuyLoading = null;
+		}
+	}
 
 	let planLabel = $derived(
 		profile?.plan === 'pro' ? 'Pro' : 'Free'
@@ -283,6 +307,57 @@
 				</button>
 			{/if}
 		</div>
+
+		{#if profile?.plan === 'pro'}
+			<!-- Token balance -->
+			<div class="mb-4">
+				<div class="flex items-center justify-between mb-1.5">
+					<span class="text-sm font-medium" style="color: var(--color-text-secondary)">
+						Tokens remaining
+					</span>
+					<span
+						class="text-sm font-semibold"
+						style="color: {tokens === 0 ? '#ef4444' : tokens <= 20 ? '#f59e0b' : 'var(--color-brand)'}"
+					>
+						{tokens} / 100
+					</span>
+				</div>
+				<div class="w-full h-2 rounded-full" style="background: var(--color-bg-elevated)">
+					<div
+						class="h-2 rounded-full transition-all"
+						style="width: {Math.min(100, (tokens / 100) * 100)}%; background: {tokens === 0 ? '#ef4444' : tokens <= 20 ? '#f59e0b' : 'var(--color-brand)'}"
+					></div>
+				</div>
+				<p class="mt-1 text-xs" style="color: var(--color-text-muted)">
+					Resets monthly with your Pro plan. 1 token = 1 humanization.
+				</p>
+			</div>
+
+			<!-- Token packs -->
+			{#if tokens <= 20}
+				<div>
+					<p class="text-xs font-medium mb-2" style="color: var(--color-text-secondary)">
+						{tokens === 0 ? 'Out of tokens — buy more to continue humanizing:' : 'Running low — top up your tokens:'}
+					</p>
+					<div class="grid grid-cols-3 gap-2">
+						{#each tokenPacks as pack}
+							<button
+								onclick={() => buyTokenPack(pack.priceId)}
+								disabled={tokenBuyLoading !== null}
+								class="flex flex-col items-center p-3 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+								style="background: var(--color-bg-elevated); border-color: var(--color-bg-border)"
+							>
+								<span class="text-sm font-bold" style="color: var(--color-text-primary)">
+									{#if tokenBuyLoading === pack.priceId}…{:else}+{pack.tokens}{/if}
+								</span>
+								<span class="text-[10px] mt-0.5" style="color: var(--color-text-muted)">tokens</span>
+								<span class="text-xs font-semibold mt-1" style="color: var(--color-brand)">${pack.price}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		{/if}
 	</section>
 
 	<!-- Danger zone -->

@@ -9,7 +9,7 @@ export const load: LayoutLoad = async ({ parent }) => {
 
 	const { data: profile, error } = await supabase
 		.from('profiles')
-		.select('id, email, full_name, plan, created_at')
+		.select('id, email, full_name, plan, tokens, created_at')
 		.eq('id', user.id)
 		.maybeSingle();
 

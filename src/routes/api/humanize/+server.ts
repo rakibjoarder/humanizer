@@ -87,12 +87,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	// Free plan users cannot use the humanizer
 	if (profile.plan === 'free') {
 		return json(
-			{
-				error:
-					'Humanization requires a Pro plan. Please upgrade to continue.'
-			},
+			{ error: 'Humanization requires a Pro plan. Please upgrade to continue.' },
 			{ status: 403 }
 		);
+	}
+
+	// Token check
+	if ((profile.tokens ?? 0) <= 0) {
+		return json({ error: 'out_of_tokens' }, { status: 402 });
 	}
 
 	let quotaResult: Awaited<ReturnType<typeof checkQuota>>;
@@ -126,7 +128,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		);
 	}
 
-	// 7. Persist humanization + increment usage
+	// 7. Persist humanization + increment usage + deduct token
 	Promise.all([
 		locals.supabase.from('humanizations').insert({
 			user_id: user.id,
@@ -134,7 +136,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			output_text: result.humanized_text,
 			word_count: result.word_count
 		}),
-		incrementUsage(locals.supabase, user.id, result.word_count)
+		incrementUsage(locals.supabase, user.id, result.word_count),
+		locals.supabase
+			.from('profiles')
+			.update({ tokens: Math.max(0, (profile.tokens ?? 1) - 1) })
+			.eq('id', user.id)
 	]).catch((err) => {
 		console.error('[humanize] Failed to persist humanization / update usage:', err);
 	});

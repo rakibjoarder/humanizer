@@ -9,6 +9,7 @@ export interface Profile {
 	email: string;
 	full_name: string | null;
 	plan: 'free' | 'pro';
+	tokens: number;
 	stripe_customer_id: string | null;
 	created_at: string;
 }
@@ -55,7 +56,7 @@ export async function getUserProfile(
 ): Promise<Profile> {
 	const { data, error } = await supabase
 		.from('profiles')
-		.select('id, email, full_name, plan, stripe_customer_id, created_at')
+		.select('id, email, full_name, plan, tokens, stripe_customer_id, created_at')
 		.eq('id', userId)
 		.single();
 

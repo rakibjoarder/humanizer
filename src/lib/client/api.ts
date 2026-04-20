@@ -3,6 +3,10 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export class OutOfTokensError extends Error {
+	constructor() { super('out_of_tokens'); }
+}
+
 export interface DetectResult {
 	verdict: 'ai' | 'human';
 	ai_probability: number;
@@ -50,6 +54,8 @@ async function postJson<T>(path: string, body: Record<string, unknown>): Promise
 				throw new Error(serverMessage ?? 'Invalid request. Please check your input.');
 			case 401:
 				throw new Error(serverMessage ?? 'You must be logged in to use this feature.');
+			case 402:
+				throw new OutOfTokensError();
 			case 403:
 				throw new Error(serverMessage ?? 'You do not have permission to use this feature.');
 			case 429:
