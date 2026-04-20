@@ -26,11 +26,19 @@
 		email: string;
 	}
 
+	interface TokenPack {
+		priceId: string;
+		tokens: number;
+		price: number;
+		label: string;
+	}
+
 	interface Props {
 		data: {
 			profile: Profile;
 			detectionsLimit: number;
 			credits: number;
+			tokenPacks: TokenPack[];
 			totalDetections: number;
 			totalHumanizations: number;
 			wordsAnalyzed: number;
@@ -69,6 +77,26 @@
 	const showUpgradedBanner = $derived(page.url.searchParams.get('upgraded') === 'true');
 
 	// ── Stat boxes ─────────────────────────────────────────────────────────────
+	let creditBuyLoading = $state<string | null>(null);
+
+	async function buyCredits(priceId: string) {
+		creditBuyLoading = priceId;
+		try {
+			const res = await fetch('/api/stripe/tokens', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ priceId })
+			});
+			const json = await res.json();
+			if (json.url) window.location.href = json.url;
+			else alert(json.error ?? 'Could not start purchase.');
+		} catch {
+			alert('Network error.');
+		} finally {
+			creditBuyLoading = null;
+		}
+	}
+
 	const creditsSub = $derived(
 		data.credits <= 10 ? 'low — top up in settings' : 'resets monthly'
 	);
@@ -186,7 +214,47 @@
 				<p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-ai); margin: 0;">Free limit reached · Upgrade to Pro</p>
 			{/if}
 
-			<Button variant="secondary" size="sm" onclick={() => {}}>Manage plan →</Button>
+			<Button variant="secondary" size="sm" onclick={() => goto('/settings')}>Manage plan →</Button>
+
+			{#if data.profile.plan === 'pro'}
+				<!-- Credits bar -->
+				<div style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
+					<div style="display: flex; justify-content: space-between; align-items: center;">
+						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Credits</span>
+						<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {data.credits === 0 ? 'var(--color-ai)' : data.credits <= 20 ? '#f59e0b' : 'var(--color-brand)'};">{data.credits} / 100</span>
+					</div>
+					<div style="width: 100%; height: 6px; border-radius: 99px; background: var(--color-bg-border); overflow: hidden;">
+						<div style="height: 100%; border-radius: 99px; width: {Math.min(100, data.credits)}%; background: {data.credits === 0 ? 'var(--color-ai)' : data.credits <= 20 ? '#f59e0b' : 'var(--color-brand)'}; transition: width 600ms ease;"></div>
+					</div>
+				</div>
+
+				<!-- Top-up packs -->
+				<div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+					<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Top up credits</span>
+					<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%;">
+						{#each data.tokenPacks as pack}
+							<button
+								onclick={() => buyCredits(pack.priceId)}
+								disabled={creditBuyLoading !== null}
+								style="
+									display: flex; flex-direction: column; align-items: center;
+									padding: 10px 6px; border-radius: 10px; cursor: pointer;
+									background: var(--color-bg-elevated);
+									border: 1px solid var(--color-bg-border);
+									transition: border-color 150ms ease, background 150ms ease;
+									opacity: {creditBuyLoading !== null ? '0.6' : '1'};
+								"
+							>
+								<span style="font-family: 'Newsreader', Georgia, serif; font-size: 18px; color: var(--color-text-primary);">
+									{creditBuyLoading === pack.priceId ? '…' : `+${pack.tokens}`}
+								</span>
+								<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--color-text-muted); margin-top: 2px;">credits</span>
+								<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-brand); margin-top: 4px;">${pack.price}</span>
+							</button>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Stat boxes -->

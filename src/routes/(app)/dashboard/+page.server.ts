@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { getUserProfile } from '$lib/server/auth';
 import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
-import { stripe, PRO_TOKENS_PER_MONTH } from '$lib/server/stripe';
+import { stripe, PRO_TOKENS_PER_MONTH, tokenPacks } from '$lib/server/stripe';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
@@ -156,6 +156,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		profile,
 		detectionsLimit,
 		credits: profile.tokens ?? 0,
+		tokenPacks,
 		totalDetections,
 		totalHumanizations,
 		wordsAnalyzed,
