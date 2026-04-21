@@ -32,7 +32,7 @@
 	let invoicesError = $state<string | null>(null);
 
 	$effect(() => {
-		if (isPaidPlan) loadInvoices();
+		if (profile?.stripe_customer_id) loadInvoices();
 	});
 
 	async function loadInvoices() {
@@ -385,7 +385,7 @@
 	{/if}
 
 	<!-- Billing history (Stripe invoices) -->
-	{#if isPaidPlan}
+	{#if profile?.stripe_customer_id}
 	<section class="rounded-xl border p-6" style="background: var(--color-bg-surface); border-color: var(--color-bg-border)">
 		<div class="flex items-center justify-between mb-1">
 			<h2 class="text-base font-semibold" style="color: var(--color-text-primary)">Billing History</h2>

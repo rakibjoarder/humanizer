@@ -6,6 +6,7 @@
 		plan: 'free' | 'basic' | 'pro' | 'ultra';
 		full_name: string | null;
 		email: string;
+		stripe_customer_id: string | null;
 	}
 
 	interface WordPack {
@@ -73,7 +74,7 @@
 	let invoicesError = $state<string | null>(null);
 
 	$effect(() => {
-		if (isPaid) loadInvoices();
+		if (data.profile.stripe_customer_id) loadInvoices();
 	});
 
 	async function loadInvoices() {
@@ -375,7 +376,7 @@
 	{/if}
 
 	<!-- ── Billing History ── -->
-	{#if isPaid}
+	{#if data.profile.stripe_customer_id}
 	<div style="
 		background: var(--color-bg-surface);
 		border-radius: 14px;
