@@ -70,6 +70,7 @@
 	let invoices = $state<Invoice[]>([]);
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
+	let invoicesError = $state<string | null>(null);
 
 	$effect(() => {
 		if (isPaid) loadInvoices();
@@ -78,11 +79,12 @@
 	async function loadInvoices() {
 		if (invoicesLoaded) return;
 		invoicesLoading = true;
+		invoicesError = null;
 		try {
 			const res = await fetch('/api/billing/history');
-			const json = await res.json();
-			invoices = json.invoices ?? [];
-		} catch { /* non-fatal */ } finally {
+			const body = await res.json();
+			if (body.error) { invoicesError = body.error; } else { invoices = body.invoices ?? []; }
+		} catch { invoicesError = 'Failed to load invoices.'; } finally {
 			invoicesLoading = false;
 			invoicesLoaded = true;
 		}
@@ -387,7 +389,9 @@
 			{/if}
 		</div>
 
-		{#if invoicesLoaded && invoices.length === 0}
+		{#if invoicesError}
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #ef4444;">{invoicesError}</p>
+		{:else if invoicesLoaded && invoices.length === 0}
 			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">No invoices found.</p>
 		{:else if invoices.length > 0}
 			<div style="display: flex; flex-direction: column; gap: 8px;">

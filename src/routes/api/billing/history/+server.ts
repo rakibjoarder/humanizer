@@ -23,8 +23,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	try {
 		const invoices = await stripe.invoices.list({
 			customer: profile.stripe_customer_id,
-			limit: 12,
-			expand: ['data.lines.data.price.product']
+			limit: 12
 		});
 
 		const formatted = invoices.data.map((inv) => ({
@@ -38,12 +37,13 @@ export const GET: RequestHandler = async ({ locals }) => {
 			period_end: inv.period_end,
 			hosted_invoice_url: inv.hosted_invoice_url,
 			billing_reason: inv.billing_reason,
-			description: inv.lines.data[0]?.description ?? null
+			description: inv.description ?? inv.lines?.data?.[0]?.description ?? null
 		}));
 
 		return json({ invoices: formatted });
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
+		console.error('[billing/history]', msg);
 		return json({ error: msg }, { status: 500 });
 	}
 };
