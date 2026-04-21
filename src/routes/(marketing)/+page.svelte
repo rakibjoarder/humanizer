@@ -12,6 +12,7 @@
 	import PricingCard from '$lib/components/PricingCard.svelte';
 	import SEO from '$lib/components/SEO.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import ProductSuccessShowcase from '$lib/components/ProductSuccessShowcase.svelte';
 
 	const homeJsonLd = {
 		'@context': 'https://schema.org',
@@ -723,197 +724,22 @@
 	</div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     HOW IT WORKS + FREE TIER
-════════════════════════════════════════════════════════════════════════════ -->
-<section
-	style="
-		background: var(--color-bg-base);
-		padding: 0 24px 48px;
-	"
->
-	<div style="max-width: 920px; margin: 0 auto;">
-		<div class="home-how-grid">
-			<div
-				style="
-					background: var(--color-bg-surface);
-					border-radius: 14px;
-					padding: 18px 20px;
-					box-shadow: inset 0 0 0 1px var(--color-bg-border);
-				"
-			>
-				<span
-					style="
-						font-family: 'JetBrains Mono', monospace;
-						font-size: 11px;
-						font-weight: 700;
-						color: var(--color-brand);
-					">1</span
-				>
-				<h3
-					style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 15px;
-						font-weight: 700;
-						color: var(--color-text-primary);
-						margin: 8px 0 6px;
-					"
-				>
-					Paste
-				</h3>
-				<p
-					style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 13px;
-						line-height: 1.5;
-						color: var(--color-text-secondary);
-						margin: 0;
-					"
-				>
-					Add text or upload a .txt file, then pick AI Detector or Humanizer.
-				</p>
-			</div>
-			<div
-				style="
-					background: var(--color-bg-surface);
-					border-radius: 14px;
-					padding: 18px 20px;
-					box-shadow: inset 0 0 0 1px var(--color-bg-border);
-				"
-			>
-				<span
-					style="
-						font-family: 'JetBrains Mono', monospace;
-						font-size: 11px;
-						font-weight: 700;
-						color: var(--color-brand);
-					">2</span
-				>
-				<h3
-					style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 15px;
-						font-weight: 700;
-						color: var(--color-text-primary);
-						margin: 8px 0 6px;
-					"
-				>
-					Detect or humanize
-				</h3>
-				<p
-					style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 13px;
-						line-height: 1.5;
-						color: var(--color-text-secondary);
-						margin: 0;
-					"
-				>
-					Run the <strong style="color: var(--color-text-primary); font-weight: 600;">detector</strong> for a score, or
-					<strong style="color: var(--color-text-primary); font-weight: 600;">humanize</strong> to rewrite in a natural voice.
-				</p>
-			</div>
-			<div
-				style="
-					background: var(--color-bg-surface);
-					border-radius: 14px;
-					padding: 18px 20px;
-					box-shadow: inset 0 0 0 1px var(--color-bg-border);
-				"
-			>
-				<span
-					style="
-						font-family: 'JetBrains Mono', monospace;
-						font-size: 11px;
-						font-weight: 700;
-						color: var(--color-brand);
-					">3</span
-				>
-				<h3
-					style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 15px;
-						font-weight: 700;
-						color: var(--color-text-primary);
-						margin: 8px 0 6px;
-					"
-				>
-					Copy &amp; use
-				</h3>
-				<p
-					style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 13px;
-						line-height: 1.5;
-						color: var(--color-text-secondary);
-						margin: 0;
-					"
-				>
-					Copy results, open your activity log, or jump back here anytime.
-				</p>
-			</div>
-		</div>
-		{#if !isPro}
-			<p
-				style="
-					margin: 20px 0 0;
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 12px;
-					line-height: 1.5;
-					color: var(--color-text-muted);
-					text-align: center;
-				"
-			>
-				<strong style="color: var(--color-text-secondary); font-weight: 600;">Free plan:</strong>
-				3 lifetime AI scans (500 words each). Humanizer and history are Pro — see pricing below.
-			</p>
-		{/if}
-	</div>
-</section>
+<ProductSuccessShowcase variant="marketing" />
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      USE-CASE MARQUEE (no implied customer logos)
 ════════════════════════════════════════════════════════════════════════════ -->
 <Reveal delay={400}>
-	<section style="
-		background: var(--color-bg-base);
-		padding: 0 0 64px;
-		overflow: hidden;
-	">
-		<div style="max-width: 1200px; margin: 0 auto; padding: 0 48px;">
-			<p style="
-				font-family: 'Space Grotesk', system-ui, sans-serif;
-				font-size: 11px;
-				font-weight: 600;
-				color: var(--color-text-dim);
-				letter-spacing: 0.14em;
-				text-transform: uppercase;
-				margin: 0 0 16px;
-			">Built for —</p>
+	<section class="home-marquee-section">
+		<div class="home-marquee-label-wrap">
+			<p class="home-marquee-label">Built for —</p>
 		</div>
 
-		<div style="
-			position: relative;
-			overflow: hidden;
-			mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
-			-webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
-		">
-			<div style="
-				display: flex;
-				gap: 56px;
-				animation: hai-marquee 40s linear infinite;
-				width: max-content;
-			">
+		<div class="home-marquee-mask">
+			<div class="home-marquee-track">
 				{#each [draftUseCases, draftUseCases] as group}
 					{#each group as label}
-						<span style="
-							font-family: 'Newsreader', Georgia, serif;
-							font-size: 22px;
-							font-style: italic;
-							color: var(--color-text-muted);
-							white-space: nowrap;
-							flex-shrink: 0;
-						">{label}</span>
+						<span class="home-marquee-item">{label}</span>
 					{/each}
 				{/each}
 			</div>
@@ -1293,12 +1119,6 @@
 		background: var(--color-bg-elevated);
 	}
 
-	.home-how-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 16px;
-	}
-
 	.suggestion-icon-detect {
 		background: var(--color-ai-muted) !important;
 		color: var(--color-ai) !important;
@@ -1429,6 +1249,57 @@
 		font-size: 13px;
 		line-height: 1.65;
 		color: var(--color-text-secondary);
+	}
+
+	/* Marquee — align label with main column; consistent horizontal padding */
+	.home-marquee-section {
+		background: var(--color-bg-base);
+		padding: 28px 24px 64px;
+		overflow: hidden;
+	}
+
+	.home-marquee-label-wrap {
+		max-width: 920px;
+		margin: 0 auto;
+		padding: 0 0 20px;
+		box-sizing: border-box;
+	}
+
+	.home-marquee-label {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--color-text-dim);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		margin: 0;
+		text-align: center;
+		line-height: 1.4;
+	}
+
+	.home-marquee-mask {
+		position: relative;
+		overflow: hidden;
+		margin: 0 -24px;
+		padding: 12px 0 8px;
+		mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+		-webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+	}
+
+	.home-marquee-track {
+		display: flex;
+		gap: 56px;
+		animation: hai-marquee 40s linear infinite;
+		width: max-content;
+	}
+
+	.home-marquee-item {
+		font-family: 'Newsreader', Georgia, serif;
+		font-size: clamp(18px, 2.5vw, 22px);
+		font-style: italic;
+		color: var(--color-text-muted);
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.home-hero-cta-row {
@@ -1570,9 +1441,6 @@
 		}
 		.home-suggestions {
 			grid-template-columns: 1fr;
-		}
-		.home-how-grid {
-			grid-template-columns: 1fr !important;
 		}
 		.home-trust-grid {
 			grid-template-columns: 1fr;

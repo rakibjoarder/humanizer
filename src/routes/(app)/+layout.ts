@@ -1,10 +1,11 @@
 import type { LayoutLoad } from './$types';
 
-export const load: LayoutLoad = async ({ parent }) => {
+export const load: LayoutLoad = async ({ parent, data }) => {
 	const { supabase, session, user } = await parent();
+	const { wordPacks } = data;
 
 	if (!user) {
-		return { session, user, profile: null };
+		return { session, user, profile: null, wordPacks };
 	}
 
 	const { data: profile, error } = await supabase
@@ -26,5 +27,5 @@ export const load: LayoutLoad = async ({ parent }) => {
 		.limit(1)
 		.maybeSingle();
 
-	return { session, user, profile: profile ?? null, subscription: subscription ?? null };
+	return { session, user, profile: profile ?? null, subscription: subscription ?? null, wordPacks };
 };

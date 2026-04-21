@@ -1,14 +1,18 @@
 import type { LayoutServerLoad } from './$types';
 import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
-import { WORDS_PER_PLAN } from '$lib/server/stripe';
+import { WORDS_PER_PLAN, wordPacks } from '$lib/server/stripe';
 
 export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabase }, url }) => {
 	const { session, user } = await safeGetSession();
 
 	if (!session) {
-		// Guest AI detection (preview) — /detect allows signed-out usage
-		if (url.pathname.startsWith('/detect')) {
-			return { session: null, user: null };
+		if (
+			url.pathname.startsWith('/detect') ||
+			url.pathname.startsWith('/blog') ||
+			url.pathname === '/privacy' ||
+			url.pathname === '/terms'
+		) {
+			return { session: null, user: null, wordPacks };
 		}
 		redirectToLoginModal(url);
 	}
@@ -44,5 +48,5 @@ export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabas
 		}
 	}
 
-	return { session, user };
+	return { session, user, wordPacks };
 };

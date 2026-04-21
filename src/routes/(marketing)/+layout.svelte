@@ -104,23 +104,10 @@
 	transition: box-shadow 200ms ease;
 "
 >
-	<nav
-		style="
-		max-width: 1280px;
-		margin: 0 auto;
-		padding: 0 24px;
-		height: 56px;
-		display: flex;
-		align-items: center;
-		gap: 24px;
-	"
-	>
+	<nav class="marketing-nav">
 		<Logo size={26} onclick={() => goto('/')} />
 
-		<div
-			style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0;"
-			class="marketing-nav-links"
-		>
+		<div class="marketing-nav-links">
 			{#each navLinks as link}
 				{@const active = isActive(link.href)}
 				<a
@@ -155,19 +142,8 @@
 			{/each}
 		</div>
 
-		<!-- Fixed-width rail so center links do not shift when auth state / CTA width changes -->
-		<div
-			style="
-				display: flex;
-				align-items: center;
-				justify-content: flex-end;
-				gap: 10px;
-				margin-left: auto;
-				flex-shrink: 0;
-				min-width: 200px;
-			"
-			class="marketing-nav-right"
-		>
+		<!-- Right rail: theme + auth (desktop); theme + hamburger (mobile) -->
+		<div class="marketing-nav-right">
 			<ThemeToggle />
 			{#if user}
 				<span
@@ -365,6 +341,35 @@
 </footer>
 
 <style>
+	.marketing-nav {
+		max-width: 1280px;
+		margin: 0 auto;
+		padding: 0 clamp(12px, 4vw, 24px);
+		min-height: 56px;
+		display: flex;
+		align-items: center;
+		gap: clamp(8px, 2vw, 24px);
+		min-width: 0;
+	}
+
+	.marketing-nav-links {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.marketing-nav-right {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 10px;
+		margin-left: auto;
+		flex-shrink: 0;
+		min-width: 200px;
+	}
+
 	.marketing-footer {
 		background: var(--color-brand-muted);
 		border-top: 1px solid rgba(16, 185, 129, 0.3);
@@ -467,16 +472,31 @@
 	}
 
 	@media (max-width: 768px) {
+		.marketing-nav {
+			gap: 8px;
+			padding: 0 12px;
+		}
+
+		/* Icon-only logo in header — saves horizontal space on narrow screens */
+		.marketing-nav :global(.logo-wordmark) {
+			display: none;
+		}
+
 		.marketing-nav-links {
 			display: none !important;
 		}
+
 		.marketing-nav-right {
-			min-width: auto;
-			gap: 8px;
+			min-width: 0;
+			flex-shrink: 0;
+			gap: 6px;
+			margin-left: auto;
 		}
+
 		.marketing-nav-right > :not(.marketing-hamburger):not(.nav-theme-toggle) {
 			display: none !important;
 		}
+
 		.marketing-hamburger {
 			display: flex !important;
 		}

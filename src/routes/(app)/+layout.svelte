@@ -5,17 +5,70 @@
 	import { onMount } from 'svelte';
 	import Logo from '$lib/components/Logo.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import NavUserMenu from '$lib/components/NavUserMenu.svelte';
+	import { openLoginModal } from '$lib/stores/loginModal';
 	import { wordsBalanceStore } from '$lib/stores/wordsBalance';
 
 	let { data, children } = $props();
 	let supabase = $derived(data.supabase);
 	let profile = $derived(data.profile);
 	let user = $derived(data.user);
+	let wordPacks = $derived(data.wordPacks ?? []);
+
+	// Guest content pages (blog/privacy/terms) — render marketing layout instead of app shell
+	const isGuestContentPage = $derived(
+		!user && (
+			page.url.pathname === '/blog' ||
+			page.url.pathname.startsWith('/blog/') ||
+			page.url.pathname === '/privacy' ||
+			page.url.pathname === '/terms'
+		)
+	);
+
+	let mkScrollY = $state(0);
+	let mkMobileOpen = $state(false);
+
+	const mkNavLinks = [
+		{ label: 'Home', href: '/' },
+		{ label: 'AI Humanizer', href: '/humanize' },
+		{ label: 'AI Detector', href: '/detect' },
+		{ label: 'Blog', href: '/blog' },
+		{ label: 'Pricing', href: '/pricing' }
+	];
+
+	function mkIsActive(href: string) {
+		const p = page.url.pathname;
+		if (href === '/') return p === '/';
+		return p === href || p.startsWith(href + '/');
+	}
+
+	function onGuestAppLink(e: MouseEvent, href: string) {
+		const pathOnly = href.split(/[?#]/)[0];
+		if (
+			pathOnly === '/humanize' ||
+			pathOnly === '/dashboard' ||
+			pathOnly === '/activity' ||
+			pathOnly.startsWith('/settings')
+		) {
+			e.preventDefault();
+			openLoginModal(href.startsWith('/') ? href : pathOnly);
+		}
+	}
+
+	$effect(() => {
+		if (!browser || !isGuestContentPage) return;
+		const onScroll = () => { mkScrollY = window.scrollY; };
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	});
 
 	// Sidebar collapse state — persisted in localStorage
 	let collapsed = $state(false);
 	let mobileOpen = $state(false);
 	let avatarMenuOpen = $state(false);
+	let topupOpen = $state(false);
+	let wordBuyLoading = $state<string | null>(null);
 
 	onMount(() => {
 		const saved = localStorage.getItem('sidebar-collapsed');
@@ -64,6 +117,27 @@
 		window.location.href = '/';
 	}
 
+	async function buyWordPack(priceId: string) {
+		wordBuyLoading = priceId;
+		try {
+			const res = await fetch('/api/stripe/tokens', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ priceId })
+			});
+			const json = await res.json();
+			if (json.url) {
+				window.location.href = json.url;
+			} else {
+				alert(json.error ?? 'Could not start purchase. Please try again.');
+			}
+		} catch {
+			alert('Failed to reach payment service.');
+		} finally {
+			wordBuyLoading = null;
+		}
+	}
+
 	const initials = $derived(user?.email ? user.email.slice(0, 2).toUpperCase() : '?');
 
 	const navItems = [
@@ -94,10 +168,106 @@
 		}
 	];
 
+	const extraLabels: Record<string, string> = {
+		'/blog': 'Blog',
+		'/privacy': 'Privacy Policy',
+		'/terms': 'Terms of Service'
+	};
+
 	const activeNavLabel = $derived(
-		navItems.find(item => isActive(item.href))?.label ?? ''
+		navItems.find(item => isActive(item.href))?.label ??
+		(page.url.pathname.startsWith('/blog/') ? 'Blog' : (extraLabels[page.url.pathname] ?? ''))
 	);
 </script>
+
+{#if isGuestContentPage}
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- MARKETING LAYOUT — guests on blog / privacy / terms                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<header
+	style="position:sticky;top:0;left:0;right:0;z-index:40;background:var(--nav-bg-light,var(--color-bg-base));border-bottom:1px solid var(--color-divider);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:{mkScrollY>10?'var(--nav-scroll-shadow)':'none'};transition:box-shadow 200ms ease;"
+>
+	<nav class="mk-nav">
+		<Logo size={26} onclick={() => goto('/')} />
+
+		<div class="mk-nav-links">
+			{#each mkNavLinks as link}
+				{@const active = mkIsActive(link.href)}
+				<a
+					href={link.href}
+					onclick={(e) => onGuestAppLink(e, link.href)}
+					style="display:inline-flex;align-items:center;padding:6px 12px;border-radius:7px;font-family:'Space Grotesk',system-ui,sans-serif;font-size:13.5px;font-weight:{active?'600':'500'};color:{active?'var(--color-brand)':'var(--color-text-secondary)'};background:{active?'var(--color-brand-muted)':'transparent'};text-decoration:none;transition:background 150ms,color 150ms;"
+					onmouseenter={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background='var(--color-bg-elevated)'; (e.currentTarget as HTMLAnchorElement).style.color='var(--color-text-primary)'; } }}
+					onmouseleave={(e) => { if (!active) { (e.currentTarget as HTMLAnchorElement).style.background='transparent'; (e.currentTarget as HTMLAnchorElement).style.color='var(--color-text-secondary)'; } }}
+				>{link.label}</a>
+			{/each}
+		</div>
+
+		<div class="mk-nav-right">
+			<ThemeToggle />
+			<Button variant="ghost" size="sm" onclick={() => openLoginModal()}>Sign in</Button>
+			<Button variant="primary" size="sm" onclick={() => goto('/register')}>Get started</Button>
+			<button
+				class="mk-hamburger"
+				type="button"
+				onclick={() => (mkMobileOpen = !mkMobileOpen)}
+				aria-label="Toggle menu"
+				aria-expanded={mkMobileOpen}
+			>
+				<span style="display:block;width:20px;height:2px;background:var(--color-text-primary);border-radius:2px;transition:transform 200ms,opacity 200ms;transform:{mkMobileOpen?'translateY(7px) rotate(45deg)':'none'};"></span>
+				<span style="display:block;width:20px;height:2px;background:var(--color-text-primary);border-radius:2px;opacity:{mkMobileOpen?0:1};transition:opacity 200ms;"></span>
+				<span style="display:block;width:20px;height:2px;background:var(--color-text-primary);border-radius:2px;transition:transform 200ms;transform:{mkMobileOpen?'translateY(-7px) rotate(-45deg)':'none'};"></span>
+			</button>
+		</div>
+	</nav>
+
+	{#if mkMobileOpen}
+		<div style="background:var(--color-bg-surface);border-top:1px solid var(--color-bg-border);padding:12px 16px 20px;">
+			{#each mkNavLinks as link}
+				{@const active = mkIsActive(link.href)}
+				<a
+					href={link.href}
+					onclick={(e) => { onGuestAppLink(e, link.href); mkMobileOpen = false; }}
+					style="display:block;padding:10px 12px;border-radius:8px;font-family:'Space Grotesk',system-ui,sans-serif;font-size:14px;font-weight:{active?'600':'500'};color:{active?'var(--color-brand)':'var(--color-text-secondary)'};background:{active?'var(--color-brand-muted)':'transparent'};text-decoration:none;margin-bottom:2px;"
+				>{link.label}</a>
+			{/each}
+			<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-bg-border);">
+				<button type="button" onclick={() => { mkMobileOpen = false; openLoginModal(); }} style="display:block;width:100%;padding:11px 16px;text-align:center;font-family:'Space Grotesk',system-ui,sans-serif;font-size:14px;font-weight:600;color:var(--color-text-secondary);background:var(--color-bg-elevated);border-radius:9px;box-shadow:inset 0 0 0 1px var(--color-bg-border);border:none;cursor:pointer;">Sign in</button>
+				<a href="/register" onclick={() => (mkMobileOpen = false)} style="display:block;padding:11px 16px;text-align:center;font-family:'Space Grotesk',system-ui,sans-serif;font-size:14px;font-weight:600;color:white;text-decoration:none;background:var(--color-brand);border-radius:9px;">Get started</a>
+			</div>
+		</div>
+	{/if}
+</header>
+
+{@render children()}
+
+<footer class="mk-footer">
+	<div class="mk-footer-grid">
+		<div>
+			<Logo size={24} onclick={() => goto('/')} />
+			<p style="margin:14px 0 0;max-width:280px;font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px;line-height:1.55;color:var(--color-text-secondary);">AI detection and humanizing — built for drafts you stand behind.</p>
+		</div>
+		<div>
+			<h3 class="mk-footer-heading">Product</h3>
+			<nav class="mk-footer-nav"><a href="/detect">AI Detector</a><a href="/humanize" onclick={(e) => onGuestAppLink(e, '/humanize')}>AI Humanizer</a><a href="/pricing">Pricing</a><a href="/">Home</a></nav>
+		</div>
+		<div>
+			<h3 class="mk-footer-heading">Resources</h3>
+			<nav class="mk-footer-nav"><a href="/blog">Blog</a><a href="/blog/how-to-bypass-gptzero">Bypass GPTZero</a><a href="/blog/does-turnitin-detect-chatgpt">Turnitin & ChatGPT</a></nav>
+		</div>
+		<div>
+			<h3 class="mk-footer-heading">Legal</h3>
+			<nav class="mk-footer-nav"><a href="/terms">Terms of Service</a><a href="/privacy">Privacy Policy</a></nav>
+		</div>
+	</div>
+	<div class="mk-footer-bottom">
+		<span style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;color:var(--color-text-muted);">&copy; {new Date().getFullYear()} HumanizeAIWrite</span>
+		<span style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;color:var(--color-text-secondary);">Detection and humanizing only — we don't sell your text.</span>
+	</div>
+</footer>
+
+{:else}
 
 <div class="shell">
 
@@ -175,10 +345,10 @@
 					</div>
 					{#if isPaid}
 						<p class="words-sub">{wordsLimit.toLocaleString()} / mo · resets monthly</p>
-						<a href="/settings#topup" class="bottom-cta topup">
+						<button onclick={() => (topupOpen = true)} class="bottom-cta topup">
 							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
 							Get more words
-						</a>
+						</button>
 					{:else}
 						<p class="words-sub">150 words free trial</p>
 						<a href="/plans" class="bottom-cta subscribe">
@@ -186,14 +356,40 @@
 							Subscribe for more
 						</a>
 					{/if}
+					<nav class="shell-legal" aria-label="Legal and resources">
+						<a href="/blog">Blog</a>
+						<span class="shell-legal-sep" aria-hidden="true">·</span>
+						<a href="/privacy">Privacy</a>
+						<span class="shell-legal-sep" aria-hidden="true">·</span>
+						<a href="/terms">Terms</a>
+					</nav>
 				</div>
 			{:else}
 				<!-- Collapsed: icon CTA with colour-coded dot -->
-				<a href={isPaid ? '/settings#topup' : '/plans'} class="icon-cta" title="{wordsBalance.toLocaleString()} words remaining">
-					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{wordsBarColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M12 5v14M5 12h14"/>
-					</svg>
-				</a>
+				{#if isPaid}
+					<button onclick={() => (topupOpen = true)} class="icon-cta" title="{wordsBalance.toLocaleString()} words remaining">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{wordsBarColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 5v14M5 12h14"/>
+						</svg>
+					</button>
+				{:else}
+					<a href="/plans" class="icon-cta" title="{wordsBalance.toLocaleString()} words remaining">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{wordsBarColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 5v14M5 12h14"/>
+						</svg>
+					</a>
+				{/if}
+				<nav class="shell-legal shell-legal--collapsed" aria-label="Legal and resources">
+					<a href="/blog" class="shell-legal-icon" title="Blog" aria-label="Blog">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>
+					</a>
+					<a href="/privacy" class="shell-legal-icon" title="Privacy Policy" aria-label="Privacy Policy">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+					</a>
+					<a href="/terms" class="shell-legal-icon" title="Terms of Service" aria-label="Terms of Service">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+					</a>
+				</nav>
 			{/if}
 		</div>
 	</aside>
@@ -227,10 +423,10 @@
 					<div class="words-track"><div class="words-fill" style="width:{wordsPct}%;background:{wordsBarColor};"></div></div>
 					{#if isPaid}
 						<p class="words-sub">{wordsLimit.toLocaleString()} / mo</p>
-						<a href="/settings#topup" class="bottom-cta topup" onclick={() => (mobileOpen = false)}>
+						<button onclick={() => { mobileOpen = false; topupOpen = true; }} class="bottom-cta topup">
 							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
 							Get more words
-						</a>
+						</button>
 					{:else}
 						<p class="words-sub">150 words free trial</p>
 						<a href="/plans" class="bottom-cta subscribe" onclick={() => (mobileOpen = false)}>
@@ -238,9 +434,47 @@
 							Subscribe for more
 						</a>
 					{/if}
+					<nav class="shell-legal" aria-label="Legal and resources">
+						<a href="/blog" onclick={() => (mobileOpen = false)}>Blog</a>
+						<span class="shell-legal-sep" aria-hidden="true">·</span>
+						<a href="/privacy" onclick={() => (mobileOpen = false)}>Privacy</a>
+						<span class="shell-legal-sep" aria-hidden="true">·</span>
+						<a href="/terms" onclick={() => (mobileOpen = false)}>Terms</a>
+					</nav>
 				</div>
 			</div>
 		</aside>
+	{/if}
+
+	<!-- ═══ TOPUP MODAL ══════════════════════════════════════════════════════ -->
+	{#if topupOpen}
+		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+		<div class="modal-backdrop" onclick={() => (topupOpen = false)}></div>
+		<div class="topup-modal" role="dialog" aria-modal="true" aria-label="Buy word packs">
+			<div class="topup-modal-header">
+				<div>
+					<h3 class="topup-modal-title">Top up words</h3>
+					<p class="topup-modal-sub">{wordsBalance.toLocaleString()} words remaining</p>
+				</div>
+				<button class="topup-modal-close" onclick={() => (topupOpen = false)} aria-label="Close">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+				</button>
+			</div>
+			<div class="topup-packs">
+				{#each wordPacks as pack}
+					<button
+						class="topup-pack"
+						onclick={() => buyWordPack(pack.priceId)}
+						disabled={wordBuyLoading !== null}
+					>
+						<span class="topup-pack-words">{wordBuyLoading === pack.priceId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}</span>
+						<span class="topup-pack-label">words</span>
+						<span class="topup-pack-price">${pack.price}</span>
+					</button>
+				{/each}
+			</div>
+			<p class="topup-modal-note">One-time purchase. Words never expire.</p>
+		</div>
 	{/if}
 
 	<!-- ═══ MAIN AREA ══════════════════════════════════════════════════════ -->
@@ -304,6 +538,19 @@
 									{isPaid ? 'Change plan' : 'Upgrade plan'}
 								</a>
 								<div class="avatar-menu-divider"></div>
+								<a href="/blog" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>
+									Blog
+								</a>
+								<a href="/privacy" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+									Privacy Policy
+								</a>
+								<a href="/terms" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+									Terms of Service
+								</a>
+								<div class="avatar-menu-divider"></div>
 								<button class="avatar-menu-item avatar-menu-signout" role="menuitem" onclick={signOut}>
 									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
 									Sign out
@@ -324,6 +571,8 @@
 		</main>
 	</div>
 </div>
+
+{/if}
 
 <style>
 /* ── Shell ──────────────────────────────────────────────────────────────── */
@@ -540,6 +789,7 @@
 	text-decoration: none;
 	transition: background 150ms;
 	width: 100%;
+	cursor: pointer;
 }
 .bottom-cta.topup {
 	color: var(--color-brand);
@@ -572,6 +822,57 @@
 }
 .icon-cta:hover {
 	background: var(--color-bg-border);
+}
+
+.shell-legal {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 4px 2px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid var(--color-bg-border);
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.3;
+}
+.shell-legal a {
+	color: var(--color-text-muted);
+	text-decoration: none;
+	transition: color 120ms ease;
+}
+.shell-legal a:hover {
+	color: var(--color-brand);
+}
+.shell-legal-sep {
+	color: var(--color-text-dim);
+	user-select: none;
+	padding: 0 2px;
+}
+
+.shell-legal--collapsed {
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid var(--color-bg-border);
+}
+.shell-legal-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	color: var(--color-text-muted);
+	text-decoration: none;
+	transition: background 120ms ease, color 120ms ease;
+}
+.shell-legal-icon:hover {
+	background: var(--color-bg-elevated);
+	color: var(--color-brand);
 }
 
 /* ── Main area ──────────────────────────────────────────────────────────── */
@@ -830,5 +1131,235 @@
 @media (min-width: 769px) {
 	.sidebar-mobile { display: none !important; }
 	.overlay        { display: none !important; }
+}
+
+/* ── Topup modal ─────────────────────────────────────────────────────────── */
+.modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0,0,0,0.45);
+	z-index: 60;
+	cursor: pointer;
+}
+
+.topup-modal {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 61;
+	width: min(360px, calc(100vw - 32px));
+	background: var(--color-bg-surface);
+	border: 1px solid var(--color-bg-border);
+	border-radius: 16px;
+	box-shadow: 0 24px 64px rgba(0,0,0,0.24), 0 4px 16px rgba(0,0,0,0.12);
+	padding: 20px;
+}
+
+.topup-modal-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 16px;
+}
+
+.topup-modal-title {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--color-text-primary);
+	margin: 0 0 3px;
+}
+
+.topup-modal-sub {
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 11px;
+	color: var(--color-text-muted);
+	margin: 0;
+}
+
+.topup-modal-close {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	background: none;
+	border: 1px solid var(--color-bg-border);
+	color: var(--color-text-muted);
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background 120ms, color 120ms;
+}
+.topup-modal-close:hover {
+	background: var(--color-bg-elevated);
+	color: var(--color-text-primary);
+}
+
+.topup-packs {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 8px;
+	margin-bottom: 14px;
+}
+
+.topup-pack {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 12px 8px;
+	border-radius: 10px;
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-bg-border);
+	cursor: pointer;
+	transition: border-color 150ms, background 150ms;
+}
+.topup-pack:hover:not(:disabled) {
+	border-color: var(--color-brand);
+	background: var(--color-brand-muted);
+}
+.topup-pack:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.topup-pack-words {
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--color-text-primary);
+}
+
+.topup-pack-label {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 10px;
+	color: var(--color-text-muted);
+}
+
+.topup-pack-price {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--color-brand);
+	margin-top: 4px;
+}
+
+.topup-modal-note {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	color: var(--color-text-muted);
+	text-align: center;
+	margin: 0;
+}
+
+/* ── Guest content page: marketing layout ───────────────────────────────── */
+.mk-nav {
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 0 clamp(12px, 4vw, 24px);
+	min-height: 56px;
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 2vw, 24px);
+	min-width: 0;
+}
+
+.mk-nav-links {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+.mk-nav-right {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.mk-hamburger {
+	display: none;
+	flex-direction: column;
+	gap: 5px;
+	background: none;
+	border: none;
+	padding: 4px;
+	cursor: pointer;
+}
+
+.mk-footer {
+	background: var(--color-brand-muted);
+	border-top: 1px solid rgba(16,185,129,0.3);
+	padding: 48px 24px 28px;
+}
+
+.mk-footer-grid {
+	max-width: 1200px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: 1.4fr repeat(3, 1fr);
+	gap: 32px 40px;
+	align-items: start;
+}
+
+.mk-footer-heading {
+	margin: 0 0 12px;
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--color-text-muted);
+}
+
+.mk-footer-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.mk-footer-nav a {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--color-text-primary);
+	text-decoration: none;
+	transition: color 120ms ease;
+}
+
+.mk-footer-nav a:hover { color: var(--color-brand); }
+
+.mk-footer-bottom {
+	max-width: 1200px;
+	margin: 40px auto 0;
+	padding-top: 24px;
+	border-top: 1px solid rgba(16,185,129,0.2);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px 24px;
+}
+
+@media (max-width: 900px) {
+	.mk-footer-grid { grid-template-columns: 1fr 1fr; }
+	.mk-footer-grid > :first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 768px) {
+	.mk-nav-links { display: none !important; }
+	.mk-nav-right > :not(.mk-hamburger) { display: none !important; }
+	.mk-hamburger { display: flex !important; }
+}
+
+@media (max-width: 520px) {
+	.mk-footer-grid { grid-template-columns: 1fr; }
 }
 </style>

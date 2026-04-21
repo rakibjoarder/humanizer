@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
 
-config({ path: '.env.test' });
+config({ path: '.env' });              // STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY, etc.
+config({ path: '.env.test', override: true }); // test-specific overrides take precedence
 
 export default defineConfig({
 	testDir: './tests/e2e',

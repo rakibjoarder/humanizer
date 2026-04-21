@@ -358,7 +358,7 @@
 						<button
 							onclick={() => buyWordPack(pack.priceId)}
 							disabled={wordBuyLoading !== null}
-							class="flex flex-col items-center p-3 rounded-lg border transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+							class="flex flex-col items-center p-3 rounded-lg border transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
 							style="background: var(--color-bg-elevated); border-color: var(--color-bg-border)"
 						>
 							<span class="text-sm font-bold" style="color: var(--color-text-primary)">
