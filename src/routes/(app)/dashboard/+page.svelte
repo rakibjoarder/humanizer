@@ -69,8 +69,19 @@
 		hosted_invoice_url: string | null; billing_reason: string | null; description: string | null;
 	};
 	type Cancellation = { id: string; canceled_at: number | null; ended_at: number | null; plan: string | null; };
+	type TimelineEntry = ({ kind: 'invoice' } & Invoice) | ({ kind: 'cancellation' } & Cancellation);
 	let invoices = $state<Invoice[]>([]);
 	let cancellations = $state<Cancellation[]>([]);
+	const timeline = $derived<TimelineEntry[]>(
+		[
+			...invoices.map(i => ({ kind: 'invoice' as const, ...i })),
+			...cancellations.map(c => ({ kind: 'cancellation' as const, ...c }))
+		].sort((a, b) => {
+			const ta = a.kind === 'invoice' ? a.created : (a.canceled_at ?? 0);
+			const tb = b.kind === 'invoice' ? b.created : (b.canceled_at ?? 0);
+			return tb - ta;
+		})
+	);
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
 	let invoicesError = $state<string | null>(null);
@@ -100,7 +111,7 @@
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(amount / 100);
 	}
 	function fmtDate(ts: number) {
-		return new Date(ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+		return new Date(ts * 1000).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 	}
 	function fmtCreditDate(iso: string) {
 		return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -401,34 +412,35 @@
 			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">No billing history found.</p>
 		{:else if invoicesLoaded}
 			<div style="display: flex; flex-direction: column; gap: 8px;">
-				{#each cancellations as c}
-					<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #ef444408; box-shadow: inset 0 0 0 1px #ef444425;">
-						<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444; flex-shrink: 0;">Canceled</span>
-							<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary);">Subscription canceled{c.ended_at ? ' · access ended ' + fmtDate(c.ended_at) : ''}</span>
+				{#each timeline as entry}
+					{#if entry.kind === 'cancellation'}
+						<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #ef444408; box-shadow: inset 0 0 0 1px #ef444425;">
+							<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+								<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444; flex-shrink: 0;">Canceled</span>
+								<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary);">Subscription canceled{entry.ended_at ? ' · access ended ' + fmtDate(entry.ended_at) : ''}</span>
+							</div>
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); flex-shrink: 0;">{entry.canceled_at ? fmtDate(entry.canceled_at) : '—'}</span>
 						</div>
-						<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); flex-shrink: 0;">{c.canceled_at ? fmtDate(c.canceled_at) : '—'}</span>
-					</div>
-				{/each}
-				{#each invoices as inv}
-					<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border);">
-						<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-							<span style="
-								font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
-								letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
-								background: {inv.status === 'paid' ? '#22c55e20' : '#ef444420'};
-								color: {inv.status === 'paid' ? '#22c55e' : '#ef4444'};
-							">{inv.status ?? 'unknown'}</span>
-							<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{inv.description ?? inv.number ?? 'Invoice'}</span>
+					{:else}
+						<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border);">
+							<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+								<span style="
+									font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+									letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+									background: {entry.status === 'paid' ? '#22c55e20' : '#ef444420'};
+									color: {entry.status === 'paid' ? '#22c55e' : '#ef4444'};
+								">{entry.status ?? 'unknown'}</span>
+								<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{entry.description ?? entry.number ?? 'Invoice'}</span>
+							</div>
+							<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+								<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--color-text-primary);">{fmtCurrency(entry.amount_paid, entry.currency)}</span>
+								<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); min-width: 80px; text-align: right;">{fmtDate(entry.created)}</span>
+								{#if entry.hosted_invoice_url}
+									<a href={entry.hosted_invoice_url} target="_blank" rel="noopener noreferrer" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none; flex-shrink: 0;">View</a>
+								{/if}
+							</div>
 						</div>
-						<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--color-text-primary);">{fmtCurrency(inv.amount_paid, inv.currency)}</span>
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); min-width: 80px; text-align: right;">{fmtDate(inv.created)}</span>
-							{#if inv.hosted_invoice_url}
-								<a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none; flex-shrink: 0;">View</a>
-							{/if}
-						</div>
-					</div>
+					{/if}
 				{/each}
 			</div>
 		{/if}

@@ -27,8 +27,19 @@
 		description: string | null;
 	};
 	type Cancellation = { id: string; canceled_at: number | null; ended_at: number | null; plan: string | null; };
+	type TimelineEntry = ({ kind: 'invoice' } & Invoice) | ({ kind: 'cancellation' } & Cancellation);
 	let invoices = $state<Invoice[]>([]);
 	let cancellations = $state<Cancellation[]>([]);
+	const timeline = $derived<TimelineEntry[]>(
+		[
+			...invoices.map(i => ({ kind: 'invoice' as const, ...i })),
+			...cancellations.map(c => ({ kind: 'cancellation' as const, ...c }))
+		].sort((a, b) => {
+			const ta = a.kind === 'invoice' ? a.created : (a.canceled_at ?? 0);
+			const tb = b.kind === 'invoice' ? b.created : (b.canceled_at ?? 0);
+			return tb - ta;
+		})
+	);
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
 	let invoicesError = $state<string | null>(null);
@@ -59,7 +70,7 @@
 	}
 
 	function formatDate(ts: number) {
-		return new Date(ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+		return new Date(ts * 1000).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 	}
 
 	function formatCreditDate(iso: string) {
@@ -406,34 +417,35 @@
 			<p class="text-sm" style="color: var(--color-text-muted)">No billing history found.</p>
 		{:else if invoicesLoaded}
 			<div class="space-y-2">
-				{#each cancellations as c}
-					<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: #ef444408; border: 1px solid #ef444425;">
-						<div style="display: flex; align-items: center; gap: 12px;">
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444;">Canceled</span>
-							<span class="text-sm" style="color: var(--color-text-secondary)">Subscription canceled{c.ended_at ? ' · access ended ' + formatDate(c.ended_at) : ''}</span>
+				{#each timeline as entry}
+					{#if entry.kind === 'cancellation'}
+						<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: #ef444408; border: 1px solid #ef444425;">
+							<div style="display: flex; align-items: center; gap: 12px;">
+								<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444;">Canceled</span>
+								<span class="text-sm" style="color: var(--color-text-secondary)">Subscription canceled{entry.ended_at ? ' · access ended ' + formatDate(entry.ended_at) : ''}</span>
+							</div>
+							<span class="text-xs" style="color: var(--color-text-muted);">{entry.canceled_at ? formatDate(entry.canceled_at) : '—'}</span>
 						</div>
-						<span class="text-xs" style="color: var(--color-text-muted);">{c.canceled_at ? formatDate(c.canceled_at) : '—'}</span>
-					</div>
-				{/each}
-				{#each invoices as inv}
-					<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
-						<div style="display: flex; align-items: center; gap: 12px;">
-							<span style="
-								font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
-								letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
-								background: {inv.status === 'paid' ? '#22c55e20' : '#ef444420'};
-								color: {inv.status === 'paid' ? '#22c55e' : '#ef4444'};
-							">{inv.status ?? 'unknown'}</span>
-							<span class="text-sm" style="color: var(--color-text-secondary)">{inv.description ?? inv.number ?? inv.billing_reason ?? 'Invoice'}</span>
+					{:else}
+						<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
+							<div style="display: flex; align-items: center; gap: 12px;">
+								<span style="
+									font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+									letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
+									background: {entry.status === 'paid' ? '#22c55e20' : '#ef444420'};
+									color: {entry.status === 'paid' ? '#22c55e' : '#ef4444'};
+								">{entry.status ?? 'unknown'}</span>
+								<span class="text-sm" style="color: var(--color-text-secondary)">{entry.description ?? entry.number ?? entry.billing_reason ?? 'Invoice'}</span>
+							</div>
+							<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+								<span class="text-sm font-semibold" style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;">{formatCurrency(entry.amount_paid, entry.currency)}</span>
+								<span class="text-xs" style="color: var(--color-text-muted); min-width: 80px; text-align: right;">{formatDate(entry.created)}</span>
+								{#if entry.hosted_invoice_url}
+									<a href={entry.hosted_invoice_url} target="_blank" rel="noopener noreferrer" class="text-xs font-semibold" style="color: var(--color-brand);">View</a>
+								{/if}
+							</div>
 						</div>
-						<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
-							<span class="text-sm font-semibold" style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;">{formatCurrency(inv.amount_paid, inv.currency)}</span>
-							<span class="text-xs" style="color: var(--color-text-muted); min-width: 80px; text-align: right;">{formatDate(inv.created)}</span>
-							{#if inv.hosted_invoice_url}
-								<a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" class="text-xs font-semibold" style="color: var(--color-brand);">View</a>
-							{/if}
-						</div>
-					</div>
+					{/if}
 				{/each}
 			</div>
 		{/if}
