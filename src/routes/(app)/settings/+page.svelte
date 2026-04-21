@@ -419,31 +419,20 @@
 			<div class="space-y-2">
 				{#each timeline as entry}
 					{#if entry.kind === 'cancellation'}
-						<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: #ef444408; border: 1px solid #ef444425;">
-							<div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-								<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444; flex-shrink: 0;">Canceled</span>
-								<span class="text-sm" style="color: var(--color-text-secondary)">Subscription canceled</span>
-							</div>
-							<span class="text-xs" style="color: var(--color-text-muted); flex-shrink: 0; margin-left: 12px;">{entry.canceled_at ? formatDate(entry.canceled_at) : '—'}</span>
+						<div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; background: #ef444408; border: 1px solid #ef444425; overflow: hidden;">
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444; flex-shrink: 0;">Canceled</span>
+							<span class="text-sm" style="color: var(--color-text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Subscription canceled</span>
+							<span class="text-xs" style="color: var(--color-text-muted); flex-shrink: 0; white-space: nowrap;">{entry.canceled_at ? formatDate(entry.canceled_at) : '—'}</span>
 						</div>
 					{:else}
-						<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
-							<div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-								<span style="
-									font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
-									letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
-									background: {entry.status === 'paid' ? '#22c55e20' : '#ef444420'};
-									color: {entry.status === 'paid' ? '#22c55e' : '#ef4444'};
-								">{entry.status ?? 'unknown'}</span>
-								<span class="text-sm" style="color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{entry.description ?? entry.number ?? entry.billing_reason ?? 'Invoice'}</span>
-							</div>
-							<div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: 12px;">
-								<span class="text-sm font-semibold" style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace; white-space: nowrap;">{formatCurrency(entry.amount_paid, entry.currency)}</span>
-								<span class="text-xs" style="color: var(--color-text-muted); white-space: nowrap;">{formatDate(entry.created)}</span>
-								{#if entry.hosted_invoice_url}
-									<a href={entry.hosted_invoice_url} target="_blank" rel="noopener noreferrer" class="text-xs font-semibold" style="color: var(--color-brand);">View</a>
-								{/if}
-							</div>
+						<div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 8px; background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border); overflow: hidden;">
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; background: {entry.status === 'paid' ? '#22c55e20' : '#ef444420'}; color: {entry.status === 'paid' ? '#22c55e' : '#ef4444'};">{entry.status ?? 'unknown'}</span>
+							<span class="text-sm" style="color: var(--color-text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{entry.description ?? entry.number ?? entry.billing_reason ?? 'Invoice'}</span>
+							<span class="text-sm font-semibold" style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace; flex-shrink: 0; white-space: nowrap;">{formatCurrency(entry.amount_paid, entry.currency)}</span>
+							<span class="text-xs" style="color: var(--color-text-muted); flex-shrink: 0; white-space: nowrap;">{formatDate(entry.created)}</span>
+							{#if entry.hosted_invoice_url}
+								<a href={entry.hosted_invoice_url} target="_blank" rel="noopener noreferrer" class="text-xs font-semibold" style="color: var(--color-brand); flex-shrink: 0;">View</a>
+							{/if}
 						</div>
 					{/if}
 				{/each}
