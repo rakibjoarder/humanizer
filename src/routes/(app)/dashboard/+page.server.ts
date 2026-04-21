@@ -118,6 +118,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const planWordsLimit = WORDS_PER_PLAN[profile.plan] ?? 150; // free = 150
 
+	const { data: wordCredits } = await locals.supabase
+		.from('word_credits')
+		.select('id, amount, source, description, created_at')
+		.eq('user_id', user.id)
+		.order('created_at', { ascending: false })
+		.limit(10);
+
 	return {
 		profile,
 		wordsBalance: profile.words_balance ?? 0,
@@ -126,6 +133,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		totalDetections,
 		totalHumanizations,
 		wordsAnalyzed,
-		avgAiProbability
+		avgAiProbability,
+		wordCredits: wordCredits ?? []
 	};
 };

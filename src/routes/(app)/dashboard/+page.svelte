@@ -61,6 +61,43 @@
 
 	let wordBuyLoading = $state<string | null>(null);
 
+	// ── Billing history ───────────────────────────────────────────────────────
+	type Invoice = {
+		id: string; number: string | null; status: string | null;
+		amount_paid: number; currency: string; created: number;
+		hosted_invoice_url: string | null; billing_reason: string | null; description: string | null;
+	};
+	let invoices = $state<Invoice[]>([]);
+	let invoicesLoading = $state(false);
+	let invoicesLoaded = $state(false);
+
+	async function loadInvoices() {
+		if (invoicesLoaded) return;
+		invoicesLoading = true;
+		try {
+			const res = await fetch('/api/billing/history');
+			const json = await res.json();
+			invoices = json.invoices ?? [];
+		} catch { /* non-fatal */ } finally {
+			invoicesLoading = false;
+			invoicesLoaded = true;
+		}
+	}
+
+	function fmtCurrency(amount: number, currency: string) {
+		return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(amount / 100);
+	}
+	function fmtDate(ts: number) {
+		return new Date(ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+	}
+	function fmtCreditDate(iso: string) {
+		return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+	}
+	const sourceLabel: Record<string, string> = {
+		subscription: 'Plan activated', subscription_renewal: 'Plan renewal',
+		word_pack: 'Word pack', admin_credit: 'Admin credit'
+	};
+
 	async function buyWords(priceId: string) {
 		wordBuyLoading = priceId;
 		try {
@@ -296,6 +333,88 @@
 			{/each}
 		</div>
 	</div>
+
+	<!-- ── Word Balance History ── -->
+	{#if data.wordCredits.length > 0}
+	<div style="
+		background: var(--color-bg-surface);
+		border-radius: 14px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		padding: 24px 28px;
+	">
+		<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 16px;">Word Balance History</p>
+		<div style="display: flex; flex-direction: column; gap: 8px;">
+			{#each data.wordCredits as credit}
+				<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border);">
+					<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+						<span style="
+							font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+							letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+							background: {credit.source === 'admin_credit' ? '#7c3aed20' : credit.source === 'word_pack' ? '#3b82f620' : 'var(--color-brand-muted)'};
+							color: {credit.source === 'admin_credit' ? '#7c3aed' : credit.source === 'word_pack' ? '#3b82f6' : 'var(--color-brand)'};
+						">{sourceLabel[credit.source] ?? credit.source}</span>
+						<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{credit.description ?? ''}</span>
+					</div>
+					<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+						<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--color-brand);">+{credit.amount.toLocaleString()} words</span>
+						<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); min-width: 80px; text-align: right;">{fmtCreditDate(credit.created_at)}</span>
+					</div>
+				</div>
+			{/each}
+		</div>
+		<p style="margin: 12px 0 0; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-text-dim); text-align: right;">
+			<a href="/settings" style="color: var(--color-brand); text-decoration: none; font-weight: 600;">See all in Settings →</a>
+		</p>
+	</div>
+	{/if}
+
+	<!-- ── Billing History ── -->
+	{#if isPaid}
+	<div style="
+		background: var(--color-bg-surface);
+		border-radius: 14px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		padding: 24px 28px;
+	">
+		<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0;">Billing History</p>
+			{#if !invoicesLoaded}
+				<button onclick={loadInvoices} disabled={invoicesLoading} style="
+					font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600;
+					color: var(--color-brand); background: var(--color-brand-muted); border: 1px solid var(--color-brand);
+					padding: 4px 12px; border-radius: 6px; cursor: pointer; opacity: {invoicesLoading ? 0.6 : 1};
+				">{invoicesLoading ? 'Loading…' : 'Load invoices'}</button>
+			{/if}
+		</div>
+
+		{#if invoicesLoaded && invoices.length === 0}
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">No invoices found.</p>
+		{:else if invoices.length > 0}
+			<div style="display: flex; flex-direction: column; gap: 8px;">
+				{#each invoices as inv}
+					<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border);">
+						<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+							<span style="
+								font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+								letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+								background: {inv.status === 'paid' ? '#22c55e20' : '#ef444420'};
+								color: {inv.status === 'paid' ? '#22c55e' : '#ef4444'};
+							">{inv.status ?? 'unknown'}</span>
+							<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{inv.description ?? inv.number ?? 'Invoice'}</span>
+						</div>
+						<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--color-text-primary);">{fmtCurrency(inv.amount_paid, inv.currency)}</span>
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); min-width: 80px; text-align: right;">{fmtDate(inv.created)}</span>
+							{#if inv.hosted_invoice_url}
+								<a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none; flex-shrink: 0;">View</a>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+	{/if}
 
 </div>
 

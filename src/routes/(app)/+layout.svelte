@@ -107,16 +107,19 @@
 		<!-- Logo + collapse toggle -->
 		<div class="sidebar-header">
 			{#if collapsed}
-				<!-- Collapsed: logo shown by default, expand arrow shown on hover -->
+				<!-- Collapsed: icon shown by default, expand arrow shown on hover -->
 				<button
 					class="sidebar-logo-toggle"
 					onclick={toggleCollapse}
 					aria-label="Expand sidebar"
 					title="Expand sidebar"
 				>
-					<span class="logo-default"><Logo size={18} /></span>
+					<span class="logo-default">
+						<img src="/assets/icon-dark.svg" width="22" height="22" alt="" aria-hidden="true" class="app-icon app-icon-dark" style="border-radius: 22%;" />
+						<img src="/assets/icon-light.svg" width="22" height="22" alt="" aria-hidden="true" class="app-icon app-icon-light" style="border-radius: 22%;" />
+					</span>
 					<span class="logo-hover">
-						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 							<path d="M9 18l6-6-6-6"/>
 						</svg>
 					</span>
@@ -412,6 +415,9 @@
 	color: var(--color-brand);
 	pointer-events: none;
 }
+.app-icon-light { display: none; }
+:global(html[data-theme='light']) .app-icon-dark { display: none; }
+:global(html[data-theme='light']) .app-icon-light { display: block; }
 .sidebar-logo-toggle:hover .logo-default {
 	display: none;
 }
