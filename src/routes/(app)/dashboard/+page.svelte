@@ -71,6 +71,10 @@
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
 
+	$effect(() => {
+		if (isPaid) loadInvoices();
+	});
+
 	async function loadInvoices() {
 		if (invoicesLoaded) return;
 		invoicesLoading = true;
@@ -378,12 +382,8 @@
 	">
 		<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
 			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0;">Billing History</p>
-			{#if !invoicesLoaded}
-				<button onclick={loadInvoices} disabled={invoicesLoading} style="
-					font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600;
-					color: var(--color-brand); background: var(--color-brand-muted); border: 1px solid var(--color-brand);
-					padding: 4px 12px; border-radius: 6px; cursor: pointer; opacity: {invoicesLoading ? 0.6 : 1};
-				">{invoicesLoading ? 'Loading…' : 'Load invoices'}</button>
+			{#if invoicesLoading}
+				<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-text-muted);">Loading…</span>
 			{/if}
 		</div>
 

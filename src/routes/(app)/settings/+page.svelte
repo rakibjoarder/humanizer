@@ -30,6 +30,10 @@
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
 
+	$effect(() => {
+		if (isPaidPlan) loadInvoices();
+	});
+
 	async function loadInvoices() {
 		if (invoicesLoaded) return;
 		invoicesLoading = true;
@@ -385,10 +389,8 @@
 	<section class="rounded-xl border p-6" style="background: var(--color-bg-surface); border-color: var(--color-bg-border)">
 		<div class="flex items-center justify-between mb-1">
 			<h2 class="text-base font-semibold" style="color: var(--color-text-primary)">Billing History</h2>
-			{#if !invoicesLoaded}
-				<button onclick={loadInvoices} disabled={invoicesLoading} class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-60" style="background: var(--color-bg-elevated); color: var(--color-text-secondary); border: 1px solid var(--color-bg-border);">
-					{invoicesLoading ? 'Loading…' : 'Load invoices'}
-				</button>
+			{#if invoicesLoading}
+				<span class="text-xs" style="color: var(--color-text-muted);">Loading…</span>
 			{/if}
 		</div>
 		<p class="text-sm mb-5" style="color: var(--color-text-secondary)">Recent charges from Stripe.</p>
