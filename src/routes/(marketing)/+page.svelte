@@ -11,6 +11,7 @@
 	import Reveal from '$lib/components/Reveal.svelte';
 	import PricingCard from '$lib/components/PricingCard.svelte';
 	import SEO from '$lib/components/SEO.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	const homeJsonLd = {
 		'@context': 'https://schema.org',
@@ -20,7 +21,8 @@
 				'@id': 'https://humanizeaiwrite.com/#website',
 				url: 'https://humanizeaiwrite.com',
 				name: 'HumanizeAIWrite',
-				description: 'AI text humanizer — bypass AI detection for essays, assignments, and content.',
+				description:
+					'Humanize AI-generated text and check drafts with an AI detector — built for essays, articles, and professional writing.',
 				potentialAction: {
 					'@type': 'SearchAction',
 					target: { '@type': 'EntryPoint', urlTemplate: 'https://humanizeaiwrite.com/detect?q={search_term_string}' },
@@ -33,7 +35,8 @@
 				applicationCategory: 'UtilitiesApplication',
 				operatingSystem: 'Web',
 				url: 'https://humanizeaiwrite.com',
-				description: 'Humanize AI-generated text to bypass GPTZero, Turnitin, and other AI detectors instantly.',
+				description:
+					'Make ChatGPT, Claude, Gemini, and other AI drafts read more naturally — with detection and humanizing in one workflow.',
 				offers: {
 					'@type': 'Offer',
 					price: '9.99',
@@ -94,11 +97,7 @@
 	let moreOpen = $state(false);
 	let moreWrapEl = $state<HTMLDivElement | null>(null);
 
-	const displayName = $derived(
-		data.profile?.full_name?.trim() ||
-			(data.user?.email ? data.user.email.split('@')[0] : '') ||
-			'there'
-	);
+	const heroArrow = 'M5 12h14 M13 6l6 6-6 6';
 
 	const isPro = $derived(
 		data.profile?.plan === 'basic' || data.profile?.plan === 'pro' || data.profile?.plan === 'ultra'
@@ -212,28 +211,6 @@
 		}
 	];
 
-	// ── Features (below fold) ───────────────────────────────────────────────────
-	const features = [
-		{
-			num: '01',
-			icon: scanIcon,
-			title: 'AI detection you can act on',
-			body: 'Probability score plus a clear classification — so you know whether a draft reads like AI before you ship it. Trained across major model families, not a generic “score out of 100” widget.'
-		},
-		{
-			num: '02',
-			icon: 'm15 4-2 2-2-2 M18 7l-2 2-2-2 M21 3v3 M3 21l9-9 M14 7l7 7-4 4-7-7z',
-			title: 'Humanizer for stiff copy',
-			body: 'Sentence- and word-level rewrites that keep your meaning while dialing down machine-like rhythm and diction. Built for the humanizer step after detection — not a random paraphraser.'
-		},
-		{
-			num: '03',
-			icon: shieldIcon,
-			title: 'Privacy by design',
-			body: 'We don’t use your text to train public models. Submissions are processed to return a result, with retention described in our Privacy Policy. SOC 2 Type II in progress.'
-		}
-	];
-
 	/** Generic use cases only — avoid implying real schools or brands use the product without proof */
 	const draftUseCases = [
 		'Course papers',
@@ -242,6 +219,47 @@
 		'Proposals',
 		'Documentation',
 		'Marketing copy'
+	];
+
+	const whyHighlights: Array<{ title: string; body: string; icon: string }> = [
+		{
+			title: 'Accuracy you can interpret',
+			body: 'Clear AI likelihood signals—not a vague “score out of 100”—so you know what to revise before you ship.',
+			icon: scanIcon
+		},
+		{
+			title: 'Detector + humanizer together',
+			body: 'Check machine-like rhythm, then rewrite in a natural voice when you need it—one workflow, two focused tools.',
+			icon: scanIcon
+		},
+		{
+			title: 'Privacy-minded by design',
+			body: 'We don’t use your text to train public models. Processing is described in our Privacy Policy.',
+			icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'
+		},
+		{
+			title: 'Honest free limits',
+			body: 'Try detection on the house; upgrade when you want the humanizer, higher caps, and unlimited scans.',
+			icon: 'M12 2v20 M2 12h20'
+		}
+	];
+
+	const audiences: Array<{ title: string; body: string; icon: string }> = [
+		{
+			title: 'Students & researchers',
+			body: 'Tighten course papers and lit reviews so ideas read clearly—after you’ve done the thinking.',
+			icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z M8 7h8 M8 11h8 M8 15h5'
+		},
+		{
+			title: 'SEO & content teams',
+			body: 'Soften stiff AI drafts for blogs and landing pages while keeping facts and structure intact.',
+			icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.27 6.96 12 12.01l8.73-5.05 M12 22.08V12'
+		},
+		{
+			title: 'Job seekers & pros',
+			body: 'Polish cover letters, bios, and client emails so they sound like you—not a template.',
+			icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'
+		}
 	];
 
 	let openFaq = $state<number | null>(null);
@@ -271,14 +289,14 @@
 </script>
 
 <SEO
-	title="AI Humanizer — Bypass AI Detection | HumanizeAIWrite"
-	description="Make AI text undetectable. Bypass GPTZero, Turnitin, and other AI detectors in seconds. Free AI detector + humanizer for students, writers, and professionals."
+	title="AI Humanizer & Detector | HumanizeAIWrite"
+	description="Humanize ChatGPT, Claude, Gemini, and other AI drafts—and scan for AI-like patterns before you publish. Free detector tier; humanizer on Pro."
 	canonical="https://humanizeaiwrite.com"
 	jsonLd={homeJsonLd}
 />
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     HUB — greeting + composer + suggestions
+     HUB — hero + composer + suggestions
      (Premium promo banner lives in +layout.svelte under the nav)
 ════════════════════════════════════════════════════════════════════════════ -->
 <section
@@ -289,38 +307,70 @@
 >
 	<div style="max-width: 920px; margin: 0 auto;">
 		<Reveal delay={0}>
-			<h1
-				style="
-					font-family: 'Newsreader', Georgia, serif;
-					font-size: clamp(28px, 4.2vw, 40px);
-					line-height: 1.15;
-					font-weight: 600;
-					color: var(--color-text-primary);
-					margin: 0 0 28px;
-					letter-spacing: -0.02em;
-				"
-			>
-				Hi, {displayName}! AI detection &amp; humanizing — your two tools here.
-			</h1>
-		</Reveal>
-
-		{#if !data.user}
 			<p
 				style="
 					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 13px;
-					color: var(--color-text-muted);
-					margin: -12px 0 20px;
+					font-size: 11px;
+					font-weight: 600;
+					letter-spacing: 0.12em;
+					text-transform: uppercase;
+					color: var(--color-brand);
+					margin: 0 0 12px;
 				"
 			>
+				HumanizeAIWrite
+			</p>
+			<h1
+				style="
+					font-family: 'Newsreader', Georgia, serif;
+					font-size: clamp(32px, 5vw, 46px);
+					line-height: 1.12;
+					font-weight: 600;
+					color: var(--color-text-primary);
+					margin: 0 0 16px;
+					letter-spacing: -0.03em;
+					max-width: 720px;
+				"
+			>
+				Humanize AI text — and check it with a built-in detector
+			</h1>
+			<p
+				style="
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: clamp(15px, 1.9vw, 17px);
+					line-height: 1.55;
+					color: var(--color-text-secondary);
+					margin: 0 0 22px;
+					max-width: 560px;
+				"
+			>
+				Make ChatGPT, Claude, Gemini, Grok, and other AI drafts read more naturally. Paste below, then
+				<strong style="font-weight: 600; color: var(--color-text-primary);">humanize</strong> or
+				<strong style="font-weight: 600; color: var(--color-text-primary);">scan</strong> for AI-like patterns.
+			</p>
+			<div class="home-hero-cta-row">
+				<Button variant="primary" size="md" iconRight={heroArrow} onclick={() => goto('/register')}>
+					Try for free
+				</Button>
+				<Button variant="secondary" size="md" onclick={() => openLoginModal()}>Log in</Button>
+			</div>
+			<p
+				style="
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 12px;
+					color: var(--color-text-dim);
+					margin: 10px 0 28px;
+				"
+			>
+				No credit card required to create an account ·
 				<button
 					type="button"
 					onclick={() => openLoginModal()}
 					style="font-weight: 600; color: var(--color-brand); text-decoration: none; background: none; border: none; padding: 0; cursor: pointer; font: inherit;"
 				>Sign in</button>
-				to save detection and humanization history across devices.
+				to sync history across devices
 			</p>
-		{/if}
+		</Reveal>
 
 		<Reveal delay={60}>
 			<div
@@ -334,7 +384,47 @@
 					margin-bottom: 28px;
 				"
 			>
-				<div style="padding: 20px 20px 8px; min-height: 140px;">
+				<div
+					style="
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						gap: 12px;
+						padding: 14px 20px 0;
+						flex-wrap: wrap;
+					"
+				>
+					<span
+						style="
+							font-family: 'Space Grotesk', system-ui, sans-serif;
+							font-size: 13px;
+							font-weight: 600;
+							color: var(--color-text-primary);
+						"
+					>
+						Your text
+					</span>
+					<span
+						class="home-composer-wordcap"
+						style="
+							font-family: 'JetBrains Mono', monospace;
+							font-size: 11px;
+							font-weight: 500;
+							color: {!data.user && homeWordCount > FREE_DETECTION_MAX_WORDS_PER_SCAN * 0.9
+								? 'var(--color-uncertain)'
+								: 'var(--color-text-muted)'};
+						"
+					>
+						{#if !data.user}
+							{homeWordCount.toLocaleString('en-US')} / {FREE_DETECTION_MAX_WORDS_PER_SCAN.toLocaleString(
+								'en-US'
+							)} words
+						{:else}
+							{homeWordCount.toLocaleString('en-US')} words
+						{/if}
+					</span>
+				</div>
+				<div style="padding: 10px 20px 8px; min-height: 140px;">
 					<label class="sr-only" for="home-composer">Your text</label>
 					<textarea
 						id="home-composer"
@@ -410,22 +500,6 @@
 								<strong style="color: var(--color-text-muted); font-weight: 600;">Guest preview:</strong>
 								up to {FREE_DETECTION_MAX_WORDS_PER_SCAN} words per AI detection scan (same as the detector).
 							</p>
-							<span
-								style="
-									font-family: 'JetBrains Mono', monospace;
-									font-size: 12px;
-									font-weight: 500;
-									color: {homeWordCount > FREE_DETECTION_MAX_WORDS_PER_SCAN * 0.9
-										? 'var(--color-uncertain)'
-										: 'var(--color-text-muted)'};
-									flex-shrink: 0;
-									padding-top: 1px;
-								"
-							>
-								{homeWordCount.toLocaleString('en-US')} / {FREE_DETECTION_MAX_WORDS_PER_SCAN.toLocaleString(
-									'en-US'
-								)} words
-							</span>
 						</div>
 					{/if}
 					<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
@@ -448,17 +522,17 @@
 							</svg>
 							Upload .txt
 						</button>
+						<button type="button" class="hub-pill hub-pill--primary" onclick={() => stashAndGoto('/humanize')}>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								<path d={shieldIcon} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+							Humanize
+						</button>
 						<button type="button" class="hub-pill" onclick={() => stashAndGoto('/detect')}>
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 								<path d={scanIcon} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 							</svg>
 							AI Detector
-						</button>
-						<button type="button" class="hub-pill" onclick={() => stashAndGoto('/humanize')}>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path d={shieldIcon} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							</svg>
-							AI Humanizer
 						</button>
 					<div class="hub-more-wrap" bind:this={moreWrapEl}>
 						<button
@@ -588,6 +662,64 @@
 				{/each}
 			</div>
 		</Reveal>
+	</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     WHY — compact value props
+════════════════════════════════════════════════════════════════════════════ -->
+<section class="home-why-section" style="background: var(--color-bg-base); padding: 0 24px 48px;">
+	<div style="max-width: 1100px; margin: 0 auto;">
+		<Reveal delay={0}>
+			<h2
+				style="
+					font-family: 'Newsreader', Georgia, serif;
+					font-size: clamp(22px, 3vw, 28px);
+					font-weight: 600;
+					color: var(--color-text-primary);
+					margin: 0 0 8px;
+					letter-spacing: -0.02em;
+					text-align: center;
+				"
+			>
+				Why HumanizeAIWrite?
+			</h2>
+			<p
+				style="
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 14px;
+					color: var(--color-text-muted);
+					margin: 0 auto 28px;
+					max-width: 520px;
+					text-align: center;
+					line-height: 1.5;
+				"
+			>
+				One place to <strong style="font-weight: 600; color: var(--color-text-secondary);">check</strong> and
+				<strong style="font-weight: 600; color: var(--color-text-secondary);">refine</strong> AI-assisted drafts — without a bloated writing suite.
+			</p>
+		</Reveal>
+		<div class="home-why-grid">
+			{#each whyHighlights as w, wi}
+				<Reveal delay={40 + wi * 50}>
+					<div class="home-why-tile hai-hover-lift">
+						<div class="home-why-icon-wrap">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								<path
+									d={w.icon}
+									stroke="var(--color-brand)"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						</div>
+						<h3 class="home-why-tile-title">{w.title}</h3>
+						<p class="home-why-tile-body">{w.body}</p>
+					</div>
+				</Reveal>
+			{/each}
+		</div>
 	</div>
 </section>
 
@@ -757,7 +889,7 @@
 				letter-spacing: 0.14em;
 				text-transform: uppercase;
 				margin: 0 0 16px;
-			">Drafts people run through us —</p>
+			">Built for —</p>
 		</div>
 
 		<div style="
@@ -790,94 +922,63 @@
 </Reveal>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     FEATURES
+     WHO IT'S FOR
 ════════════════════════════════════════════════════════════════════════════ -->
-<section style="
-	background: var(--color-bg-base);
-	padding: 80px 48px;
-">
-	<div style="max-width: 1200px; margin: 0 auto;">
+<section class="home-audience-section" style="background: var(--color-bg-base); padding: 0 24px 72px;">
+	<div style="max-width: 1100px; margin: 0 auto;">
 		<Reveal delay={0}>
-			<h2 style="
-				font-family: 'Newsreader', Georgia, serif;
-				font-size: clamp(28px, 4vw, 40px);
-				font-weight: 400;
-				color: var(--color-text-primary);
-				margin: 0 0 14px;
-				letter-spacing: -0.02em;
-				line-height: 1.15;
-			">Detect AI patterns. Humanize what still sounds synthetic.</h2>
-			<p style="
-				font-family: 'Space Grotesk', system-ui, sans-serif;
-				font-size: 16px;
-				line-height: 1.55;
-				color: var(--color-text-secondary);
-				margin: 0 0 40px;
-				max-width: 640px;
-			">
-				Two focused tools for the draft in front of you — papers, emails, briefs, and notes. No extra “writing suite” clutter:
-				<strong style="font-weight: 600; color: var(--color-text-primary);">check</strong>, then
-				<strong style="font-weight: 600; color: var(--color-text-primary);">rewrite</strong>, when you need it.
+			<h2
+				style="
+					font-family: 'Newsreader', Georgia, serif;
+					font-size: clamp(26px, 3.5vw, 34px);
+					font-weight: 600;
+					color: var(--color-text-primary);
+					margin: 0 0 10px;
+					letter-spacing: -0.02em;
+					text-align: center;
+				"
+			>
+				Who it’s for
+			</h2>
+			<p
+				style="
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 14px;
+					line-height: 1.55;
+					color: var(--color-text-muted);
+					margin: 0 auto 32px;
+					max-width: 520px;
+					text-align: center;
+				"
+			>
+				If you use AI as a drafting assistant, we help you <strong style="font-weight: 600; color: var(--color-text-secondary);">verify tone</strong> and
+				<strong style="font-weight: 600; color: var(--color-text-secondary);">tighten prose</strong> before you submit or publish.
 			</p>
 		</Reveal>
-
-		<div style="
-			display: grid;
-			grid-template-columns: repeat(3, 1fr);
-			gap: 20px;
-		" class="features-grid">
-			{#each features as feat, i}
-				<Reveal delay={i * 100}>
-					<div class="hai-hover-lift" style="
-						background: var(--color-bg-surface);
-						border-radius: 14px;
-						box-shadow: inset 0 0 0 1px var(--color-bg-border);
-						padding: 28px;
-						height: 100%;
-					">
-						<div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px;">
-							<div style="
-								width: 40px;
-								height: 40px;
-								border-radius: 10px;
-								background: var(--color-brand-muted);
-								display: flex;
-								align-items: center;
-								justify-content: center;
-								flex-shrink: 0;
-							">
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-									<path d={feat.icon} />
-								</svg>
-							</div>
-							<span style="
-								font-family: 'JetBrains Mono', monospace;
-								font-size: 11px;
-								color: var(--color-text-dim);
-							">{feat.num}</span>
+		<div class="home-audience-grid">
+			{#each audiences as aud, ai}
+				<Reveal delay={60 + ai * 80}>
+					<div class="home-audience-card hai-hover-lift">
+						<div class="home-audience-icon">
+							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								<path
+									d={aud.icon}
+									stroke="var(--color-brand)"
+									stroke-width="1.75"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
 						</div>
-
-						<h3 style="
-							font-family: 'Space Grotesk', system-ui, sans-serif;
-							font-size: 16px;
-							font-weight: 700;
-							color: var(--color-text-primary);
-							margin: 0 0 10px;
-						">{feat.title}</h3>
-
-						<p style="
-							font-family: 'Space Grotesk', system-ui, sans-serif;
-							font-size: 14px;
-							line-height: 1.65;
-							color: var(--color-text-secondary);
-							margin: 0;
-						">{feat.body}</p>
+						<h3 class="home-audience-title">{aud.title}</h3>
+						<p class="home-audience-body">{aud.body}</p>
 					</div>
 				</Reveal>
 			{/each}
 		</div>
 	</div>
 </section>
+
 
 {#if !isPro}
 	<!-- ═══════════════════════════════════════════════════════════════════════════
@@ -1030,6 +1131,12 @@
 				Two focused tools — detection and humanizing — with clear limits on Free and no mystery features.
 			</p>
 		</Reveal>
+		<div class="home-trust-badges" aria-label="Policies and payments">
+			<a href="/privacy" class="home-trust-badge home-trust-badge--link">Privacy Policy</a>
+			<a href="/terms" class="home-trust-badge home-trust-badge--link">Terms of Service</a>
+			<span class="home-trust-badge">Secure card payments via Stripe</span>
+			<span class="home-trust-badge">We don’t sell your personal data</span>
+		</div>
 		<div class="home-trust-grid">
 			<Reveal delay={60}>
 				<div class="home-trust-card">
@@ -1082,7 +1189,7 @@
 					text-align: center;
 				"
 			>
-				Common questions
+				FAQ
 			</h2>
 		</Reveal>
 		<div style="display: flex; flex-direction: column; gap: 10px;">
@@ -1324,8 +1431,140 @@
 		color: var(--color-text-secondary);
 	}
 
+	.home-hero-cta-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.hub-pill--primary {
+		background: var(--color-brand) !important;
+		color: #fff !important;
+		border-color: var(--color-brand) !important;
+		font-weight: 600;
+	}
+
+	.hub-pill--primary:hover {
+		filter: brightness(1.06);
+		color: #fff !important;
+	}
+
+	.home-why-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 16px;
+	}
+
+	.home-why-tile {
+		background: var(--color-bg-surface);
+		border-radius: 14px;
+		padding: 20px 18px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		height: 100%;
+	}
+
+	.home-why-icon-wrap {
+		width: 40px;
+		height: 40px;
+		border-radius: 10px;
+		background: var(--color-brand-muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 14px;
+	}
+
+	.home-why-tile-title {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--color-text-primary);
+		margin: 0 0 8px;
+		letter-spacing: -0.01em;
+	}
+
+	.home-why-tile-body {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--color-text-secondary);
+		margin: 0;
+	}
+
+	.home-audience-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+	}
+
+	.home-audience-card {
+		background: var(--color-bg-surface);
+		border-radius: 14px;
+		padding: 24px 22px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		height: 100%;
+	}
+
+	.home-audience-icon {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		background: var(--color-brand-muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 16px;
+	}
+
+	.home-audience-title {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--color-text-primary);
+		margin: 0 0 10px;
+	}
+
+	.home-audience-body {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--color-text-secondary);
+		margin: 0;
+	}
+
+	.home-trust-badges {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 10px;
+		margin: 0 auto 32px;
+		max-width: 900px;
+	}
+
+	.home-trust-badge {
+		font-family: 'Space Grotesk', system-ui, sans-serif;
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--color-text-secondary);
+		padding: 8px 14px;
+		border-radius: 999px;
+		background: var(--color-bg-surface);
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+	}
+
+	a.home-trust-badge--link {
+		text-decoration: none;
+		color: var(--color-text-primary);
+		transition: background 150ms ease, box-shadow 150ms ease;
+	}
+
+	a.home-trust-badge--link:hover {
+		background: var(--color-bg-elevated);
+		box-shadow: inset 0 0 0 1px var(--color-bg-border-hi);
+	}
+
 	@media (max-width: 900px) {
-		.features-grid,
 		.pricing-grid {
 			grid-template-columns: 1fr !important;
 		}
@@ -1337,6 +1576,12 @@
 		}
 		.home-trust-grid {
 			grid-template-columns: 1fr;
+		}
+		.home-why-grid {
+			grid-template-columns: 1fr !important;
+		}
+		.home-audience-grid {
+			grid-template-columns: 1fr !important;
 		}
 	}
 </style>

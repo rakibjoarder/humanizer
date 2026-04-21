@@ -4,11 +4,10 @@ import type { RequestHandler } from './$types';
 export const config = { runtime: 'nodejs20.x', maxDuration: 30 };
 import { stripe } from '$lib/server/stripe';
 import { getUserProfile } from '$lib/server/auth';
-import { PUBLIC_APP_URL } from '$env/static/public';
 
 // ── POST /api/billing/portal ──────────────────────────────────────────────────
 
-export const POST: RequestHandler = async ({ locals }) => {
+export const POST: RequestHandler = async ({ locals, url }) => {
 	const { session, user } = await locals.safeGetSession();
 
 	if (!session || !user) {
@@ -29,7 +28,7 @@ export const POST: RequestHandler = async ({ locals }) => {
 	try {
 		const portalSession = await stripe.billingPortal.sessions.create({
 			customer: profile.stripe_customer_id,
-			return_url: `${PUBLIC_APP_URL}/settings`
+			return_url: `${url.origin}/settings`
 		});
 
 		return json({ url: portalSession.url });

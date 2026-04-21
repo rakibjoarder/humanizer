@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto, invalidate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import Logo from '$lib/components/Logo.svelte';
 	import NavUserMenu from '$lib/components/NavUserMenu.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -21,8 +21,8 @@
 
 	const navLinks = [
 		{ label: 'Home', href: '/' },
-		{ label: 'Detect', href: '/detect' },
-		{ label: 'Humanize', href: '/humanize' },
+		{ label: 'AI Humanizer', href: '/humanize' },
+		{ label: 'AI Detector', href: '/detect' },
 		{ label: 'Blog', href: '/blog' },
 		{ label: 'Pricing', href: '/pricing' }
 	];
@@ -53,8 +53,7 @@
 
 	async function signOut() {
 		await supabase.auth.signOut();
-		invalidate('supabase:auth');
-		goto('/');
+		window.location.href = '/';
 	}
 
 	const planLabel = $derived(
@@ -317,7 +316,7 @@
 			<h3 class="marketing-footer-heading">Product</h3>
 			<nav class="marketing-footer-nav" aria-label="Product">
 				<a href="/detect">AI Detector</a>
-				<a href="/humanize" onclick={(e) => onGuestAppLink(e, '/humanize')}>Humanizer</a>
+				<a href="/humanize" onclick={(e) => onGuestAppLink(e, '/humanize')}>AI Humanizer</a>
 				<a href="/pricing">Pricing</a>
 				<a href="/">Home</a>
 			</nav>

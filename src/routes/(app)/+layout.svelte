@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto, invalidate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import Logo from '$lib/components/Logo.svelte';
@@ -61,8 +61,7 @@
 
 	async function signOut() {
 		await supabase.auth.signOut();
-		invalidate('supabase:auth');
-		goto('/');
+		window.location.href = '/';
 	}
 
 	const initials = $derived(user?.email ? user.email.slice(0, 2).toUpperCase() : '?');
@@ -259,7 +258,7 @@
 							Upgrade plan
 						</a>
 					{:else}
-						<a href="/plans" class="plan-badge plan-{profile?.plan}" title="Change plan">
+						<a href="/settings" class="plan-badge plan-{profile?.plan}" title="Manage subscription">
 							{planLabel}
 						</a>
 					{/if}

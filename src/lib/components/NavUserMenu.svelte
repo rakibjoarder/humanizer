@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto, invalidate } from '$app/navigation';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 
 	type Profile = {
@@ -29,8 +28,7 @@
 	async function signOut() {
 		open = false;
 		await supabase.auth.signOut();
-		invalidate('supabase:auth');
-		goto('/');
+		window.location.href = '/';
 	}
 
 	function toggle() {

@@ -7,6 +7,15 @@
 
 	let { data } = $props();
 
+	const isPaid = $derived(
+		data.profile?.plan === 'basic' || data.profile?.plan === 'pro' || data.profile?.plan === 'ultra'
+	);
+	const planLabel = $derived(
+		data.profile?.plan === 'ultra' ? 'Ultra' :
+		data.profile?.plan === 'pro' ? 'Pro' :
+		data.profile?.plan === 'basic' ? 'Basic' : 'Free'
+	);
+
 	let billingCycle = $state<BillingCycle>('monthly');
 	let checkoutLoading = $state<PlanKey | null>(null);
 	let checkoutError = $state('');
@@ -113,40 +122,82 @@
 		</div>
 	</div>
 
-	{#if checkoutError}
+	{#if isPaid}
+		<!-- Subscribed state: show badge, not pricing cards -->
 		<div style="
-			margin-bottom: 20px;
-			padding: 12px 16px;
-			background: #ef444420;
-			border: 1px solid #ef444440;
-			border-radius: 10px;
-			font-family: 'Space Grotesk', system-ui, sans-serif;
-			font-size: 13px;
-			color: #ef4444;
-		">{checkoutError}</div>
-	{/if}
-
-	<!-- Plan cards -->
-	<div style="
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 20px;
-		align-items: start;
-	" class="pricing-grid">
-		{#each (['basic', 'pro', 'ultra'] as PlanKey[]) as planKey, i}
-			<div style="padding-top: {i === 1 ? '0' : '16px'}">
-				<PricingCard
-					plan={planKey}
-					{billingCycle}
-					highlighted={planKey === 'pro'}
-					onselect={() => handleSelectPlan(planKey)}
-				/>
-				{#if checkoutLoading === planKey}
-					<p style="text-align:center;font-family:'Space Grotesk',system-ui;font-size:12px;color:var(--color-text-muted);margin-top:8px;">Redirecting to checkout…</p>
-				{/if}
+			margin-bottom: 36px;
+			padding: 24px 28px;
+			background: var(--color-brand-muted);
+			border: 1px solid var(--color-brand);
+			border-radius: 14px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 20px;
+			flex-wrap: wrap;
+		">
+			<div style="display: flex; align-items: center; gap: 14px;">
+				<div style="
+					width: 44px; height: 44px; border-radius: 12px;
+					background: var(--color-brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+				">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M20 6 9 17l-5-5"/>
+					</svg>
+				</div>
+				<div>
+					<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 16px; font-weight: 700; color: var(--color-text-primary); margin: 0 0 3px;">
+						You're subscribed to the {planLabel} plan
+					</p>
+					<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); margin: 0;">
+						Manage your subscription, billing, and payment details in Settings.
+					</p>
+				</div>
 			</div>
-		{/each}
-	</div>
+			<a href="/settings" style="
+				display: inline-flex; align-items: center; gap: 6px;
+				padding: 10px 18px; border-radius: 9px;
+				background: var(--color-brand); color: white;
+				font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 700;
+				text-decoration: none; white-space: nowrap; flex-shrink: 0;
+			">Manage billing</a>
+		</div>
+	{:else}
+		{#if checkoutError}
+			<div style="
+				margin-bottom: 20px;
+				padding: 12px 16px;
+				background: #ef444420;
+				border: 1px solid #ef444440;
+				border-radius: 10px;
+				font-family: 'Space Grotesk', system-ui, sans-serif;
+				font-size: 13px;
+				color: #ef4444;
+			">{checkoutError}</div>
+		{/if}
+
+		<!-- Plan cards -->
+		<div style="
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 20px;
+			align-items: start;
+		" class="pricing-grid">
+			{#each (['basic', 'pro', 'ultra'] as PlanKey[]) as planKey, i}
+				<div style="padding-top: {i === 1 ? '0' : '16px'}">
+					<PricingCard
+						plan={planKey}
+						{billingCycle}
+						highlighted={planKey === 'pro'}
+						onselect={() => handleSelectPlan(planKey)}
+					/>
+					{#if checkoutLoading === planKey}
+						<p style="text-align:center;font-family:'Space Grotesk',system-ui;font-size:12px;color:var(--color-text-muted);margin-top:8px;">Redirecting to checkout…</p>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	{/if}
 
 	<!-- Comparison table -->
 	<div style="margin-top: 48px; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 14px; overflow: hidden;">
