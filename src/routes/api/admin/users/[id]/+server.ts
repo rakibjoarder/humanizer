@@ -31,12 +31,28 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		return json({ error: 'Nothing to update.' }, { status: 400 });
 	}
 
-	const { error: dbErr } = await adminClient()
-		.from('profiles')
-		.update(update)
-		.eq('id', params.id);
+	const db = adminClient();
 
+	// Fetch current balance before update so we can log the delta
+	let previousBalance = 0;
+	if (typeof words_balance === 'number') {
+		const { data: current } = await db.from('profiles').select('words_balance').eq('id', params.id).single();
+		previousBalance = current?.words_balance ?? 0;
+	}
+
+	const { error: dbErr } = await db.from('profiles').update(update).eq('id', params.id);
 	if (dbErr) return json({ error: dbErr.message }, { status: 500 });
+
+	// Log admin credit when words were increased
+	if (typeof words_balance === 'number' && words_balance > previousBalance) {
+		const delta = words_balance - previousBalance;
+		await db.from('word_credits').insert({
+			user_id: params.id,
+			amount: delta,
+			source: 'admin_credit',
+			description: `Admin credit (+${delta.toLocaleString()} words) by ${user.email}`
+		});
+	}
 
 	return json({ ok: true });
 };

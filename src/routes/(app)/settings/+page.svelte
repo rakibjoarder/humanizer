@@ -14,6 +14,56 @@
 
 	let billingLoading = $state(false);
 
+	// ── Billing history (Stripe invoices) ────────────────────────────────────────
+	type Invoice = {
+		id: string;
+		number: string | null;
+		status: string | null;
+		amount_paid: number;
+		currency: string;
+		created: number;
+		hosted_invoice_url: string | null;
+		billing_reason: string | null;
+		description: string | null;
+	};
+	let invoices = $state<Invoice[]>([]);
+	let invoicesLoading = $state(false);
+	let invoicesLoaded = $state(false);
+
+	async function loadInvoices() {
+		if (invoicesLoaded) return;
+		invoicesLoading = true;
+		try {
+			const res = await fetch('/api/billing/history');
+			const json = await res.json();
+			invoices = json.invoices ?? [];
+		} catch {
+			/* non-fatal */
+		} finally {
+			invoicesLoading = false;
+			invoicesLoaded = true;
+		}
+	}
+
+	function formatCurrency(amount: number, currency: string) {
+		return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(amount / 100);
+	}
+
+	function formatDate(ts: number) {
+		return new Date(ts * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+	}
+
+	function formatCreditDate(iso: string) {
+		return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+	}
+
+	const sourceLabel: Record<string, string> = {
+		subscription: 'Plan activated',
+		subscription_renewal: 'Plan renewal',
+		word_pack: 'Word pack',
+		admin_credit: 'Admin credit'
+	};
+
 	let deleteConfirm = $state('');
 	let deleteLoading = $state(false);
 	let deleteError = $state('');
@@ -302,6 +352,75 @@
 			</div>
 		{/if}
 	</section>
+
+	<!-- Word balance history -->
+	{#if data.wordCredits.length > 0}
+	<section class="rounded-xl border p-6" style="background: var(--color-bg-surface); border-color: var(--color-bg-border)">
+		<h2 class="text-base font-semibold mb-1" style="color: var(--color-text-primary)">Word Balance History</h2>
+		<p class="text-sm mb-5" style="color: var(--color-text-secondary)">All credits added to your word balance.</p>
+		<div class="space-y-2">
+			{#each data.wordCredits as credit}
+				<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
+					<div style="display: flex; align-items: center; gap: 12px;">
+						<span style="
+							font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+							letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
+							background: {credit.source === 'admin_credit' ? '#7c3aed20' : credit.source === 'word_pack' ? '#3b82f620' : 'var(--color-brand-muted)'};
+							color: {credit.source === 'admin_credit' ? '#7c3aed' : credit.source === 'word_pack' ? '#3b82f6' : 'var(--color-brand)'};
+						">{sourceLabel[credit.source] ?? credit.source}</span>
+						<span class="text-sm" style="color: var(--color-text-secondary)">{credit.description ?? ''}</span>
+					</div>
+					<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+						<span class="text-sm font-semibold" style="color: var(--color-brand); font-family: 'JetBrains Mono', monospace;">+{credit.amount.toLocaleString()} words</span>
+						<span class="text-xs" style="color: var(--color-text-muted); min-width: 80px; text-align: right;">{formatCreditDate(credit.created_at)}</span>
+					</div>
+				</div>
+			{/each}
+		</div>
+	</section>
+	{/if}
+
+	<!-- Billing history (Stripe invoices) -->
+	{#if isPaidPlan}
+	<section class="rounded-xl border p-6" style="background: var(--color-bg-surface); border-color: var(--color-bg-border)">
+		<div class="flex items-center justify-between mb-1">
+			<h2 class="text-base font-semibold" style="color: var(--color-text-primary)">Billing History</h2>
+			{#if !invoicesLoaded}
+				<button onclick={loadInvoices} disabled={invoicesLoading} class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-60" style="background: var(--color-bg-elevated); color: var(--color-text-secondary); border: 1px solid var(--color-bg-border);">
+					{invoicesLoading ? 'Loading…' : 'Load invoices'}
+				</button>
+			{/if}
+		</div>
+		<p class="text-sm mb-5" style="color: var(--color-text-secondary)">Recent charges from Stripe.</p>
+
+		{#if invoicesLoaded && invoices.length === 0}
+			<p class="text-sm" style="color: var(--color-text-muted)">No invoices found.</p>
+		{:else if invoices.length > 0}
+			<div class="space-y-2">
+				{#each invoices as inv}
+					<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
+						<div style="display: flex; align-items: center; gap: 12px;">
+							<span style="
+								font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+								letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
+								background: {inv.status === 'paid' ? '#22c55e20' : '#ef444420'};
+								color: {inv.status === 'paid' ? '#22c55e' : '#ef4444'};
+							">{inv.status ?? 'unknown'}</span>
+							<span class="text-sm" style="color: var(--color-text-secondary)">{inv.description ?? inv.number ?? inv.billing_reason ?? 'Invoice'}</span>
+						</div>
+						<div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+							<span class="text-sm font-semibold" style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;">{formatCurrency(inv.amount_paid, inv.currency)}</span>
+							<span class="text-xs" style="color: var(--color-text-muted); min-width: 80px; text-align: right;">{formatDate(inv.created)}</span>
+							{#if inv.hosted_invoice_url}
+								<a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" class="text-xs font-semibold" style="color: var(--color-brand);">View</a>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
+	{/if}
 
 	<!-- Danger zone -->
 	<section class="rounded-xl border p-6" style="border-color: #ef444430; background: var(--color-bg-surface)">

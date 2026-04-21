@@ -106,24 +106,34 @@
 	<aside class="sidebar" class:collapsed>
 		<!-- Logo + collapse toggle -->
 		<div class="sidebar-header">
-			{#if !collapsed}
+			{#if collapsed}
+				<!-- Collapsed: logo shown by default, expand arrow shown on hover -->
+				<button
+					class="sidebar-logo-toggle"
+					onclick={toggleCollapse}
+					aria-label="Expand sidebar"
+					title="Expand sidebar"
+				>
+					<span class="logo-default"><Logo size={18} /></span>
+					<span class="logo-hover">
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d="M9 18l6-6-6-6"/>
+						</svg>
+					</span>
+				</button>
+			{:else}
 				<Logo size={20} onclick={() => goto('/humanize')} />
-			{/if}
-			<button
-				class="collapse-btn"
-				class:collapsed
-				onclick={toggleCollapse}
-				aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-				title={collapsed ? 'Expand' : 'Collapse'}
-			>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-					{#if collapsed}
-						<path d="M9 18l6-6-6-6"/>
-					{:else}
+				<button
+					class="collapse-btn"
+					onclick={toggleCollapse}
+					aria-label="Collapse sidebar"
+					title="Collapse"
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M15 18l-6-6 6-6"/>
-					{/if}
-				</svg>
-			</button>
+					</svg>
+				</button>
+			{/if}
 		</div>
 
 		<!-- Nav items -->
@@ -370,8 +380,43 @@
 	background: var(--color-bg-elevated);
 	color: var(--color-text-primary);
 }
-.collapse-btn.collapsed {
+
+/* Collapsed sidebar: logo → expand arrow on hover */
+.sidebar-logo-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
 	margin: 0 auto;
+	transition: background 150ms;
+	position: relative;
+}
+.sidebar-logo-toggle:hover {
+	background: var(--color-bg-elevated);
+}
+.logo-default {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+}
+.logo-hover {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-brand);
+	pointer-events: none;
+}
+.sidebar-logo-toggle:hover .logo-default {
+	display: none;
+}
+.sidebar-logo-toggle:hover .logo-hover {
+	display: flex;
 }
 
 /* ── Nav ────────────────────────────────────────────────────────────────── */

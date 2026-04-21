@@ -110,7 +110,15 @@ async function handleCheckoutSessionCompleted(
 				current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
 			},
 			{ onConflict: 'stripe_subscription_id' }
-		)
+		),
+
+		supabase.from('word_credits').insert({
+			user_id: userId,
+			amount: wordsBalance,
+			source: 'subscription',
+			description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan activated`,
+			stripe_ref: subscriptionId
+		})
 	]);
 }
 
@@ -220,10 +228,20 @@ async function handleInvoicePaid(
 
 	const wordsBalance = WORDS_PER_PLAN[profileData.plan] ?? WORDS_PER_PLAN.basic;
 
-	await supabase
-		.from('profiles')
-		.update({ words_balance: wordsBalance })
-		.eq('id', profileData.id);
+	await Promise.all([
+		supabase
+			.from('profiles')
+			.update({ words_balance: wordsBalance })
+			.eq('id', profileData.id),
+
+		supabase.from('word_credits').insert({
+			user_id: profileData.id,
+			amount: wordsBalance,
+			source: 'subscription_renewal',
+			description: `${profileData.plan.charAt(0).toUpperCase() + profileData.plan.slice(1)} plan renewed`,
+			stripe_ref: typeof invoice.id === 'string' ? invoice.id : undefined
+		})
+	]);
 }
 
 async function handleWordPackPurchase(
@@ -235,7 +253,17 @@ async function handleWordPackPurchase(
 
 	if (!userId || !wordsToAdd) return;
 
-	await supabase.rpc('add_words', { p_user_id: userId, p_amount: wordsToAdd });
+	await Promise.all([
+		supabase.rpc('add_words', { p_user_id: userId, p_amount: wordsToAdd }),
+
+		supabase.from('word_credits').insert({
+			user_id: userId,
+			amount: wordsToAdd,
+			source: 'word_pack',
+			description: `Word pack purchased (+${wordsToAdd.toLocaleString()} words)`,
+			stripe_ref: session.id
+		})
+	]);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
