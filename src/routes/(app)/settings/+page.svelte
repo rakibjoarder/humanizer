@@ -324,12 +324,12 @@
 				{/if}
 			</div>
 
-			{#if !isPaidPlan}
-				<a href="/pricing" class="btn-brand shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold">Upgrade</a>
-			{:else}
+			{#if subscription}
 				<button onclick={openBillingPortal} disabled={billingLoading} class="btn-outline shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60 disabled:cursor-not-allowed">
 					{billingLoading ? 'Opening…' : 'Manage Billing'}
 				</button>
+			{:else}
+				<a href="/plans" class="btn-brand shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold">Upgrade</a>
 			{/if}
 		</div>
 
