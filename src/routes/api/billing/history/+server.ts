@@ -21,12 +21,12 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	try {
-		const invoices = await stripe.invoices.list({
-			customer: profile.stripe_customer_id,
-			limit: 12
-		});
+		const [invoicesRes, canceledSubsRes] = await Promise.all([
+			stripe.invoices.list({ customer: profile.stripe_customer_id, limit: 12 }),
+			stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: 'canceled', limit: 5 })
+		]);
 
-		const formatted = invoices.data.map((inv) => ({
+		const invoices = invoicesRes.data.map((inv) => ({
 			id: inv.id,
 			number: inv.number,
 			status: inv.status,
@@ -40,7 +40,14 @@ export const GET: RequestHandler = async ({ locals }) => {
 			description: inv.description ?? inv.lines?.data?.[0]?.description ?? null
 		}));
 
-		return json({ invoices: formatted });
+		const cancellations = canceledSubsRes.data.map((sub) => ({
+			id: sub.id,
+			canceled_at: sub.canceled_at,
+			ended_at: sub.ended_at,
+			plan: (sub.items?.data?.[0]?.price?.nickname ?? null) as string | null
+		}));
+
+		return json({ invoices, cancellations });
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
 		console.error('[billing/history]', msg);

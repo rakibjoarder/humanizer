@@ -68,7 +68,9 @@
 		amount_paid: number; currency: string; created: number;
 		hosted_invoice_url: string | null; billing_reason: string | null; description: string | null;
 	};
+	type Cancellation = { id: string; canceled_at: number | null; ended_at: number | null; plan: string | null; };
 	let invoices = $state<Invoice[]>([]);
+	let cancellations = $state<Cancellation[]>([]);
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
 	let invoicesError = $state<string | null>(null);
@@ -84,7 +86,10 @@
 		try {
 			const res = await fetch('/api/billing/history');
 			const body = await res.json();
-			if (body.error) { invoicesError = body.error; } else { invoices = body.invoices ?? []; }
+			if (body.error) { invoicesError = body.error; } else {
+				invoices = body.invoices ?? [];
+				cancellations = body.cancellations ?? [];
+			}
 		} catch { invoicesError = 'Failed to load invoices.'; } finally {
 			invoicesLoading = false;
 			invoicesLoaded = true;
@@ -392,10 +397,19 @@
 
 		{#if invoicesError}
 			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #ef4444;">{invoicesError}</p>
-		{:else if invoicesLoaded && invoices.length === 0}
-			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">No invoices found.</p>
-		{:else if invoices.length > 0}
+		{:else if invoicesLoaded && invoices.length === 0 && cancellations.length === 0}
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">No billing history found.</p>
+		{:else if invoicesLoaded}
 			<div style="display: flex; flex-direction: column; gap: 8px;">
+				{#each cancellations as c}
+					<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #ef444408; box-shadow: inset 0 0 0 1px #ef444425;">
+						<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444; flex-shrink: 0;">Canceled</span>
+							<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary);">Subscription canceled{c.ended_at ? ' · access ended ' + fmtDate(c.ended_at) : ''}</span>
+						</div>
+						<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); flex-shrink: 0;">{c.canceled_at ? fmtDate(c.canceled_at) : '—'}</span>
+					</div>
+				{/each}
 				{#each invoices as inv}
 					<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border);">
 						<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">

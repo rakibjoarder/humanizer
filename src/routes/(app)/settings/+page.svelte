@@ -26,7 +26,9 @@
 		billing_reason: string | null;
 		description: string | null;
 	};
+	type Cancellation = { id: string; canceled_at: number | null; ended_at: number | null; plan: string | null; };
 	let invoices = $state<Invoice[]>([]);
+	let cancellations = $state<Cancellation[]>([]);
 	let invoicesLoading = $state(false);
 	let invoicesLoaded = $state(false);
 	let invoicesError = $state<string | null>(null);
@@ -42,7 +44,10 @@
 		try {
 			const res = await fetch('/api/billing/history');
 			const body = await res.json();
-			if (body.error) { invoicesError = body.error; } else { invoices = body.invoices ?? []; }
+			if (body.error) { invoicesError = body.error; } else {
+				invoices = body.invoices ?? [];
+				cancellations = body.cancellations ?? [];
+			}
 		} catch { invoicesError = 'Failed to load invoices.'; } finally {
 			invoicesLoading = false;
 			invoicesLoaded = true;
@@ -397,10 +402,19 @@
 
 		{#if invoicesError}
 			<p class="text-sm" style="color: #ef4444">{invoicesError}</p>
-		{:else if invoicesLoaded && invoices.length === 0}
-			<p class="text-sm" style="color: var(--color-text-muted)">No invoices found.</p>
-		{:else if invoices.length > 0}
+		{:else if invoicesLoaded && invoices.length === 0 && cancellations.length === 0}
+			<p class="text-sm" style="color: var(--color-text-muted)">No billing history found.</p>
+		{:else if invoicesLoaded}
 			<div class="space-y-2">
+				{#each cancellations as c}
+					<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: #ef444408; border: 1px solid #ef444425;">
+						<div style="display: flex; align-items: center; gap: 12px;">
+							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444;">Canceled</span>
+							<span class="text-sm" style="color: var(--color-text-secondary)">Subscription canceled{c.ended_at ? ' · access ended ' + formatDate(c.ended_at) : ''}</span>
+						</div>
+						<span class="text-xs" style="color: var(--color-text-muted);">{c.canceled_at ? formatDate(c.canceled_at) : '—'}</span>
+					</div>
+				{/each}
 				{#each invoices as inv}
 					<div class="flex items-center justify-between px-4 py-3 rounded-lg" style="background: var(--color-bg-elevated); border: 1px solid var(--color-bg-border)">
 						<div style="display: flex; align-items: center; gap: 12px;">
