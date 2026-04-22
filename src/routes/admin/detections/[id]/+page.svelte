@@ -42,7 +42,7 @@
 			<div>
 				<p style="font-family: 'Space Grotesk', system-ui; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); margin: 0 0 3px;">{row.label}</p>
 				{#if row.label === 'User'}
-					<a href="/admin/users/{profile.id}" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-brand); text-decoration: none;">{row.value}</a>
+					<a href={`/admin/users/${profile.id}`} style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-brand); text-decoration: none;">{row.value}</a>
 				{:else}
 					<p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--color-text-primary); margin: 0; word-break: break-all;">{row.value}</p>
 				{/if}

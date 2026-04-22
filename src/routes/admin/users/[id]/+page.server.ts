@@ -1,5 +1,6 @@
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
@@ -71,36 +72,147 @@ function eventLabel(type: string): string {
 	return map[type] ?? type;
 }
 
+type AdminProfile = {
+	id: string;
+	email: string;
+	full_name: string | null;
+	plan: 'free' | 'basic' | 'pro' | 'ultra';
+	words_balance: number | null;
+	stripe_customer_id: string | null;
+	created_at: string;
+	disabled: boolean;
+	disabled_at: string | null;
+};
+
+function coercePlan(raw: unknown): AdminProfile['plan'] {
+	return raw === 'basic' || raw === 'pro' || raw === 'ultra' ? raw : 'free';
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	const db = adminClient();
 
 	const [
-		{ data: profile },
 		{ count: detections },
 		{ count: humanizations },
 		{ data: recentDetections },
 		{ data: recentHumanizations }
 	] = await Promise.all([
-		db.from('profiles')
-			.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
-			.eq('id', params.id)
-			.single(),
 		db.from('detections').select('id', { count: 'exact', head: true }).eq('user_id', params.id),
 		db.from('humanizations').select('id', { count: 'exact', head: true }).eq('user_id', params.id),
-		db.from('detections').select('id, created_at').eq('user_id', params.id).order('created_at', { ascending: false }).limit(10),
-		db.from('humanizations').select('id, created_at').eq('user_id', params.id).order('created_at', { ascending: false }).limit(10)
+		db.from('detections')
+			.select('id, created_at')
+			.eq('user_id', params.id)
+			.order('created_at', { ascending: false })
+			.limit(10),
+		db.from('humanizations')
+			.select('id, created_at')
+			.eq('user_id', params.id)
+			.order('created_at', { ascending: false })
+			.limit(10)
 	]);
 
-	if (!profile) error(404, 'User not found');
+	// `profiles.disabled` is optional until migration is applied.
+	let profile: AdminProfile | null = null;
+
+	{
+		const withDisabled = await db
+			.from('profiles')
+			.select(
+				'id, email, full_name, plan, words_balance, stripe_customer_id, created_at, disabled, disabled_at'
+			)
+			.eq('id', params.id)
+			.maybeSingle();
+
+		if (!withDisabled.error) {
+			const d = withDisabled.data as Partial<AdminProfile> | null;
+			profile = d
+				? {
+						id: d.id!,
+						email: d.email!,
+						full_name: (d.full_name ?? null) as string | null,
+						plan: coercePlan(d.plan),
+						words_balance: (d.words_balance ?? 0) as number | null,
+						stripe_customer_id: (d.stripe_customer_id ?? null) as string | null,
+						created_at: d.created_at!,
+						disabled: Boolean(d.disabled),
+						disabled_at: (d.disabled_at ?? null) as string | null
+					}
+				: null;
+		} else if (
+			withDisabled.error.message.includes('column') &&
+			(withDisabled.error.message.includes('disabled') || withDisabled.error.message.includes('disabled_at'))
+		) {
+			// Migration not applied yet; retry without the new columns.
+			const withoutDisabled = await db
+				.from('profiles')
+				.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
+				.eq('id', params.id)
+				.maybeSingle();
+			if (withoutDisabled.error) {
+				error(500, `Failed to load profile: ${withoutDisabled.error.message}`);
+			}
+			const d = withoutDisabled.data as Omit<AdminProfile, 'disabled' | 'disabled_at'> | null;
+			profile = d
+				? { ...d, disabled: false, disabled_at: null }
+				: null;
+		} else {
+			error(500, `Failed to load profile: ${withDisabled.error.message}`);
+		}
+	}
+
+	let resolvedProfile = profile;
+	if (!resolvedProfile) {
+		// If the auth user exists but the profile row is missing (e.g. trigger failed),
+		// auto-create a minimal profile so the admin panel can load.
+		const { data: authRes, error: authErr } = await db.auth.admin.getUserById(params.id);
+		if (authErr) error(500, `Failed to fetch auth user: ${authErr.message}`);
+		if (!authRes?.user) error(404, 'User not found');
+
+		const email = authRes.user.email ?? `missing-email+${params.id}@local.invalid`;
+		await db.from('profiles').upsert(
+			{
+				id: params.id,
+				email,
+				full_name: authRes.user.user_metadata?.full_name ?? null,
+				plan: 'free',
+				words_balance: 0,
+				created_at: new Date(authRes.user.created_at).toISOString()
+			},
+			{ onConflict: 'id' }
+		);
+
+		const { data: reloaded, error: reloadError } = await db
+			.from('profiles')
+			.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at, disabled, disabled_at')
+			.eq('id', params.id)
+			.maybeSingle();
+		if (reloadError) error(500, `Failed to reload profile: ${reloadError.message}`);
+
+		const d = reloaded as Partial<AdminProfile> | null;
+		resolvedProfile = d
+			? {
+					id: d.id!,
+					email: d.email!,
+					full_name: (d.full_name ?? null) as string | null,
+					plan: coercePlan(d.plan),
+					words_balance: (d.words_balance ?? 0) as number | null,
+					stripe_customer_id: (d.stripe_customer_id ?? null) as string | null,
+					created_at: d.created_at!,
+					disabled: Boolean(d.disabled),
+					disabled_at: (d.disabled_at ?? null) as string | null
+				}
+			: null;
+		if (!resolvedProfile) error(404, 'User not found');
+	}
 
 	let subscriptions: StripeSub[] = [];
 	let payments: StripePayment[] = [];
 	let events: StripeEvent[] = [];
 	let customerInfo: StripeCustomerInfo | null = null;
 
-	if (profile.stripe_customer_id) {
+	if (resolvedProfile.stripe_customer_id) {
 		await Promise.all([
-			stripe.customers.retrieve(profile.stripe_customer_id)
+			stripe.customers.retrieve(resolvedProfile.stripe_customer_id)
 				.then((c) => {
 					if (c.deleted) return;
 					customerInfo = {
@@ -117,7 +229,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					};
 				}).catch(() => {}),
 
-			stripe.subscriptions.list({ customer: profile.stripe_customer_id, limit: 10 })
+			stripe.subscriptions.list({ customer: resolvedProfile.stripe_customer_id, limit: 10 })
 				.then((r) => {
 					subscriptions = r.data.map((s) => ({
 						id: s.id,
@@ -131,7 +243,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					}));
 				}).catch(() => {}),
 
-			stripe.charges.list({ customer: profile.stripe_customer_id, limit: 100 })
+			stripe.charges.list({ customer: resolvedProfile.stripe_customer_id, limit: 100 })
 				.then((r) => {
 					const paid = r.data.filter((c) => c.paid && !c.refunded);
 					const topUps = paid.filter((c) => c.metadata?.words);
@@ -160,7 +272,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					events = r.data
 						.filter((e) => {
 							const obj = e.data.object as unknown as Record<string, unknown>;
-							return obj.customer === profile.stripe_customer_id;
+							return obj.customer === resolvedProfile.stripe_customer_id;
 						})
 						.map((e) => ({
 							id: e.id,
@@ -177,5 +289,70 @@ export const load: PageServerLoad = async ({ params }) => {
 		...(recentHumanizations ?? []).map((h) => ({ type: 'humanization' as const, created_at: h.created_at }))
 	].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 15);
 
-	return { profile, subscriptions, payments, events, activity, customerInfo, detections: detections ?? 0, humanizations: humanizations ?? 0 };
+	return {
+		profile: resolvedProfile,
+		subscriptions,
+		payments,
+		events,
+		activity,
+		customerInfo,
+		detections: detections ?? 0,
+		humanizations: humanizations ?? 0,
+		recentDetections: recentDetections ?? [],
+		recentHumanizations: recentHumanizations ?? []
+	};
+};
+
+function parseIds(form: FormData): string[] {
+	const raw = String(form.get('ids') ?? '[]');
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+	} catch {
+		return [];
+	}
+}
+
+export const actions: Actions = {
+	deleteUserDetectionsSelected: async ({ request, params }) => {
+		const db = adminClient();
+		const form = await request.formData();
+		const ids = parseIds(form);
+		if (ids.length === 0) return fail(400, { error: 'Select at least one row.' });
+
+		const { error: delError } = await db.from('detections').delete().in('id', ids).eq('user_id', params.id);
+		if (delError) return fail(500, { error: delError.message });
+		return { ok: true };
+	},
+
+	deleteUserHumanizationsSelected: async ({ request, params }) => {
+		const db = adminClient();
+		const form = await request.formData();
+		const ids = parseIds(form);
+		if (ids.length === 0) return fail(400, { error: 'Select at least one row.' });
+
+		const { error: delError } = await db.from('humanizations').delete().in('id', ids).eq('user_id', params.id);
+		if (delError) return fail(500, { error: delError.message });
+		return { ok: true };
+	},
+
+	deleteUserDetectionsAll: async ({ request, params }) => {
+		const db = adminClient();
+		const form = await request.formData();
+		if (String(form.get('confirm') ?? '') !== 'DELETE') return fail(400, { error: 'Type DELETE to confirm.' });
+
+		const { error: delError } = await db.from('detections').delete().eq('user_id', params.id);
+		if (delError) return fail(500, { error: delError.message });
+		return { ok: true };
+	},
+
+	deleteUserHumanizationsAll: async ({ request, params }) => {
+		const db = adminClient();
+		const form = await request.formData();
+		if (String(form.get('confirm') ?? '') !== 'DELETE') return fail(400, { error: 'Type DELETE to confirm.' });
+
+		const { error: delError } = await db.from('humanizations').delete().eq('user_id', params.id);
+		if (delError) return fail(500, { error: delError.message });
+		return { ok: true };
+	}
 };

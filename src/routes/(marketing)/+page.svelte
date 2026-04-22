@@ -355,22 +355,7 @@
 				</Button>
 				<Button variant="secondary" size="md" onclick={() => openLoginModal()}>Log in</Button>
 			</div>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 12px;
-					color: var(--color-text-dim);
-					margin: 10px 0 28px;
-				"
-			>
-				No credit card required to create an account ·
-				<button
-					type="button"
-					onclick={() => openLoginModal()}
-					style="font-weight: 600; color: var(--color-brand); text-decoration: none; background: none; border: none; padding: 0; cursor: pointer; font: inherit;"
-				>Sign in</button>
-				to sync history across devices
-			</p>
+			<div style="height: 28px;" aria-hidden="true"></div>
 		</Reveal>
 
 		<Reveal delay={60}>
@@ -830,7 +815,7 @@
 						font-size: 15px;
 						color: var(--color-text-secondary);
 						margin: 0 0 24px;
-					">7-day free trial · cancel anytime</p>
+					"></p>
 
 					<div style="
 						display: inline-flex;

@@ -79,7 +79,7 @@
 		},
 		{
 			q: 'Do you offer a free trial?',
-			a: 'All paid plans include a 7-day free trial. No credit card is required to try the basic detection feature.'
+			a: 'We don’t currently offer a free trial. You can start on Free and upgrade any time.'
 		},
 		{
 			q: 'What payment methods are accepted?',
@@ -167,7 +167,7 @@
 		{/if}
 
 		<p class="footnote">
-			All plans include a 7-day free trial. No credit card required to explore.
+			Cancel anytime.
 		</p>
 	</section>
 

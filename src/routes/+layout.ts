@@ -15,24 +15,20 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 				cookies: { getAll: () => data.cookies }
 			});
 
-	let session: Session | null = null;
+	const session: Session | null = data.session ?? null;
 	let user: User | null = null;
 
 	if (browser) {
+		// Don't trust user data from session storage; fetch verified user from Auth server.
 		const {
-			data: { session: s }
-		} = await supabase.auth.getSession();
-		session = s ?? null;
-		user = s?.user ?? null;
+			data: { user: u }
+		} = await supabase.auth.getUser();
+		user = u ?? null;
 	} else {
 		const {
 			data: { user: u }
 		} = await supabase.auth.getUser();
 		user = u ?? null;
-		const {
-			data: { session: s }
-		} = await supabase.auth.getSession();
-		session = s ?? null;
 	}
 
 	return { session, supabase, user };

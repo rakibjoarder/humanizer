@@ -43,14 +43,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// 2. safeGetSession helper — always verifies JWT via getUser()
 	event.locals.safeGetSession = async () => {
 		const {
-			data: { session }
-		} = await event.locals.supabase.auth.getSession();
-		if (!session) return { session: null, user: null };
-		const {
 			data: { user },
 			error
 		} = await event.locals.supabase.auth.getUser();
-		if (error) return { session: null, user: null };
+		if (error || !user) return { session: null, user: null };
+
+		// We only use `session` as an "authenticated?" boolean across the app.
+		// Avoid `getSession()` here to prevent relying on storage-derived auth state.
+		const session = {} as import('@supabase/supabase-js').Session;
+
+		// If the user was deactivated by an admin, force logout (best-effort).
+		try {
+			const { data: profile } = await event.locals.supabase
+				.from('profiles')
+				.select('disabled')
+				.eq('id', user.id)
+				.maybeSingle();
+
+			if (profile?.disabled) {
+				await event.locals.supabase.auth.signOut();
+				return { session: null, user: null };
+			}
+		} catch {
+			// If the column doesn't exist yet (migration not applied), don't block access.
+		}
 		return { session, user };
 	};
 

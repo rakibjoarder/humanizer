@@ -1,4 +1,5 @@
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
@@ -64,4 +65,55 @@ export const load: PageServerLoad = async ({ url }) => {
 		search,
 		dateRange
 	};
+};
+
+function parseIds(form: FormData): string[] {
+	const raw = String(form.get('ids') ?? '[]');
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+	} catch {
+		return [];
+	}
+}
+
+async function resolveUserIds(db: ReturnType<typeof adminClient>, search: string): Promise<string[] | null> {
+	if (!search) return null;
+	const { data: profiles } = await db
+		.from('profiles')
+		.select('id')
+		.ilike('email', `%${search.slice(0, 100)}%`)
+		.limit(500);
+	const userIds = (profiles ?? []).map((p) => p.id);
+	return userIds;
+}
+
+export const actions: Actions = {
+	deleteSelected: async ({ request, url }) => {
+		const db = adminClient();
+		const form = await request.formData();
+		const ids = parseIds(form);
+		if (ids.length === 0) return fail(400, { error: 'Select at least one row.' });
+
+		const { error } = await db.from('detections').delete().in('id', ids);
+		if (error) return fail(500, { error: error.message });
+
+		return { ok: true };
+	},
+
+	deleteAll: async ({ request }) => {
+		const db = adminClient();
+		const form = await request.formData();
+
+		// Guardrail: require explicit confirmation to avoid accidental wipe.
+		if (String(form.get('confirm') ?? '') !== 'DELETE') {
+			return fail(400, { error: 'Type DELETE to confirm.' });
+		}
+
+		// Supabase/PostgREST requires a filter on deletes; this matches all rows.
+		const { error } = await db.from('detections').delete().not('id', 'is', null);
+		if (error) return fail(500, { error: error.message });
+
+		return { ok: true };
+	}
 };
