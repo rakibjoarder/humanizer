@@ -146,10 +146,12 @@
 		} catch {}
 	}
 
-	function handleRecheck() {
+	async function handleRecheck() {
 		const text = result ? result.humanized_text : inputText;
-		try { localStorage.setItem('humanize_prefill', text); } catch {}
-		goto('/detect');
+		try {
+			localStorage.setItem('detect_prefill', text);
+		} catch {}
+		await goto('/detect');
 	}
 
 	function handleRegenerate() {
@@ -256,6 +258,7 @@
 					variant="primary"
 					size="md"
 					icon={wandIcon}
+					ariaLabel="Humanize"
 					disabled={isLoading || inputText.trim().length < 10 || overLimit}
 					loading={isLoading}
 					onclick={handleHumanize}
@@ -337,7 +340,13 @@
 						padding: 18px 20px;
 						box-shadow: inset 0 0 0 1px var(--color-bg-border);
 					">
-						<DiffText text={result.humanized_text} flags={HUMAN_FIXES} color="var(--color-human)"/>
+						{#if result.humanized_text.trim().length === 0}
+							<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-muted); margin: 0; text-align: center;">
+								The humanizer returned an empty response. Please try again with different text.
+							</p>
+						{:else}
+							<DiffText text={result.humanized_text} flags={HUMAN_FIXES} color="var(--color-human)"/>
+						{/if}
 					</div>
 
 					<div style="display: flex; gap: 8px; flex-wrap: wrap;">

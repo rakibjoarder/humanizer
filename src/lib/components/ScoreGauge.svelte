@@ -55,8 +55,12 @@
 			};
 		}
 
-		const start = animVal;
-		const startNum = displayNum;
+		// Always reset to 0 before animating so re-runs don't jump from old value
+		animVal = 0;
+		displayNum = 0;
+
+		const start = 0;
+		const startNum = 0;
 		const targetNum = Math.round(target * 100);
 		const duration = 800;
 		let startTime: number | null = null;

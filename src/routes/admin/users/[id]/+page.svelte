@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import type { StripeCustomerInfo } from './+page.server';
 
 	let { data } = $props();
 	let { profile, subscriptions, payments, events, activity, customerInfo, detections, humanizations } = $derived(data);
@@ -28,14 +29,18 @@
 		}
 	}
 
-	let insightRows = $derived(data.customerInfo ? [
-		{ label: 'Total Spent',    value: `$${(data.customerInfo.totalSpent / 100).toFixed(2)}` },
-		{ label: 'Top-up Spent',   value: `$${(data.customerInfo.topUpSpent / 100).toFixed(2)}` },
-		{ label: 'Stripe Balance', value: data.customerInfo.balance !== 0 ? `$${(data.customerInfo.balance / 100).toFixed(2)}` : '—' },
-		{ label: 'Delinquent',     value: data.customerInfo.delinquent ? 'Yes' : 'No' },
-		{ label: 'First Payment',  value: data.customerInfo.firstCharge ? fmtDate(data.customerInfo.firstCharge) : '—' },
-		{ label: 'Last Payment',   value: data.customerInfo.lastCharge  ? fmtDate(data.customerInfo.lastCharge)  : '—' },
-	] : []);
+	let insightRows = $derived.by(() => {
+		const ci = data.customerInfo as StripeCustomerInfo | null;
+		if (!ci) return [];
+		return [
+			{ label: 'Total Spent',    value: `$${(ci.totalSpent / 100).toFixed(2)}` },
+			{ label: 'Top-up Spent',   value: `$${(ci.topUpSpent / 100).toFixed(2)}` },
+			{ label: 'Stripe Balance', value: ci.balance !== 0 ? `$${(ci.balance / 100).toFixed(2)}` : '—' },
+			{ label: 'Delinquent',     value: ci.delinquent ? 'Yes' : 'No' },
+			{ label: 'First Payment',  value: ci.firstCharge ? fmtDate(ci.firstCharge) : '—' },
+			{ label: 'Last Payment',   value: ci.lastCharge  ? fmtDate(ci.lastCharge)  : '—' },
+		];
+	});
 
 	function fmtDate(s: string | null) {
 		if (!s) return '—';

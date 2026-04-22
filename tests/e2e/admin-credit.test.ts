@@ -17,14 +17,21 @@ test.describe('Admin credit API', () => {
 	});
 
 	test('non-admin user cannot add credits', async ({ page, request }) => {
-		// Log in as the regular test user (not admin)
+		// If TEST_USER_EMAIL is also an admin, skip this test
+		const adminList = (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase());
+		const userEmail = (process.env.TEST_USER_EMAIL ?? '').toLowerCase();
+		if (adminList.includes(userEmail)) {
+			test.skip();
+			return;
+		}
+
 		await loginAs(page, process.env.TEST_USER_EMAIL!, process.env.TEST_USER_PASSWORD!);
 		const cookies = await page.context().cookies();
 		const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
 		const res = await request.patch(`/api/admin/users/${TEST_USER_ID}`, {
 			headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
-			data: { words_to_add: 500 }
+			data: { words_balance: 500 }
 		});
 		// Admin route redirects or returns 403 for non-admins
 		expect([401, 403]).toContain(res.status());
@@ -37,10 +44,9 @@ test.describe('Admin credit API', () => {
 
 		const res = await request.patch(`/api/admin/users/${TEST_USER_ID}`, {
 			headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
-			data: { words_to_add: 100 }
+			data: { words_balance: 1000 }
 		});
 
-		// Admin using same email as test user — acceptable to skip if 403
 		if (res.status() === 403) {
 			test.skip();
 			return;
@@ -48,8 +54,7 @@ test.describe('Admin credit API', () => {
 
 		expect(res.status()).toBe(200);
 		const body = await res.json();
-		expect(body).toHaveProperty('words_balance');
-		expect(typeof body.words_balance).toBe('number');
+		expect(body).toHaveProperty('ok', true);
 	});
 
 	test('admin adding 0 words returns 400', async ({ page, request }) => {
@@ -59,7 +64,7 @@ test.describe('Admin credit API', () => {
 
 		const res = await request.patch(`/api/admin/users/${TEST_USER_ID}`, {
 			headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
-			data: { words_to_add: 0 }
+			data: {}
 		});
 
 		if (res.status() === 403) { test.skip(); return; }

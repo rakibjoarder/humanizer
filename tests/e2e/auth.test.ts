@@ -17,9 +17,8 @@ test.describe('Authentication', () => {
 
 	test('logged-in user email is visible in the nav', async ({ page }) => {
 		await loginAs(page);
-		// The nav user menu should show part of the email or full name
-		const nav = page.locator('nav');
-		await expect(nav).toBeVisible();
+		// The app layout nav should be visible
+		await expect(page.locator('nav').first()).toBeVisible();
 	});
 
 	test('user can sign out and is redirected to home', async ({ page }) => {

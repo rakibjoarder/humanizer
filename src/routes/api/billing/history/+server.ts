@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	if (!profile.stripe_customer_id) {
-		return json({ invoices: [] });
+		return json({ invoices: [], cancellations: [] });
 	}
 
 	try {

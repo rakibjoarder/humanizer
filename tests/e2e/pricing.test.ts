@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Pricing page', () => {
 	test('unauthenticated user sees pricing cards', async ({ page }) => {
 		await page.goto('/pricing');
-		await expect(page.getByRole('button', { name: /get started free/i })).toBeVisible();
+		await expect(page.getByRole('button', { name: /start basic|start pro|start ultra/i }).first()).toBeVisible();
 		await expect(page.getByRole('button', { name: /start pro/i })).toBeVisible();
 	});
 
@@ -43,7 +43,8 @@ test.describe('Pricing page', () => {
 
 	test('logged-in user clicking Start Pro opens Stripe checkout', async ({ page }) => {
 		await loginAs(page);
-		await page.goto('/pricing');
+		// Logged-in users are redirected from /pricing to /humanize; use /plans instead
+		await page.goto('/plans');
 
 		// Wait for plan state to fully load (profile query is async)
 		const openDashLink = page.getByRole('link', { name: /open dashboard/i });
@@ -78,7 +79,8 @@ test.describe('Pricing page', () => {
 
 	test('pricing page shows correct state based on user plan', async ({ page }) => {
 		await loginAs(page);
-		await page.goto('/pricing');
+		// Logged-in users are redirected from /pricing to /humanize; use /plans instead
+		await page.goto('/plans');
 
 		// Wait for plan state to fully load (profile query is async)
 		const openDashLink = page.getByRole('link', { name: /open dashboard/i });

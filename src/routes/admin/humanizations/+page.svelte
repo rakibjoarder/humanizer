@@ -73,7 +73,7 @@
 			</thead>
 			<tbody>
 				{#each data.humanizations as h}
-					{@const profile = h.profiles as { email: string } | null}
+					{@const profile = h.profiles as unknown as { email: string } | null}
 					<tr style="border-bottom: 1px solid var(--color-bg-border);">
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); white-space: nowrap;">{fmtDate(h.created_at)}</td>
 						<td style="padding: 10px 14px; color: var(--color-text-secondary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
