@@ -5,12 +5,15 @@
 	let verdictFilter = $state(data.verdict);
 	let dateFilter = $state(data.dateRange);
 	let search = $state(data.search);
+	let selected = $state<Set<string>>(new Set());
+	let deleteAllConfirm = $state('');
 
 	function applyFilter() {
 		const p = new URLSearchParams();
 		if (verdictFilter !== 'all') p.set('verdict', verdictFilter);
 		if (dateFilter !== 'all') p.set('date', dateFilter);
 		if (search) p.set('q', search);
+		selected = new Set();
 		goto(`/admin/detections?${p.toString()}`);
 	}
 
@@ -18,6 +21,7 @@
 		verdictFilter = 'all';
 		dateFilter = 'all';
 		search = '';
+		selected = new Set();
 		goto('/admin/detections');
 	}
 
@@ -30,6 +34,27 @@
 		if (search) params.set('q', search);
 		params.set('page', String(p));
 		return `/admin/detections?${params.toString()}`;
+	}
+
+	function toggleRow(id: string, checked: boolean) {
+		const next = new Set(selected);
+		if (checked) next.add(id);
+		else next.delete(id);
+		selected = next;
+	}
+
+	function allOnPageSelected(): boolean {
+		const ids = (data.detections ?? []).map((d: { id: string }) => d.id);
+		return ids.length > 0 && ids.every((id) => selected.has(id));
+	}
+
+	function toggleAllOnPage(checked: boolean) {
+		const next = new Set(selected);
+		for (const d of data.detections ?? []) {
+			if (checked) next.add(d.id);
+			else next.delete(d.id);
+		}
+		selected = next;
 	}
 
 	function fmtDate(s: string) {
@@ -85,10 +110,69 @@
 	</form>
 
 	<!-- Table -->
-	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
+	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden; overflow-x: auto;">
+		<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
+			<div style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted);">
+				{selected.size} selected
+			</div>
+			<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+				<form
+					method="POST"
+					action="?/deleteSelected"
+					onsubmit={(e) => {
+						if (selected.size === 0) {
+							e.preventDefault();
+							return;
+						}
+						if (!confirm(`Delete ${selected.size} detection(s)? This cannot be undone.`)) {
+							e.preventDefault();
+						}
+					}}
+				>
+					<input type="hidden" name="ids" value={JSON.stringify(Array.from(selected))} />
+					<button type="submit" style="padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: #ef4444; color: white; border: none; cursor: pointer; font-family: 'Space Grotesk', system-ui; opacity: {selected.size === 0 ? 0.5 : 1};" disabled={selected.size === 0}>
+						Delete selected
+					</button>
+				</form>
+
+				<form
+					method="POST"
+					action="?/deleteAll"
+					onsubmit={(e) => {
+						if (!confirm('Delete ALL detections? This cannot be undone.')) {
+							e.preventDefault();
+							return;
+						}
+						if (deleteAllConfirm !== 'DELETE') {
+							e.preventDefault();
+							alert('Type DELETE to confirm.');
+						}
+					}}
+				>
+					<input type="hidden" name="confirm" value={deleteAllConfirm} />
+					<input
+						type="text"
+						placeholder="Type DELETE"
+						bind:value={deleteAllConfirm}
+						style="padding: 7px 10px; border-radius: 8px; font-size: 12px; outline: none; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace; width: 120px;"
+					/>
+					<button type="submit" style="padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.4); cursor: pointer; font-family: 'Space Grotesk', system-ui;">
+						Delete all
+					</button>
+				</form>
+			</div>
+		</div>
 		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
+					<th style="padding: 10px 14px; text-align: left; width: 1%;">
+						<input
+							type="checkbox"
+							checked={allOnPageSelected()}
+							onchange={(e) => toggleAllOnPage((e.currentTarget as HTMLInputElement).checked)}
+							aria-label="Select all on page"
+						/>
+					</th>
 					{#each ['Date', 'User', 'Words', 'AI %', 'Verdict', ''] as h}
 						<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;">{h}</th>
 					{/each}
@@ -96,11 +180,19 @@
 			</thead>
 			<tbody>
 				{#each data.detections as d}
-					{@const profile = d.profiles as { email: string } | null}
+					{@const profile = d.profiles as unknown as { email: string } | null}
 					<tr style="border-bottom: 1px solid var(--color-bg-border);">
+						<td style="padding: 10px 14px;">
+							<input
+								type="checkbox"
+								checked={selected.has(d.id)}
+								onchange={(e) => toggleRow(d.id, (e.currentTarget as HTMLInputElement).checked)}
+								aria-label="Select detection"
+							/>
+						</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); white-space: nowrap;">{fmtDate(d.created_at)}</td>
 						<td style="padding: 10px 14px; color: var(--color-text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-							<a href="/admin/users/{d.user_id}" style="color: var(--color-brand); text-decoration: none;">{profile?.email ?? d.user_id}</a>
+							<a href={`/admin/users/${d.user_id}`} style="color: var(--color-brand); text-decoration: none;">{profile?.email ?? d.user_id}</a>
 						</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">{d.word_count ?? '—'}</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">
@@ -110,11 +202,11 @@
 							<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: {verdictBg(d.verdict)}; color: {verdictColor(d.verdict)};">{d.verdict ?? '—'}</span>
 						</td>
 						<td style="padding: 10px 14px;">
-							<a href="/admin/detections/{d.id}" style="font-size: 12px; color: var(--color-brand); text-decoration: none; font-weight: 600; white-space: nowrap;">View →</a>
+							<a href={`/admin/detections/${d.id}`} style="font-size: 12px; color: var(--color-brand); text-decoration: none; font-weight: 600; white-space: nowrap;">View →</a>
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="6" style="padding: 32px; text-align: center; color: var(--color-text-muted);">No detections found.</td></tr>
+					<tr><td colspan="7" style="padding: 32px; text-align: center; color: var(--color-text-muted);">No detections found.</td></tr>
 				{/each}
 			</tbody>
 		</table>

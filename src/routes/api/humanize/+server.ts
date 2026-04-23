@@ -28,12 +28,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json({ error: 'Field "text" must be a string.' }, { status: 400 });
 	}
 
-	if (text.length < 1) {
+	if (text.trim().length === 0) {
 		return json({ error: 'Text must not be empty.' }, { status: 400 });
+	}
+
+	if (text.trim().length < 10) {
+		return json({ error: 'Text must be at least 10 characters long.' }, { status: 400 });
 	}
 
 	if (text.length > 50_000) {
 		return json({ error: 'Text must not exceed 50,000 characters.' }, { status: 400 });
+	}
+
+	const outputWordCount = countWords(text);
+	if (outputWordCount === 0) {
+		return json({ error: 'Text must contain at least one word.' }, { status: 400 });
 	}
 
 	// 3. Require auth

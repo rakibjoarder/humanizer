@@ -14,6 +14,7 @@ CREATE INDEX IF NOT EXISTS word_credits_user_created_idx
 
 ALTER TABLE word_credits ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "word_credits: users can view own rows" ON public.word_credits;
 CREATE POLICY "word_credits: users can view own rows"
-  ON word_credits FOR SELECT
+  ON public.word_credits FOR SELECT
   USING (auth.uid() = user_id);

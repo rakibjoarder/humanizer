@@ -44,13 +44,13 @@
 	</div>
 
 	<!-- Filters -->
-	<div style="display: flex; gap: 10px; align-items: center;">
+	<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
 		<input
 			type="text"
 			placeholder="Search by email…"
 			bind:value={search}
 			onkeydown={(e) => e.key === 'Enter' && applyFilters()}
-			style="flex: 1; max-width: 320px; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
+			style="flex: 1; min-width: 200px; max-width: 320px; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
 		/>
 		<select
 			bind:value={planFilter}
@@ -70,7 +70,7 @@
 	</div>
 
 	<!-- Table -->
-	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
+	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden; overflow-x: auto;">
 		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
@@ -94,7 +94,7 @@
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{u.stripe_customer_id ? u.stripe_customer_id.slice(0, 14) + '…' : '—'}</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); white-space: nowrap;">{fmtDate(u.created_at)}</td>
 						<td style="padding: 10px 14px;">
-							<a href="/admin/users/{u.id}" style="font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none;">View →</a>
+							<a href={`/admin/users/${u.id}`} style="font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none;">View →</a>
 						</td>
 					</tr>
 				{:else}

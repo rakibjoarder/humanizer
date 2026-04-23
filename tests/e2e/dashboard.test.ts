@@ -26,16 +26,15 @@ test.describe('Dashboard', () => {
 	test('dashboard shows recent activity table', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/dashboard');
-		// Activity section
-		await expect(page.getByText(/recent activity|activity/i).first()).toBeVisible();
+		// Dashboard has a Billing History section
+		await expect(page.getByText(/billing history/i).first()).toBeVisible();
 	});
 
 	test('upgraded banner appears when ?upgraded=true is in URL', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/dashboard?upgraded=true');
-		// The banner uses a specific class or text — check for the upgrade message
-		await expect(page.locator('[class*="banner"], [class*="alert"], [class*="upgrade"]').first()
-			.or(page.getByText(/now on the|enjoy your upgraded/i))).toBeVisible({ timeout: 5_000 });
+		// Banner text: "You're now on the X plan. Enjoy your upgraded words!"
+		await expect(page.getByText(/now on the|enjoy your upgraded/i)).toBeVisible({ timeout: 5_000 });
 	});
 
 	test('nav links are all functional', async ({ page }) => {
@@ -45,7 +44,7 @@ test.describe('Dashboard', () => {
 			{ label: /detect/i, url: '/detect' },
 			{ label: /humanize/i, url: '/humanize' },
 			{ label: /dashboard/i, url: '/dashboard' },
-			{ label: /activity/i, url: '/activity' }
+			{ label: /history/i, url: '/activity' }
 		];
 
 		for (const { label, url } of links) {

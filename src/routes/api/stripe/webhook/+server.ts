@@ -78,6 +78,8 @@ async function handleCheckoutSessionCompleted(
 	session: Stripe.Checkout.Session,
 	supabase: import('@supabase/supabase-js').SupabaseClient
 ): Promise<void> {
+	if (session.payment_status !== 'paid') return;
+
 	const userId = session.metadata?.supabase_user_id;
 	const subscriptionId = typeof session.subscription === 'string'
 		? session.subscription

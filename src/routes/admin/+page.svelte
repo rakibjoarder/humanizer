@@ -22,7 +22,7 @@
 	</div>
 
 	<!-- Stat cards -->
-	<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+	<div class="admin-stats-grid">
 		{#each [
 			{ label: 'Total Users',     value: fmt(stats.totalUsers) },
 			{ label: 'Basic Users',     value: fmt(stats.basicUsers) },
@@ -40,7 +40,7 @@
 	</div>
 
 	<!-- Recent signups -->
-	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden;">
+	<div style="background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 12px; overflow: hidden; overflow-x: auto;">
 		<div style="padding: 14px 20px; border-bottom: 1px solid var(--color-bg-border); display: flex; justify-content: space-between; align-items: center;">
 			<span style="font-family: 'Space Grotesk', system-ui; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.08em; text-transform: uppercase;">Recent signups</span>
 			<a href="/admin/users" style="font-family: 'Space Grotesk', system-ui; font-size: 12px; color: var(--color-brand); text-decoration: none; font-weight: 600;">View all →</a>
@@ -58,7 +58,7 @@
 				{#each recentUsers as u}
 					<tr style="border-bottom: 1px solid var(--color-bg-border);">
 						<td style="padding: 10px 16px; color: var(--color-text-primary);">
-							<a href="/admin/users/{u.id}" style="color: var(--color-brand); text-decoration: none;">{u.email}</a>
+							<a href={`/admin/users/${u.id}`} style="color: var(--color-brand); text-decoration: none;">{u.email}</a>
 						</td>
 						<td style="padding: 10px 16px;">
 							<span style="
@@ -77,3 +77,23 @@
 		</table>
 	</div>
 </div>
+
+<style>
+	.admin-stats-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 14px;
+	}
+
+	@media (max-width: 980px) {
+		.admin-stats-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 520px) {
+		.admin-stats-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

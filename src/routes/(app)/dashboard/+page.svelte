@@ -16,6 +16,14 @@
 		label: string;
 	}
 
+	interface WordCredit {
+		id: string;
+		amount: number;
+		source: string;
+		description: string | null;
+		created_at: string;
+	}
+
 	interface Props {
 		data: {
 			profile: Profile;
@@ -26,6 +34,7 @@
 			totalHumanizations: number;
 			wordsAnalyzed: number;
 			avgAiProbability: number | null;
+			wordCredits: WordCredit[];
 		};
 	}
 

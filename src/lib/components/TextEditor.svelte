@@ -10,6 +10,8 @@
 		maxWords?: number;
 		label?: string;
 		readonly?: boolean;
+		/** Stable DOM id for imperative updates (e.g. clear / paste sample while focused). */
+		elementId?: string;
 	}
 
 	let {
@@ -19,11 +21,21 @@
 		maxChars,
 		maxWords,
 		label,
-		readonly = false
+		readonly = false,
+		elementId = 'text-editor'
 	}: Props = $props();
 
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let focused = $state(false);
+
+	// Svelte 5's bind:value has a focus guard that skips DOM updates when the element is
+	// focused. This explicit effect ensures the DOM always reflects the reactive state
+	// (e.g. when parent calls clear() or pasteSample() while the textarea is focused).
+	$effect(() => {
+		if (textareaEl && textareaEl.value !== value) {
+			textareaEl.value = value;
+		}
+	});
 
 	const charCount = $derived(value.length);
 	const wordCount = $derived(countWords(value));
@@ -75,11 +87,6 @@
 		value = newVal;
 	}
 
-	export function clear() {
-		value = '';
-		if (textareaEl) textareaEl.value = '';
-	}
-
 	const containerShadow = $derived(
 		focused
 			? 'inset 0 0 0 1px var(--color-brand), 0 0 0 3px var(--color-brand-glow)'
@@ -114,9 +121,9 @@
 		"
 	>
 		<textarea
-			id="text-editor"
+			id={elementId}
 			bind:this={textareaEl}
-			{value}
+			bind:value
 			{placeholder}
 			{readonly}
 			oninput={handleInput}

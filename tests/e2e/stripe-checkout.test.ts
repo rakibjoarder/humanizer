@@ -62,7 +62,8 @@ test.describe('Stripe checkout flow', () => {
 
 	test('full checkout flow: login → pricing → Stripe → dashboard shows Pro', async ({ page }) => {
 		await loginAs(page);
-		await page.goto('/pricing');
+		// Logged-in users are redirected from /pricing → /humanize; use /plans instead
+		await page.goto('/plans');
 
 		// Wait for plan state to fully load (profile query is async)
 		const openDashLink = page.getByRole('link', { name: /open dashboard/i });

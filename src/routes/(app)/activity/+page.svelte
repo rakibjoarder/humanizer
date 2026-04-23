@@ -7,29 +7,38 @@
 		setLastVisitedActivityId
 	} from '$lib/client/lastActivityVisit';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
-	import type { ActivityItem } from './+page.server';
+	import type {
+		ActivityItem,
+		ActivitySortOrder,
+		ActivityTypeFilter
+	} from './+page.server';
 
 	type Classification = 'LIKELY_AI' | 'POSSIBLY_AI' | 'POSSIBLY_HUMAN' | 'LIKELY_HUMAN';
-	type TypeFilter = 'all' | 'detect' | 'humanize';
-	type SortOrder = 'newest' | 'oldest';
 
 	interface Props {
-		data: { activity: ActivityItem[] };
+		data: {
+			activity: ActivityItem[];
+			page: number;
+			pageSize: number;
+			total: number;
+			totalPages: number;
+			typeFilter: ActivityTypeFilter;
+			sortOrder: ActivitySortOrder;
+			loadError: string | null;
+		};
 	}
 	let { data }: Props = $props();
 
-	let typeFilter = $state<TypeFilter>('all');
-	let sortOrder = $state<SortOrder>('newest');
+	function activityHref(over: Partial<{ page: number; type: ActivityTypeFilter; sort: ActivitySortOrder }>) {
+		const sp = new URLSearchParams();
+		sp.set('page', String(over.page ?? data.page));
+		sp.set('type', over.type ?? data.typeFilter);
+		sp.set('sort', over.sort ?? data.sortOrder);
+		return `/activity?${sp.toString()}`;
+	}
 
-	const filteredActivity = $derived(
-		data.activity
-			.filter(item => typeFilter === 'all' || item.type === typeFilter)
-			.slice()
-			.sort((a, b) => {
-				const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-				return sortOrder === 'newest' ? -diff : diff;
-			})
-	);
+	const rangeStart = $derived(data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1);
+	const rangeEnd = $derived(Math.min(data.page * data.pageSize, data.total));
 
 	const lastVisitedActivityId = $derived.by(() => {
 		if (!browser) return null;
@@ -50,13 +59,13 @@
 		return c === 'LIKELY_AI' || c === 'POSSIBLY_AI' || c === 'POSSIBLY_HUMAN' || c === 'LIKELY_HUMAN';
 	}
 
-	function activityHref(item: ActivityItem) {
+	function activityHrefItem(item: ActivityItem) {
 		return item.type === 'detect' ? `/detect?id=${item.id}` : `/humanize?id=${item.id}`;
 	}
 
 	function onRowActivate(item: ActivityItem) {
 		setLastVisitedActivityId(item.id);
-		goto(activityHref(item));
+		goto(activityHrefItem(item));
 	}
 </script>
 
@@ -70,54 +79,65 @@
 		</p>
 	</div>
 
+	{#if data.loadError}
+		<p
+			role="alert"
+			style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: #b45309; margin: 0; padding: 10px 14px; background: #fef3c7; border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(180,83,9,0.25);"
+		>
+			Activity could not load ({data.loadError}).
+		</p>
+	{/if}
+
 	<!-- Filter + sort controls -->
 	<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
 		<!-- Type filter -->
 		<div style="display: inline-flex; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 9px; padding: 3px; gap: 2px;">
-			{#each ([['all', 'All'], ['detect', 'Detect'], ['humanize', 'Humanize']] as [TypeFilter, string][]) as [val, label]}
-				<button
-					onclick={() => (typeFilter = val)}
+			{#each ([['all', 'All'], ['detect', 'Detect'], ['humanize', 'Humanize']] as [ActivityTypeFilter, string][]) as [val, label]}
+				<a
+					href={activityHref({ page: 1, type: val })}
 					style="
 						padding: 5px 14px;
 						border-radius: 6px;
-						border: none;
 						font-family: 'Space Grotesk', system-ui, sans-serif;
 						font-size: 12px;
 						font-weight: 600;
-						cursor: pointer;
+						text-decoration: none;
 						transition: all 130ms;
-						background: {typeFilter === val ? 'var(--color-bg-elevated)' : 'transparent'};
-						color: {typeFilter === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
-						box-shadow: {typeFilter === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
+						background: {data.typeFilter === val ? 'var(--color-bg-elevated)' : 'transparent'};
+						color: {data.typeFilter === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
+						box-shadow: {data.typeFilter === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
 					"
-				>{label}</button>
+				>{label}</a>
 			{/each}
 		</div>
 
 		<!-- Sort -->
 		<div style="display: inline-flex; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 9px; padding: 3px; gap: 2px;">
-			{#each ([['newest', 'Newest first'], ['oldest', 'Oldest first']] as [SortOrder, string][]) as [val, label]}
-				<button
-					onclick={() => (sortOrder = val)}
+			{#each ([['newest', 'Newest first'], ['oldest', 'Oldest first']] as [ActivitySortOrder, string][]) as [val, label]}
+				<a
+					href={activityHref({ page: 1, sort: val })}
 					style="
 						padding: 5px 14px;
 						border-radius: 6px;
-						border: none;
 						font-family: 'Space Grotesk', system-ui, sans-serif;
 						font-size: 12px;
 						font-weight: 600;
-						cursor: pointer;
+						text-decoration: none;
 						transition: all 130ms;
-						background: {sortOrder === val ? 'var(--color-bg-elevated)' : 'transparent'};
-						color: {sortOrder === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
-						box-shadow: {sortOrder === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
+						background: {data.sortOrder === val ? 'var(--color-bg-elevated)' : 'transparent'};
+						color: {data.sortOrder === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
+						box-shadow: {data.sortOrder === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
 					"
-				>{label}</button>
+				>{label}</a>
 			{/each}
 		</div>
 
 		<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-text-muted); margin-left: auto;">
-			{filteredActivity.length} {filteredActivity.length === 1 ? 'item' : 'items'}
+			{#if data.total === 0}
+				0 items
+			{:else}
+				Showing {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} of {data.total.toLocaleString()}
+			{/if}
 		</span>
 	</div>
 
@@ -127,15 +147,20 @@
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		overflow: hidden;
 	">
-		{#if filteredActivity.length === 0}
+		{#if data.activity.length === 0}
 			<div style="padding: 48px 24px; text-align: center;">
 				<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0 0 12px;">
-					{data.activity.length === 0 ? 'No activity yet.' : 'No items match the current filter.'}
+					{data.total === 0 && data.typeFilter === 'all'
+						? 'No activity yet.'
+						: 'No items match the current filter.'}
 				</p>
-				{#if data.activity.length === 0}
+				{#if data.total === 0 && data.typeFilter === 'all'}
 					<a href="/detect" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); text-decoration: none;">Go to Detect →</a>
 				{:else}
-					<button onclick={() => { typeFilter = 'all'; sortOrder = 'newest'; }} style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); background: none; border: none; cursor: pointer; text-decoration: none;">Clear filters</button>
+					<a
+						href={activityHref({ page: 1, type: 'all', sort: 'newest' })}
+						style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600; color: var(--color-brand); text-decoration: none;"
+					>Clear filters</a>
 				{/if}
 			</div>
 		{:else}
@@ -145,20 +170,21 @@
 						<tr style="border-bottom: 1px solid var(--color-divider); background: var(--color-bg-sunk);">
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;">Date</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Type</th>
+							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Preview</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Words</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Result</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;"></th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each filteredActivity as item (item.id)}
+						{#each data.activity as item (item.id)}
 							<tr
 								class="activity-row"
 								class:activity-row-last={item.id === lastVisitedActivityId}
 								style="border-bottom: 1px solid var(--color-divider); cursor: pointer;"
 								role="link"
 								tabindex="0"
-								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}"
+								aria-label="Open {item.type === 'detect' ? 'detection' : 'humanization'} from {formatDate(item.created_at)}: {item.preview}"
 								onclick={() => onRowActivate(item)}
 								onkeydown={(e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
@@ -182,6 +208,12 @@
 										{item.type === 'detect' ? 'Detect' : 'Humanize'}
 									</span>
 								</td>
+								<td style="padding: 12px 16px; max-width: 360px;">
+									<span
+										style="display: block; font-size: 13px; line-height: 1.45; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+										title={item.preview}
+									>{item.preview}</span>
+								</td>
 								<td style="padding: 12px 16px;">
 									<span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">{item.word_count.toLocaleString()}</span>
 								</td>
@@ -202,7 +234,7 @@
 								</td>
 								<td style="padding: 12px 16px;">
 									<a
-										href={activityHref(item)}
+										href={activityHrefItem(item)}
 										style="color: var(--color-text-muted); text-decoration: none; display: inline-flex;"
 										aria-label="Open in new tab"
 										onclick={(e) => {
@@ -218,6 +250,46 @@
 					</tbody>
 				</table>
 			</div>
+
+			{#if data.totalPages > 1}
+				<div
+					style="
+						display: flex;
+						align-items: center;
+						justify-content: space-between;
+						gap: 12px;
+						flex-wrap: wrap;
+						padding: 14px 16px;
+						border-top: 1px solid var(--color-divider);
+						background: var(--color-bg-sunk);
+						font-family: 'Space Grotesk', system-ui, sans-serif;
+						font-size: 13px;
+						color: var(--color-text-secondary);
+					"
+				>
+					<div style="display: flex; align-items: center; gap: 10px;">
+						{#if data.page > 1}
+							<a
+								href={activityHref({ page: data.page - 1 })}
+								style="font-weight: 600; color: var(--color-brand); text-decoration: none;"
+							>Previous</a>
+						{:else}
+							<span style="font-weight: 600; color: var(--color-text-dim);">Previous</span>
+						{/if}
+						{#if data.page < data.totalPages}
+							<a
+								href={activityHref({ page: data.page + 1 })}
+								style="font-weight: 600; color: var(--color-brand); text-decoration: none;"
+							>Next</a>
+						{:else}
+							<span style="font-weight: 600; color: var(--color-text-dim);">Next</span>
+						{/if}
+					</div>
+					<span style="color: var(--color-text-muted);">
+						Page {data.page} of {data.totalPages}
+					</span>
+				</div>
+			{/if}
 		{/if}
 	</div>
 </div>

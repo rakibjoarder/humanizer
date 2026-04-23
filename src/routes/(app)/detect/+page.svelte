@@ -16,6 +16,18 @@
 	import SEO from '$lib/components/SEO.svelte';
 	import { countWords, MAX_INPUT_WORDS } from '$lib/limits';
 
+	const DETECT_INPUT_ID = 'detect-page-input';
+
+	function syncDetectTextareaValue(text: string) {
+		if (typeof document === 'undefined') return;
+		const el = document.getElementById(DETECT_INPUT_ID);
+		if (!(el instanceof HTMLTextAreaElement)) return;
+		// Blur first so Svelte bind:value does not immediately re-apply the old value from a focused textarea.
+		el.blur();
+		el.value = text;
+		el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true }));
+	}
+
 	// ── Icon paths ──────────────────────────────────────────────────────────────
 	const scanIcon  = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
 	const gaugeIcon = 'm12 14 4-4 M3.34 19a10 10 0 1 1 17.32 0';
@@ -79,7 +91,7 @@
 	let savedHydratedId = $state<string | null>(null);
 
 	// ── State ──────────────────────────────────────────────────────────────────
-	let inputText   = $state('');
+	let inputText = $state('');
 	let isLoading   = $state(false);
 	let result      = $state<DetectResult | null>(null);
 	let error       = $state<string | null>(null);
@@ -238,7 +250,9 @@
 	}
 
 	function pasteSample() {
-		inputText = "In today's rapidly evolving digital landscape, the fundamentally transformative power of AI-driven technologies has revolutionized operational efficiency. Furthermore, comprehensive data-driven paradigms have empowered stakeholders to leverage unprecedented synergy, fostering seamless integration across multifaceted workflows. Moreover, this transformative approach ensures that organizations can maintain crucial competitive advantages.";
+		const sample =
+			"In today's rapidly evolving digital landscape, the fundamentally transformative power of AI-driven technologies has revolutionized operational efficiency. Furthermore, comprehensive data-driven paradigms have empowered stakeholders to leverage unprecedented synergy, fostering seamless integration across multifaceted workflows. Moreover, this transformative approach ensures that organizations can maintain crucial competitive advantages.";
+		syncDetectTextareaValue(sample);
 	}
 </script>
 
@@ -309,6 +323,7 @@
 
 			<div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
 				<TextEditor
+					elementId={DETECT_INPUT_ID}
 					bind:value={inputText}
 					placeholder="Paste your text here to analyze…"
 					minChars={50}
@@ -364,14 +379,17 @@
 					<Button
 						variant="secondary"
 						size="md"
-						onclick={async () => {
-							inputText = '';
+						onclick={() => {
+							syncDetectTextareaValue('');
 							result = null;
 							error = null;
 							outOfWords = false;
 							resultSource = 'none';
 							savedHydratedId = null;
-							await goto('/detect', { replaceState: true, noScroll: true });
+							// Strip ?id= etc. without blocking on navigation (e2e + UX stay in sync)
+							if (page.url.searchParams.size > 0) {
+								void goto('/detect', { replaceState: true, noScroll: true });
+							}
 						}}
 					>Clear</Button>
 					<Button variant="ghost" size="md" onclick={pasteSample}>Paste sample</Button>

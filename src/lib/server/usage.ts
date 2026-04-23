@@ -14,6 +14,14 @@ export interface QuotaResult {
 const UNLIMITED = -1;
 const FREE_DETECTION_LIFETIME = 2;
 
+/** PostgREST has not picked up `increment_usage_log` yet (or RPC not deployed). */
+function isIncrementUsageRpcMissing(message: string): boolean {
+	return (
+		message.includes('Could not find the function') ||
+		message.includes('schema cache')
+	);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function todayUtc(): string {
@@ -52,6 +60,8 @@ export async function checkQuota(
 
 /**
  * Increment the words-used counter for today.
+ * Prefer atomic `increment_usage_log` RPC when PostgREST exposes it; otherwise read + upsert
+ * (slightly race-prone under concurrent same-day updates from the same user).
  */
 export async function incrementUsage(
 	supabase: SupabaseClient,
@@ -59,6 +69,18 @@ export async function incrementUsage(
 	wordCount: number
 ): Promise<void> {
 	const date = todayUtc();
+
+	const { error: rpcError } = await supabase.rpc('increment_usage_log', {
+		p_user_id: userId,
+		p_date: date,
+		p_words: wordCount
+	});
+
+	if (!rpcError) return;
+
+	if (!isIncrementUsageRpcMissing(rpcError.message)) {
+		console.warn('[usage] increment_usage_log failed, using read/upsert fallback:', rpcError.message);
+	}
 
 	const { data: existing, error: readError } = await supabase
 		.from('usage_logs')
@@ -72,10 +94,9 @@ export async function incrementUsage(
 	}
 
 	const currentWords = (existing?.words_used as number) ?? 0;
-	const newTotal = currentWords + wordCount;
 
 	const { error: upsertError } = await supabase.from('usage_logs').upsert(
-		{ user_id: userId, date, words_used: newTotal },
+		{ user_id: userId, date, words_used: currentWords + wordCount },
 		{ onConflict: 'user_id,date' }
 	);
 

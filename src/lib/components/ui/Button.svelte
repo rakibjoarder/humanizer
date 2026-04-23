@@ -12,6 +12,8 @@
 		type?: 'button' | 'submit' | 'reset';
 		icon?: string;
 		iconRight?: string;
+		/** Stable accessible name when `loading` replaces visible label (e.g. e2e + screen readers) */
+		ariaLabel?: string;
 		onclick?: (e: MouseEvent) => void;
 		children?: Snippet;
 	}
@@ -24,6 +26,7 @@
 		type = 'button',
 		icon,
 		iconRight,
+		ariaLabel,
 		onclick,
 		children
 	}: Props = $props();
@@ -67,6 +70,7 @@
 	disabled={isDisabled}
 	aria-disabled={isDisabled}
 	aria-busy={loading}
+	aria-label={ariaLabel}
 	onclick={handleClick}
 	onmousedown={() => { pressed = true; }}
 	onmouseup={() => { pressed = false; }}
