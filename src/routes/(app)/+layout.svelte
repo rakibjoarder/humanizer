@@ -66,7 +66,7 @@
 	// Sidebar collapse state — persisted in localStorage
 	let collapsed = $state(false);
 	let mobileOpen = $state(false);
-	let avatarMenuOpen = $state(false);
+	let userMenuOpen = $state(false);
 	let topupOpen = $state(false);
 	let wordBuyLoading = $state<string | null>(null);
 
@@ -142,41 +142,41 @@
 
 	const navItems = [
 		{
-			href: '/humanize',
-			label: 'Humanizer',
-			icon: 'M12 20h9 M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'
+			href: '/dashboard',
+			label: 'Overview',
+			icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z'
 		},
 		{
 			href: '/detect',
-			label: 'AI Detector',
+			label: 'Detections',
 			icon: 'm12 14 4-4 M3.34 19a10 10 0 1 1 17.32 0'
+		},
+		{
+			href: '/humanize',
+			label: 'Humanizer',
+			icon: 'M12 20h9 M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'
 		},
 		{
 			href: '/activity',
 			label: 'History',
 			icon: 'M12 8v4l3 3 M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5'
 		},
-		{
-			href: '/dashboard',
-			label: 'Dashboard',
-			icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z'
-		},
-		{
-			href: '/settings',
-			label: 'Settings',
-			icon: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'
-		}
 	];
 
 	const extraLabels: Record<string, string> = {
 		'/blog': 'Blog',
 		'/privacy': 'Privacy Policy',
-		'/terms': 'Terms of Service'
+		'/terms': 'Terms of Service',
+		'/plans': 'Plans'
 	};
 
 	const activeNavLabel = $derived(
 		navItems.find(item => isActive(item.href))?.label ??
 		(page.url.pathname.startsWith('/blog/') ? 'Blog' : (extraLabels[page.url.pathname] ?? ''))
+	);
+
+	const userFirstName = $derived(
+		profile?.full_name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? ''
 	);
 </script>
 
@@ -284,15 +284,8 @@
 					aria-label="Expand sidebar"
 					title="Expand sidebar"
 				>
-					<span class="logo-default">
-						<img src="/assets/icon-dark.svg" width="22" height="22" alt="" aria-hidden="true" class="app-icon app-icon-dark" style="border-radius: 22%;" />
-						<img src="/assets/icon-light.svg" width="22" height="22" alt="" aria-hidden="true" class="app-icon app-icon-light" style="border-radius: 22%;" />
-					</span>
-					<span class="logo-hover">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-							<path d="M9 18l6-6-6-6"/>
-						</svg>
-					</span>
+					<img src="/assets/icon-dark.svg" width="22" height="22" alt="" aria-hidden="true" class="app-icon app-icon-dark" style="border-radius: 22%;" />
+					<img src="/assets/icon-light.svg" width="22" height="22" alt="" aria-hidden="true" class="app-icon app-icon-light" style="border-radius: 22%;" />
 				</button>
 			{:else}
 				<Logo size={20} onclick={() => goto('/humanize')} />
@@ -330,9 +323,27 @@
 			{/each}
 		</nav>
 
-		<!-- Bottom: words balance -->
+		<!-- Bottom: user info + words + upgrade -->
 		<div class="sidebar-bottom">
 			{#if !collapsed}
+				<!-- Upgrade card for free users -->
+				{#if !isPaid}
+					<div class="upgrade-card">
+						<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+							<div>
+								<p class="upgrade-card-title">Unlock unlimited potential</p>
+								<p class="upgrade-card-sub">Upgrade to unlock more words, scans, and features.</p>
+							</div>
+						</div>
+						<a href="/plans" class="upgrade-card-btn">
+							Upgrade Now
+							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+						</a>
+					</div>
+				{/if}
+
+				<!-- Words widget -->
 				<div class="words-widget">
 					<div class="words-header">
 						<span class="words-label">Words remaining</span>
@@ -351,45 +362,71 @@
 						</button>
 					{:else}
 						<p class="words-sub">150 words free trial</p>
-						<a href="/plans" class="bottom-cta subscribe">
-							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-							Subscribe for more
-						</a>
 					{/if}
-					<nav class="shell-legal" aria-label="Legal and resources">
-						<a href="/blog">Blog</a>
-						<span class="shell-legal-sep" aria-hidden="true">·</span>
-						<a href="/privacy">Privacy</a>
-						<span class="shell-legal-sep" aria-hidden="true">·</span>
-						<a href="/terms">Terms</a>
-					</nav>
+				</div>
+
+				<!-- User row -->
+				<div class="sidebar-user-wrap">
+					{#if userMenuOpen}
+						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+						<div class="sidebar-user-backdrop" onclick={() => (userMenuOpen = false)}></div>
+						<div class="sidebar-user-menu">
+							<div class="sidebar-user-menu-header">
+								<span class="sidebar-user-menu-email">{user?.email}</span>
+								<span class="sidebar-user-menu-plan">{planLabel} plan</span>
+							</div>
+							<div class="sidebar-user-menu-divider"></div>
+							<a href="/settings" class="sidebar-user-menu-item" onclick={() => (userMenuOpen = false)}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+								Settings
+							</a>
+							<div class="sidebar-user-menu-divider"></div>
+							<button type="button" class="sidebar-user-menu-item sidebar-user-menu-signout" onclick={() => { userMenuOpen = false; signOut(); }}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
+								Sign out
+							</button>
+						</div>
+					{/if}
+					<button type="button" class="sidebar-user" onclick={() => (userMenuOpen = !userMenuOpen)}>
+						<div class="sidebar-user-avatar">{initials}</div>
+						<div class="sidebar-user-info">
+							<span class="sidebar-user-name">{userFirstName || user?.email?.split('@')[0] || 'Account'}</span>
+							<span class="sidebar-user-plan-text">{planLabel} plan</span>
+						</div>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-left:auto;" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+					</button>
 				</div>
 			{:else}
-				<!-- Collapsed: icon CTA with colour-coded dot -->
-				{#if isPaid}
-					<button onclick={() => (topupOpen = true)} class="icon-cta" title="{wordsBalance.toLocaleString()} words remaining">
-						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{wordsBarColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M12 5v14M5 12h14"/>
-						</svg>
-					</button>
-				{:else}
-					<a href="/plans" class="icon-cta" title="{wordsBalance.toLocaleString()} words remaining">
-						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{wordsBarColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M12 5v14M5 12h14"/>
-						</svg>
-					</a>
+				<!-- Collapsed user avatar with dropdown -->
+				{#if userMenuOpen}
+					<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+					<div class="sidebar-user-backdrop" onclick={() => (userMenuOpen = false)}></div>
+					<div class="collapsed-user-menu">
+						<div class="sidebar-user-menu-header">
+							<span class="sidebar-user-menu-email">{user?.email}</span>
+							<span class="sidebar-user-menu-plan">{planLabel} plan</span>
+						</div>
+						<div class="sidebar-user-menu-divider"></div>
+						<a href="/settings" class="sidebar-user-menu-item" onclick={() => (userMenuOpen = false)}>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+							Settings
+						</a>
+						<div class="sidebar-user-menu-divider"></div>
+						<button type="button" class="sidebar-user-menu-item sidebar-user-menu-signout" onclick={() => { userMenuOpen = false; signOut(); }}>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
+							Sign out
+						</button>
+					</div>
 				{/if}
-				<nav class="shell-legal shell-legal--collapsed" aria-label="Legal and resources">
-					<a href="/blog" class="shell-legal-icon" title="Blog" aria-label="Blog">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>
-					</a>
-					<a href="/privacy" class="shell-legal-icon" title="Privacy Policy" aria-label="Privacy Policy">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-					</a>
-					<a href="/terms" class="shell-legal-icon" title="Terms of Service" aria-label="Terms of Service">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-					</a>
-				</nav>
+				<button
+					type="button"
+					class="icon-cta"
+					title="{user?.email}"
+					style="background:var(--color-brand);color:#fff;font-family:'Space Grotesk',system-ui,sans-serif;font-size:11px;font-weight:700;"
+					onclick={() => (userMenuOpen = !userMenuOpen)}
+				>
+					{initials}
+				</button>
 			{/if}
 		</div>
 	</aside>
@@ -415,6 +452,16 @@
 				{/each}
 			</nav>
 			<div class="sidebar-bottom">
+				{#if !isPaid}
+					<div class="upgrade-card">
+						<p class="upgrade-card-title">Unlock unlimited potential</p>
+						<p class="upgrade-card-sub">Get thousands of words & premium features</p>
+						<a href="/plans" class="upgrade-card-btn" onclick={() => (mobileOpen = false)}>
+							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+							Upgrade Now
+						</a>
+					</div>
+				{/if}
 				<div class="words-widget">
 					<div class="words-header">
 						<span class="words-label">Words remaining</span>
@@ -429,18 +476,37 @@
 						</button>
 					{:else}
 						<p class="words-sub">150 words free trial</p>
-						<a href="/plans" class="bottom-cta subscribe" onclick={() => (mobileOpen = false)}>
-							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-							Subscribe for more
-						</a>
 					{/if}
-					<nav class="shell-legal" aria-label="Legal and resources">
-						<a href="/blog" onclick={() => (mobileOpen = false)}>Blog</a>
-						<span class="shell-legal-sep" aria-hidden="true">·</span>
-						<a href="/privacy" onclick={() => (mobileOpen = false)}>Privacy</a>
-						<span class="shell-legal-sep" aria-hidden="true">·</span>
-						<a href="/terms" onclick={() => (mobileOpen = false)}>Terms</a>
-					</nav>
+				</div>
+				<div class="sidebar-user-wrap">
+					{#if userMenuOpen}
+						<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+						<div class="sidebar-user-backdrop" onclick={() => (userMenuOpen = false)}></div>
+						<div class="sidebar-user-menu">
+							<div class="sidebar-user-menu-header">
+								<span class="sidebar-user-menu-email">{user?.email}</span>
+								<span class="sidebar-user-menu-plan">{planLabel} plan</span>
+							</div>
+							<div class="sidebar-user-menu-divider"></div>
+							<a href="/settings" class="sidebar-user-menu-item" onclick={() => { userMenuOpen = false; mobileOpen = false; }}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+								Settings
+							</a>
+							<div class="sidebar-user-menu-divider"></div>
+							<button type="button" class="sidebar-user-menu-item sidebar-user-menu-signout" onclick={() => { userMenuOpen = false; mobileOpen = false; signOut(); }}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
+								Sign out
+							</button>
+						</div>
+					{/if}
+					<button type="button" class="sidebar-user" onclick={() => (userMenuOpen = !userMenuOpen)}>
+						<div class="sidebar-user-avatar">{initials}</div>
+						<div class="sidebar-user-info">
+							<span class="sidebar-user-name">{userFirstName || user?.email?.split('@')[0] || 'Account'}</span>
+							<span class="sidebar-user-plan-text">{planLabel} plan</span>
+						</div>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-left:auto;" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+					</button>
 				</div>
 			</div>
 		</aside>
@@ -510,54 +576,6 @@
 						</a>
 					{/if}
 
-					<div class="avatar-wrap">
-						<button
-							class="avatar"
-							onclick={() => (avatarMenuOpen = !avatarMenuOpen)}
-							title={user.email}
-							aria-label="Account menu"
-							aria-expanded={avatarMenuOpen}
-							aria-haspopup="true"
-						>{initials}</button>
-
-						{#if avatarMenuOpen}
-							<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-							<div class="avatar-backdrop" onclick={() => (avatarMenuOpen = false)}></div>
-							<div class="avatar-menu" role="menu">
-								<div class="avatar-menu-header">
-									<span class="avatar-menu-email">{user.email}</span>
-									<span class="avatar-menu-plan plan-{profile?.plan}">{planLabel}</span>
-								</div>
-								<div class="avatar-menu-divider"></div>
-								<a href="/settings" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
-									Settings
-								</a>
-								<a href="/plans" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-									{isPaid ? 'Change plan' : 'Upgrade plan'}
-								</a>
-								<div class="avatar-menu-divider"></div>
-								<a href="/blog" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h6"/></svg>
-									Blog
-								</a>
-								<a href="/privacy" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-									Privacy Policy
-								</a>
-								<a href="/terms" class="avatar-menu-item" role="menuitem" onclick={() => (avatarMenuOpen = false)}>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-									Terms of Service
-								</a>
-								<div class="avatar-menu-divider"></div>
-								<button class="avatar-menu-item avatar-menu-signout" role="menuitem" onclick={signOut}>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
-									Sign out
-								</button>
-							</div>
-						{/if}
-					</div>
 				{:else}
 					<a href="/plans" class="upgrade-pill">View plans</a>
 					<a href="/register" class="ghost-pill">Get started</a>
@@ -651,28 +669,9 @@
 .sidebar-logo-toggle:hover {
 	background: var(--color-bg-elevated);
 }
-.logo-default {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	pointer-events: none;
-}
-.logo-hover {
-	display: none;
-	align-items: center;
-	justify-content: center;
-	color: var(--color-brand);
-	pointer-events: none;
-}
 .app-icon-light { display: none; }
 :global(html[data-theme='light']) .app-icon-dark { display: none; }
 :global(html[data-theme='light']) .app-icon-light { display: block; }
-.sidebar-logo-toggle:hover .logo-default {
-	display: none;
-}
-.sidebar-logo-toggle:hover .logo-hover {
-	display: flex;
-}
 
 /* ── Nav ────────────────────────────────────────────────────────────────── */
 .sidebar-nav {
@@ -1253,6 +1252,231 @@
 	color: var(--color-text-muted);
 	text-align: center;
 	margin: 0;
+}
+
+/* ── Upgrade card ───────────────────────────────────────────────────────── */
+.upgrade-card {
+	background: linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 14%, transparent), color-mix(in srgb, var(--color-brand) 6%, transparent));
+	border: 1px solid color-mix(in srgb, var(--color-brand) 30%, transparent);
+	border-radius: 10px;
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin-bottom: 10px;
+}
+.upgrade-card-title {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--color-text-primary);
+	margin: 0;
+	line-height: 1.3;
+}
+.upgrade-card-sub {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	color: var(--color-text-muted);
+	margin: 0;
+	line-height: 1.4;
+}
+.upgrade-card-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin-top: 6px;
+	padding: 7px 12px;
+	border-radius: 7px;
+	background: var(--color-brand);
+	color: #fff;
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 12px;
+	font-weight: 700;
+	text-decoration: none;
+	align-self: flex-start;
+	transition: background 150ms;
+}
+.upgrade-card-btn:hover {
+	background: var(--color-brand-hover, #059669);
+}
+
+/* ── Sidebar user row ───────────────────────────────────────────────────── */
+.sidebar-user-wrap {
+	position: relative;
+	border-top: 1px solid var(--color-bg-border);
+	margin-top: 8px;
+}
+
+.sidebar-user {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	padding: 9px 6px;
+	border-radius: 8px;
+	width: 100%;
+	background: none;
+	border: none;
+	cursor: pointer;
+	text-align: left;
+	transition: background 120ms;
+}
+.sidebar-user:hover {
+	background: var(--color-bg-elevated);
+}
+
+.sidebar-user-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 39;
+}
+
+.sidebar-user-menu {
+	position: absolute;
+	bottom: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	z-index: 40;
+	background: var(--color-bg-surface);
+	border: 1px solid var(--color-bg-border);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+	overflow: hidden;
+}
+
+.sidebar-user-menu-header {
+	padding: 10px 12px 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.sidebar-user-menu-email {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	color: var(--color-text-secondary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sidebar-user-menu-plan {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 10px;
+	color: var(--color-text-muted);
+}
+
+.sidebar-user-menu-divider {
+	height: 1px;
+	background: var(--color-bg-border);
+}
+
+.sidebar-user-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 9px 12px;
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--color-text-secondary);
+	background: none;
+	border: none;
+	cursor: pointer;
+	text-decoration: none;
+	text-align: left;
+	transition: background 120ms, color 120ms;
+}
+.sidebar-user-menu-item:hover {
+	background: var(--color-bg-elevated);
+	color: var(--color-text-primary);
+}
+
+.sidebar-user-menu-signout {
+	color: #ef4444;
+}
+.sidebar-user-menu-signout:hover {
+	background: #ef444412;
+	color: #ef4444;
+}
+
+.collapsed-user-menu {
+	position: fixed;
+	left: 64px;
+	bottom: 20px;
+	z-index: 100;
+	min-width: 200px;
+	background: var(--color-bg-surface);
+	border: 1px solid var(--color-bg-border);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
+	overflow: hidden;
+}
+.sidebar-user-plan-text {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	color: var(--color-text-muted);
+}
+.sidebar-user-avatar {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: var(--color-brand);
+	color: #fff;
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 11px;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+.sidebar-user-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.sidebar-user-name {
+	font-family: 'Space Grotesk', system-ui, sans-serif;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--color-text-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.sidebar-user-plan {
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	padding: 1px 6px;
+	border-radius: 4px;
+	align-self: flex-start;
+}
+.sidebar-user-plan.plan-basic { background: #3b82f620; color: #3b82f6; }
+.sidebar-user-plan.plan-pro   { background: var(--color-brand-muted); color: var(--color-brand); }
+.sidebar-user-plan.plan-ultra { background: #7c3aed20; color: #7c3aed; }
+.sidebar-user-plan.plan-free  { background: var(--color-bg-elevated); color: var(--color-text-muted); }
+
+.sidebar-user-gear {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	color: var(--color-text-muted);
+	text-decoration: none;
+	flex-shrink: 0;
+	transition: background 120ms, color 120ms;
+}
+.sidebar-user-gear:hover {
+	background: var(--color-bg-elevated);
+	color: var(--color-text-primary);
 }
 
 /* ── Guest content page: marketing layout ───────────────────────────────── */

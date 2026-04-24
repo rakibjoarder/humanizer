@@ -10,6 +10,8 @@
 		maxWords?: number;
 		label?: string;
 		readonly?: boolean;
+		/** When true, editor stretches to fill parent height. */
+		fill?: boolean;
 		/** Stable DOM id for imperative updates (e.g. clear / paste sample while focused). */
 		elementId?: string;
 	}
@@ -22,6 +24,7 @@
 		maxWords,
 		label,
 		readonly = false,
+		fill = false,
 		elementId = 'text-editor'
 	}: Props = $props();
 
@@ -94,7 +97,7 @@
 	);
 </script>
 
-<div style="display:flex;flex-direction:column;gap:8px;width:100%;">
+<div style="display:flex;flex-direction:column;gap:8px;width:100%;{fill ? 'flex:1;min-height:0;' : ''}">
 	{#if label}
 		<label
 			for="text-editor"
@@ -118,6 +121,7 @@
 			box-shadow:{containerShadow};
 			transition:box-shadow 150ms ease;
 			overflow:hidden;
+			{fill ? 'flex:1;min-height:0;' : ''}
 		"
 	>
 		<textarea
@@ -141,8 +145,9 @@
 				border:none;
 				outline:none;
 				padding:18px 20px 44px;
-				min-height:200px;
-				resize:vertical;
+				min-height:{fill ? '0' : '200px'};
+				height:{fill ? '100%' : 'auto'};
+				resize:{fill ? 'none' : 'vertical'};
 				width:100%;
 				caret-color:var(--color-brand);
 			"

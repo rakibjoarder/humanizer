@@ -6,7 +6,6 @@
 		getLastVisitedActivityId,
 		setLastVisitedActivityId
 	} from '$lib/client/lastActivityVisit';
-	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import type {
 		ActivityItem,
 		ActivitySortOrder,
@@ -72,7 +71,7 @@
 <div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: flex; flex-direction: column; gap: 20px;">
 	<div>
 		<h1 style="font-family: 'Newsreader', Georgia, serif; font-size: 34px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 6px; letter-spacing: -0.02em;">
-			Activity log
+			History
 		</h1>
 		<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0;">
 			All saved detections and humanizations. Open a row to view details.
@@ -89,48 +88,54 @@
 	{/if}
 
 	<!-- Filter + sort controls -->
-	<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-		<!-- Type filter -->
-		<div style="display: inline-flex; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 9px; padding: 3px; gap: 2px;">
-			{#each ([['all', 'All'], ['detect', 'Detect'], ['humanize', 'Humanize']] as [ActivityTypeFilter, string][]) as [val, label]}
-				<a
-					href={activityHref({ page: 1, type: val })}
-					style="
-						padding: 5px 14px;
-						border-radius: 6px;
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 12px;
-						font-weight: 600;
-						text-decoration: none;
-						transition: all 130ms;
-						background: {data.typeFilter === val ? 'var(--color-bg-elevated)' : 'transparent'};
-						color: {data.typeFilter === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
-						box-shadow: {data.typeFilter === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
-					"
-				>{label}</a>
-			{/each}
-		</div>
+	<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+		<!-- Type filter: separate bordered buttons with icons -->
+		{#each ([
+			['all',      'All',       'M8 2v4M16 2v4M3 10h18M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'],
+			['detect',   'Detect',    'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+			['humanize', 'Humanize',  'M12 20h9 M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z']
+		] as [ActivityTypeFilter, string, string][]) as [val, label, iconPath]}
+			{@const active = data.typeFilter === val}
+			<a
+				href={activityHref({ page: 1, type: val })}
+				style="
+					display: inline-flex; align-items: center; gap: 6px;
+					padding: 7px 14px; border-radius: 9px;
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 13px; font-weight: 600;
+					text-decoration: none;
+					border: 1px solid {active ? 'var(--color-brand)' : 'var(--color-bg-border)'};
+					background: {active ? 'var(--color-brand-muted)' : 'var(--color-bg-surface)'};
+					color: {active ? 'var(--color-brand)' : 'var(--color-text-secondary)'};
+					transition: all 130ms;
+				"
+			>
+				<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={iconPath}/></svg>
+				{label}
+			</a>
+		{/each}
 
-		<!-- Sort -->
-		<div style="display: inline-flex; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); border-radius: 9px; padding: 3px; gap: 2px;">
-			{#each ([['newest', 'Newest first'], ['oldest', 'Oldest first']] as [ActivitySortOrder, string][]) as [val, label]}
-				<a
-					href={activityHref({ page: 1, sort: val })}
-					style="
-						padding: 5px 14px;
-						border-radius: 6px;
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 12px;
-						font-weight: 600;
-						text-decoration: none;
-						transition: all 130ms;
-						background: {data.sortOrder === val ? 'var(--color-bg-elevated)' : 'transparent'};
-						color: {data.sortOrder === val ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
-						box-shadow: {data.sortOrder === val ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'};
-					"
-				>{label}</a>
-			{/each}
-		</div>
+		<!-- Divider -->
+		<div style="width: 1px; height: 22px; background: var(--color-bg-border); margin: 0 2px; flex-shrink: 0;"></div>
+
+		<!-- Sort: separate outlined buttons -->
+		{#each ([['newest', 'Newest first', '↓'], ['oldest', 'Oldest first', '↑']] as [ActivitySortOrder, string, string][]) as [val, label, arrow]}
+			{@const active = data.sortOrder === val}
+			<a
+				href={activityHref({ page: 1, sort: val })}
+				style="
+					display: inline-flex; align-items: center; gap: 5px;
+					padding: 7px 13px; border-radius: 9px;
+					font-family: 'Space Grotesk', system-ui, sans-serif;
+					font-size: 13px; font-weight: 600;
+					text-decoration: none;
+					border: 1px solid {active ? 'var(--color-brand)' : 'var(--color-bg-border)'};
+					background: {active ? 'var(--color-brand-muted)' : 'var(--color-bg-surface)'};
+					color: {active ? 'var(--color-brand)' : 'var(--color-text-secondary)'};
+					transition: all 130ms;
+				"
+			>{label} {arrow}</a>
+		{/each}
 
 		<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-text-muted); margin-left: auto;">
 			{#if data.total === 0}
@@ -167,7 +172,7 @@
 			<div style="overflow-x: auto;">
 				<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px;">
 					<thead>
-						<tr style="border-bottom: 1px solid var(--color-divider); background: var(--color-bg-sunk);">
+						<tr style="border-bottom: 1px solid rgba(16, 185, 129, 0.25); background: var(--color-brand-muted);">
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;">Date</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Type</th>
 							<th style="padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.08em; text-transform: uppercase;">Preview</th>
@@ -194,16 +199,19 @@
 								}}
 							>
 								<td style="padding: 12px 16px; white-space: nowrap;">
-									<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{formatDate(item.created_at)}</span>
+									<div style="display: flex; align-items: center; gap: 6px;">
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+										<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{formatDate(item.created_at)}</span>
+									</div>
 								</td>
 								<td style="padding: 12px 16px;">
 									<span style="
 										display: inline-flex; align-items: center; gap: 6px;
 										font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-										padding: 3px 10px; border-radius: 99px;
-										background: {item.type === 'detect' ? 'var(--color-brand-muted)' : 'var(--color-human-muted)'};
+										padding: 3px 10px; border-radius: 6px;
+										background: transparent;
 										color: {item.type === 'detect' ? 'var(--color-brand)' : 'var(--color-human)'};
-										box-shadow: inset 0 0 0 1px {item.type === 'detect' ? 'var(--color-brand)' : 'var(--color-human)'};
+										border: 1px solid {item.type === 'detect' ? 'var(--color-brand)' : 'var(--color-human)'};
 									">
 										{item.type === 'detect' ? 'Detect' : 'Humanize'}
 									</span>
@@ -219,15 +227,30 @@
 								</td>
 								<td style="padding: 12px 16px;">
 									{#if item.type === 'detect' && isValidClassification(item.classification)}
-										<ClassificationBadge classification={item.classification} size="sm" />
+										{@const rc = item.classification === 'LIKELY_AI' ? { label: 'AI Generated', color: '#ef4444' } :
+										             item.classification === 'POSSIBLY_AI' ? { label: 'Possibly AI', color: '#f59e0b' } :
+										             item.classification === 'POSSIBLY_HUMAN' ? { label: 'Possibly Human', color: '#84cc16' } :
+										             { label: 'Human', color: 'var(--color-brand)' }}
+										<span style="
+											display: inline-flex; align-items: center; gap: 5px;
+											font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+											padding: 3px 9px; border-radius: 99px;
+											background: color-mix(in srgb, {rc.color} 14%, transparent);
+											color: {rc.color};
+										">
+											<span style="width: 5px; height: 5px; border-radius: 50%; background: {rc.color}; flex-shrink: 0;"></span>
+											{rc.label}
+										</span>
 									{:else if item.type === 'humanize'}
 										<span style="
-											display: inline-flex; align-items: center;
+											display: inline-flex; align-items: center; gap: 5px;
 											font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-											padding: 3px 10px; border-radius: 99px;
+											padding: 3px 9px; border-radius: 99px;
 											background: var(--color-human-muted); color: var(--color-human);
-											box-shadow: inset 0 0 0 1px var(--color-human);
-										">Humanized</span>
+										">
+											<span style="width: 5px; height: 5px; border-radius: 50%; background: var(--color-human); flex-shrink: 0;"></span>
+											Humanized
+										</span>
 									{:else}
 										<span style="color: var(--color-text-dim);">—</span>
 									{/if}
@@ -261,7 +284,7 @@
 						flex-wrap: wrap;
 						padding: 14px 16px;
 						border-top: 1px solid var(--color-divider);
-						background: var(--color-bg-sunk);
+						background: var(--color-brand-muted);
 						font-family: 'Space Grotesk', system-ui, sans-serif;
 						font-size: 13px;
 						color: var(--color-text-secondary);

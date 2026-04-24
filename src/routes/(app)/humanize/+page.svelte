@@ -20,6 +20,9 @@
 	const checkIcon   = 'M20 6 9 17l-5-5';
 	const scanIcon    = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
 	const refreshIcon = 'M3 12a9 9 0 0 1 15-6.7L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-15 6.7L3 16 M3 21v-5h5';
+	const trashIcon   = 'M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6';
+	const uploadIcon  = 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12';
+	const playIcon    = 'M8 5v14l11-7z';
 
 	// Human-natural words highlighted in output
 	const HUMAN_FIXES = new Set([
@@ -50,6 +53,8 @@
 	let progress        = $state(0);
 	let elapsedInterval: ReturnType<typeof setInterval> | null = null;
 	let progressInterval: ReturnType<typeof setInterval> | null = null;
+	let fileInputEl: HTMLInputElement | null = null;
+	let showHowItWorks = $state(false);
 
 
 	const inputWordCount = $derived(
@@ -158,6 +163,37 @@
 		result = null;
 		handleHumanize();
 	}
+
+	function handleClear() {
+		inputText = '';
+		result = null;
+		error = null;
+		outOfWords = false;
+		resultSource = 'none';
+	}
+
+	function triggerUpload() {
+		fileInputEl?.click();
+	}
+
+	async function handleUploadFile(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		try {
+			const text = await file.text();
+			inputText = text;
+			error = null;
+			outOfWords = false;
+			result = null;
+			resultSource = 'none';
+		} catch {
+			error = 'Could not read that file.';
+		} finally {
+			// allow re-uploading same file
+			input.value = '';
+		}
+	}
 </script>
 
 <SEO
@@ -166,7 +202,7 @@
 	canonical="https://humanizeaiwrite.com/humanize"
 />
 
-<div style="max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px;">
+<div style="max-width: 1200px; margin: 0 auto; padding: 18px 24px 64px;">
 	<!-- Page header -->
 	<div style="margin-bottom: 8px;">
 		{#if page.url.searchParams.get('id')}
@@ -177,22 +213,13 @@
 				>← Activity log</a>
 			</p>
 		{/if}
-		<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-			<span style="
-				font-family: 'JetBrains Mono', monospace;
-				font-size: 10px;
-				font-weight: 700;
-				letter-spacing: 0.14em;
-				text-transform: uppercase;
-				color: var(--color-text-dim);
-				background: var(--color-bg-elevated);
-				padding: 3px 8px;
-				border-radius: 4px;
-				box-shadow: inset 0 0 0 1px var(--color-bg-border);
-			">STACKED DIFF VIEW</span>
+		<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+			<div>
+				<h1 style="font-family: 'Newsreader', Georgia, serif; font-size: 34px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 6px; letter-spacing: -0.02em;">Humanize</h1>
+				<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0;">Rewrite AI-generated text to read naturally.</p>
+			</div>
 		</div>
-		<h1 style="font-family: 'Newsreader', Georgia, serif; font-size: 34px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 6px; letter-spacing: -0.02em;">Humanize</h1>
-		<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-secondary); margin: 0;">Rewrite AI-generated text to read naturally.</p>
+
 	</div>
 
 	<!-- ── Input card ── -->
@@ -202,17 +229,38 @@
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		overflow: hidden;
 		margin-bottom: 20px;
-		margin-top: 24px;
+		margin-top: 14px;
 	">
 		<CardHeader icon={wandIcon} label="Input">
 			{#snippet right()}
-				<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {overLimit ? '#ef4444' : 'var(--color-text-muted)'}; font-weight: {overLimit ? 700 : 400};">
-					{inputWordCount.toLocaleString()} / {MAX_INPUT_WORDS.toLocaleString()} words
-				</span>
+				<div style="display:flex;align-items:center;gap:10px;">
+					<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {overLimit ? '#ef4444' : 'var(--color-text-muted)'}; font-weight: {overLimit ? 700 : 400};">
+						{inputWordCount.toLocaleString()} / {MAX_INPUT_WORDS.toLocaleString()} words
+					</span>
+					<button
+						type="button"
+						onclick={handleClear}
+						disabled={isLoading || (inputText.trim().length === 0 && !result && !error)}
+						style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:9px;border:1px solid var(--color-bg-border);background:transparent;color:var(--color-text-secondary);cursor:pointer;font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;font-weight:600;opacity:{isLoading ? 0.6 : 1};"
+						title="Clear"
+					>
+						<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<path d={trashIcon}/>
+						</svg>
+						Clear
+					</button>
+				</div>
 			{/snippet}
 		</CardHeader>
 
 		<div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+			<input
+				bind:this={fileInputEl}
+				type="file"
+				accept=".txt,.md,.rtf,.csv,.json"
+				style="display:none"
+				onchange={handleUploadFile}
+			/>
 			<TextEditor
 				bind:value={inputText}
 				placeholder="Paste or type the text you want to sound more natural…"
@@ -263,7 +311,20 @@
 					loading={isLoading}
 					onclick={handleHumanize}
 				>Humanize</Button>
+				<Button
+					variant="ghost"
+					size="md"
+					icon={playIcon}
+					onclick={() => {
+						showHowItWorks = true;
+						queueMicrotask(() => {
+							const el = document.getElementById('how-it-works');
+							el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+						});
+					}}
+				>How it works</Button>
 				<Button variant="secondary" size="md" icon={scanIcon} onclick={handleRecheck}>Re-check detection</Button>
+				<Button variant="ghost" size="md" icon={uploadIcon} onclick={triggerUpload}>Upload file</Button>
 			</div>
 		</div>
 	</div>
@@ -339,7 +400,18 @@
 						border-radius: 10px;
 						padding: 18px 20px;
 						box-shadow: inset 0 0 0 1px var(--color-bg-border);
+						position: relative;
 					">
+						<button
+							type="button"
+							onclick={handleCopy}
+							title="Copy output"
+							style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;background:var(--color-bg-surface);border:1px solid var(--color-bg-border);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);"
+						>
+							<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d={copyIcon}/>
+							</svg>
+						</button>
 						{#if result.humanized_text.trim().length === 0}
 							<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; color: var(--color-text-muted); margin: 0; text-align: center;">
 								The humanizer returned an empty response. Please try again with different text.
@@ -386,6 +458,50 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Benefits row (matches marketing-style strip) -->
+	<div style="margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+		{#each [
+			{ title: 'AI detector bypass', desc: 'Humanized to avoid AI detection', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
+			{ title: 'Keep your meaning', desc: 'Preserves original intent & context', icon: 'M21 7-9 13-5-5 5-5 4 4L7 14' },
+			{ title: 'Improved readability', desc: 'Natural, clear, and engaging', icon: 'M4 19h16 M4 5h16 M4 12h10' },
+			{ title: 'Your data is private', desc: 'Secure & confidential', icon: 'M12 17a2 2 0 0 0 2-2v-3a2 2 0 0 0-4 0v3a2 2 0 0 0 2 2z M17 11V9a5 5 0 0 0-10 0v2 M5 11h14v10H5z' }
+		] as b}
+			<div style="display:flex;gap:10px;align-items:flex-start;padding:12px 12px;border-radius:12px;background:var(--color-bg-surface);box-shadow:inset 0 0 0 1px var(--color-bg-border);">
+				<div style="width:28px;height:28px;border-radius:10px;background:var(--color-brand-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d={b.icon}/>
+					</svg>
+				</div>
+				<div style="min-width:0;">
+					<div style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;font-weight:700;color:var(--color-text-primary);line-height:1.2;margin-bottom:2px;">
+						{b.title}
+					</div>
+					<div style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:11px;color:var(--color-text-muted);line-height:1.35;">
+						{b.desc}
+					</div>
+				</div>
+			</div>
+		{/each}
+	</div>
+
+	{#if showHowItWorks}
+		<section id="how-it-works" style="margin-top: 18px; padding-top: 6px;">
+			<div style="background:var(--color-bg-surface);border-radius:14px;box-shadow:inset 0 0 0 1px var(--color-bg-border);padding:18px 20px;">
+				<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
+					<div style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-text-muted);">How it works</div>
+					<button
+						type="button"
+						onclick={() => (showHowItWorks = false)}
+						style="padding:6px 10px;border-radius:10px;background:transparent;border:1px solid var(--color-bg-border);cursor:pointer;font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--color-text-secondary);"
+					>Close</button>
+				</div>
+				<p style="margin:0;font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px;line-height:1.7;color:var(--color-text-secondary);">
+					Paste (or upload) text, click <b>Humanize</b>, and we rewrite it for clarity and natural flow while preserving meaning. Use <b>Re-check detection</b> to analyze the output.
+				</p>
+			</div>
+		</section>
+	{/if}
 </div>
 
 {#if outOfWords}
@@ -430,5 +546,16 @@
 	@keyframes shimmer {
 		0%   { background-position: -200% 0; }
 		100% { background-position:  200% 0; }
+	}
+
+	@media (max-width: 920px) {
+		div[style*="grid-template-columns: repeat(4, 1fr)"] {
+			grid-template-columns: repeat(2, 1fr) !important;
+		}
+	}
+	@media (max-width: 520px) {
+		div[style*="grid-template-columns: repeat(2, 1fr)"] {
+			grid-template-columns: 1fr !important;
+		}
 	}
 </style>

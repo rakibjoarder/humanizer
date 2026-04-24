@@ -307,12 +307,7 @@
 	<div class="detect-grid">
 
 		<!-- Left: Input card -->
-		<div style="
-			background: var(--color-bg-surface);
-			border-radius: 14px;
-			box-shadow: inset 0 0 0 1px var(--color-bg-border);
-			overflow: hidden;
-		">
+		<div class="detect-input-card">
 			<CardHeader icon={scanIcon} label="Input">
 				{#snippet right()}
 					<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {overLimit ? '#ef4444' : 'var(--color-text-muted)'}; font-weight: {overLimit ? 700 : 400};">
@@ -321,7 +316,7 @@
 				{/snippet}
 			</CardHeader>
 
-			<div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+			<div class="detect-input-body">
 				<TextEditor
 					elementId={DETECT_INPUT_ID}
 					bind:value={inputText}
@@ -329,6 +324,7 @@
 					minChars={50}
 					maxWords={maxWordsCap}
 					maxChars={(data.plan === 'basic' || data.plan === 'pro' || data.plan === 'ultra') ? 50000 : 20000}
+					fill={true}
 				/>
 
 				{#if overLimit}
@@ -374,7 +370,7 @@
 					</div>
 				{/if}
 
-				<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+				<div class="detect-input-actions" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
 					<Button variant="primary" size="md" icon={scanIcon} disabled={!canSubmit} loading={isLoading} onclick={handleAnalyze}>Analyze</Button>
 					<Button
 						variant="secondary"
@@ -459,7 +455,7 @@
 									<ScoreGauge
 										aiProbability={result.ai_probability}
 										classification={result.classification}
-										size={200}
+										size={180}
 										animate={true}
 									/>
 								{/key}
@@ -512,7 +508,7 @@
 	</div>
 
 	<!-- Detail card (shown when result exists) -->
-	{#if result}
+	{#if false && result}
 		<div style="
 			margin-top: 20px;
 			background: var(--color-bg-surface);
@@ -569,8 +565,32 @@
 	@media (min-width: 900px) {
 		.detect-grid {
 			grid-template-columns: 1fr 1fr;
-			align-items: start;
+			align-items: stretch;
 		}
+	}
+
+	.detect-input-card {
+		background: var(--color-bg-surface);
+		border-radius: 14px;
+		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		overflow: hidden;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.detect-input-body {
+		padding: 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.detect-input-actions {
+		margin-top: auto;
 	}
 
 	.detect-result-card {
@@ -579,6 +599,9 @@
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		overflow: hidden;
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
 	}
 
 	.detect-run-meta {
@@ -600,6 +623,10 @@
 	.detect-result-body {
 		padding: clamp(16px, 3vw, 22px);
 		min-width: 0;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
 	}
 
 	.detect-result-placeholder {
@@ -611,6 +638,8 @@
 		min-height: clamp(260px, 42vh, 360px);
 		text-align: center;
 		padding: 12px 8px;
+		width: 100%;
+		flex: 1;
 	}
 
 	.detect-result-loading {
@@ -689,7 +718,7 @@
 		display: flex;
 		align-items: center;
 		gap: 14px;
-		padding: 16px 18px;
+		padding: 14px 16px;
 		border-radius: 12px;
 		background: var(--color-bg-elevated);
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
@@ -703,8 +732,8 @@
 		box-shadow: inset 0 0 0 1px rgba(34,197,94,0.3);
 	}
 	.dr-verdict-icon {
-		width: 40px;
-		height: 40px;
+		width: 36px;
+		height: 36px;
 		border-radius: 10px;
 		display: flex;
 		align-items: center;
@@ -727,7 +756,7 @@
 	}
 	.dr-verdict-text {
 		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 16px;
+		font-size: 15px;
 		font-weight: 700;
 		color: var(--color-text-primary);
 		margin: 0;
@@ -737,24 +766,25 @@
 
 	/* Gauge + score cards row */
 	.dr-body {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-		align-items: center;
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 14px;
+		align-items: start;
 	}
 	@media (min-width: 480px) {
 		.dr-body {
-			flex-direction: row;
-			align-items: flex-start;
+			grid-template-columns: 220px 1fr;
+			gap: 16px;
 		}
 	}
 	.dr-gauge-wrap {
 		flex-shrink: 0;
 		display: flex;
 		justify-content: center;
+		align-items: center;
 	}
 	.dr-gauge-wrap :global(svg) {
-		width: min(180px, 48vw);
+		width: min(170px, 42vw);
 		height: auto;
 	}
 	.dr-scores {
@@ -767,9 +797,10 @@
 	}
 	.dr-score-card {
 		padding: 14px 16px;
-		border-radius: 10px;
-		background: var(--color-bg-elevated);
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		border-radius: 12px;
+		background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-surface) 92%, white) 0%, var(--color-bg-elevated) 100%);
+		border: 1px solid var(--color-bg-border);
+		box-shadow: 0 1px 0 rgba(0,0,0,0.03), 0 10px 24px rgba(0,0,0,0.04);
 	}
 	.dr-score-top {
 		display: flex;
@@ -793,7 +824,7 @@
 	}
 	.dr-score-num {
 		font-family: 'JetBrains Mono', monospace;
-		font-size: 32px;
+		font-size: 28px;
 		font-weight: 700;
 		line-height: 1;
 		margin: 0 0 10px;
@@ -803,17 +834,17 @@
 		opacity: 0.7;
 	}
 	.dr-score-bar-track {
-		height: 6px;
+		height: 7px;
 		border-radius: 99px;
-		background: var(--color-bg-surface);
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
+		background: color-mix(in srgb, var(--color-bg-surface) 55%, var(--color-bg-border));
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-bg-border) 80%, transparent);
 		overflow: hidden;
 	}
 	.dr-score-bar-fill {
 		height: 100%;
 		border-radius: 99px;
 		transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
-		opacity: 0.85;
+		opacity: 0.9;
 	}
 
 	/* Actions */
@@ -821,7 +852,8 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
-		padding-top: 4px;
+		padding-top: 12px;
+		margin-top: 2px;
 		border-top: 1px solid var(--color-bg-border);
 	}
 

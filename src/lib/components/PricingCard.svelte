@@ -18,6 +18,7 @@
 
 	interface PlanData {
 		name: string;
+		tagline: string;
 		monthlyPrice: number;
 		yearlyPrice: number;
 		yearlyMonthlyEquiv: number;
@@ -30,10 +31,11 @@
 	const plans: Record<Plan, PlanData> = {
 		basic: {
 			name: 'Basic',
+			tagline: 'Perfect for getting started',
 			monthlyPrice: 9.99,
 			yearlyPrice: 86.99,
 			yearlyMonthlyEquiv: 7.25,
-			wordsPerMonth: '4,500 words/mo',
+			wordsPerMonth: '4,500 words per month',
 			cta: 'Start Basic',
 			features: [
 				{ text: '4,500 words per month', available: true },
@@ -46,10 +48,11 @@
 		},
 		pro: {
 			name: 'Pro',
+			tagline: 'For professionals & power users',
 			monthlyPrice: 19.99,
 			yearlyPrice: 182.99,
 			yearlyMonthlyEquiv: 15.25,
-			wordsPerMonth: '12,000 words/mo',
+			wordsPerMonth: '12,000 words per month',
 			cta: 'Start Pro',
 			badge: 'Most Popular',
 			features: [
@@ -63,10 +66,11 @@
 		},
 		ultra: {
 			name: 'Ultra',
+			tagline: 'For teams & high-volume users',
 			monthlyPrice: 39.99,
 			yearlyPrice: 374.99,
 			yearlyMonthlyEquiv: 31.25,
-			wordsPerMonth: '35,000 words/mo',
+			wordsPerMonth: '35,000 words per month',
 			cta: 'Start Ultra',
 			features: [
 				{ text: '35,000 words per month', available: true },
@@ -105,6 +109,7 @@
 
 	<header class="card-header">
 		<h3 class="plan-name">{data.name}</h3>
+		<p class="plan-tagline">{data.tagline}</p>
 
 		<div class="price-row">
 			<span class="price-currency">$</span>
@@ -226,6 +231,14 @@
 		font-weight: 600;
 		color: var(--color-text-primary);
 		margin: 0;
+	}
+
+	.plan-tagline {
+		font-family: 'DM Sans', system-ui, sans-serif;
+		font-size: 13px;
+		color: var(--color-text-muted);
+		margin: 0;
+		line-height: 1.4;
 	}
 
 	.price-row {
