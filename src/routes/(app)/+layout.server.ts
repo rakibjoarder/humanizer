@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { redirectToLoginModal } from '$lib/server/redirectLoginModal';
-import { WORDS_PER_PLAN, wordPacks } from '$lib/server/stripe';
+import { WORDS_PER_PLAN, wordPacks } from '$lib/server/lemonsqueezy';
 
 export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabase }, url }) => {
 	const { session, user } = await safeGetSession();
@@ -27,7 +27,7 @@ export const load: LayoutServerLoad = async ({ locals: { safeGetSession, supabas
 					.from('subscriptions')
 					.select('plan')
 					.eq('user_id', user.id)
-					.in('status', ['active', 'trialing'])
+					.in('status', ['active', 'on_trial'])
 					.eq('cancel_at_period_end', false)
 					.order('current_period_end', { ascending: false })
 					.limit(1)

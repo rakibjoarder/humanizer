@@ -1,57 +1,32 @@
 import type { PageServerLoad } from './$types';
-import { stripe } from '$lib/server/stripe';
-import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL } from '$env/static/public';
-import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
-
-function adminClient() {
-	return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-		auth: { autoRefreshToken: false, persistSession: false }
-	});
-}
+import { lsApi } from '$lib/server/lemonsqueezy';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const statusFilter = url.searchParams.get('status') ?? 'active';
 
-	// Fetch subscriptions from Stripe
-	const result = await stripe.subscriptions.list({
-		limit: 100,
-		status: statusFilter === 'all' ? undefined : (statusFilter as 'active' | 'canceled' | 'past_due' | 'trialing') ,
-		expand: ['data.customer']
-	});
+	// LemonSqueezy statuses: on_trial, active, paused, past_due, unpaid, cancelled, expired
+	const queryParams = new URLSearchParams({ 'page[size]': '100' });
+	if (statusFilter !== 'all') queryParams.set('filter[status]', statusFilter);
 
-	const stripeSubs = result.data;
+	const res = await lsApi(`/subscriptions?${queryParams}`);
+	const body = res.ok ? await res.json() : { data: [] };
 
-	// Get customer IDs to look up emails from Supabase
-	const customerIds = stripeSubs
-		.map((s) => (typeof s.customer === 'object' ? s.customer.id : s.customer))
-		.filter(Boolean);
+	const subscriptions = (body.data ?? []).map((s: Record<string, unknown>) => {
+		const attrs = s.attributes as Record<string, unknown>;
+		const variantName = String(attrs.variant_name ?? '').toLowerCase();
+		const interval = variantName.includes('year') ? 'yearly' : 'monthly';
 
-	let emailMap: Record<string, string> = {};
-	if (customerIds.length > 0) {
-		const db = adminClient();
-		const { data: profiles } = await db
-			.from('profiles')
-			.select('email, stripe_customer_id')
-			.in('stripe_customer_id', customerIds);
-
-		emailMap = Object.fromEntries(
-			(profiles ?? []).map((p) => [p.stripe_customer_id, p.email])
-		);
-	}
-
-	const subscriptions = stripeSubs.map((s) => {
-		const customerId = typeof s.customer === 'object' ? s.customer.id : s.customer;
 		return {
-			id: s.id,
-			customerId,
-			email: emailMap[customerId] ?? customerId,
-			status: s.status,
-			cancel_at_period_end: s.cancel_at_period_end,
-			interval: s.items.data[0]?.price.recurring?.interval ?? '—',
-			amount: s.items.data[0]?.price.unit_amount ?? null,
-			current_period_end: new Date(s.current_period_end * 1000).toISOString(),
-			created: new Date(s.created * 1000).toISOString()
+			id:                  String(s.id),
+			customerId:          String(attrs.customer_id ?? ''),
+			email:               String(attrs.user_email ?? ''),
+			plan:                String(attrs.product_name ?? ''),
+			status:              String(attrs.status ?? ''),
+			cancel_at_period_end: Boolean(attrs.cancelled),
+			interval,
+			amount:              null as number | null,
+			current_period_end:  String(attrs.renews_at ?? attrs.ends_at ?? attrs.updated_at ?? ''),
+			created:             String(attrs.created_at ?? '')
 		};
 	});
 

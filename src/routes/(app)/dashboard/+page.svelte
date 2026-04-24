@@ -6,11 +6,11 @@
 		plan: 'free' | 'basic' | 'pro' | 'ultra';
 		full_name: string | null;
 		email: string;
-		stripe_customer_id: string | null;
+		ls_customer_id: string | null;
 	}
 
 	interface WordPack {
-		priceId: string;
+		variantId: string;
 		words: number;
 		price: number;
 		label: string;
@@ -96,7 +96,7 @@
 	let invoicesError = $state<string | null>(null);
 
 	$effect(() => {
-		if (data.profile.stripe_customer_id) loadInvoices();
+		if (data.profile.ls_customer_id) loadInvoices();
 	});
 
 	async function loadInvoices() {
@@ -133,10 +133,10 @@
 	async function buyWords(priceId: string) {
 		wordBuyLoading = priceId;
 		try {
-			const res = await fetch('/api/stripe/tokens', {
+			const res = await fetch('/api/lemonsqueezy/tokens', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ priceId })
+				body: JSON.stringify({ variantId: priceId })
 			});
 			const json = await res.json();
 			if (json.url) window.location.href = json.url;
@@ -250,7 +250,7 @@
 					<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
 						{#each data.wordPacks as pack}
 							<button
-								onclick={() => buyWords(pack.priceId)}
+								onclick={() => buyWords(pack.variantId)}
 								disabled={wordBuyLoading !== null}
 								style="
 									display: flex; flex-direction: column; align-items: center;
@@ -262,7 +262,7 @@
 								"
 							>
 								<span style="font-family: 'Newsreader', Georgia, serif; font-size: 18px; color: var(--color-text-primary);">
-									{wordBuyLoading === pack.priceId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}
+									{wordBuyLoading === pack.variantId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}
 								</span>
 								<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--color-text-muted); margin-top: 2px;">words</span>
 								<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 700; color: var(--color-brand); margin-top: 5px;">${pack.price}</span>
@@ -401,15 +401,10 @@
 	{/if}
 
 	<!-- ── Billing History ── -->
-	{#if data.profile.stripe_customer_id}
-	<div style="
-		background: var(--color-bg-surface);
-		border-radius: 14px;
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		padding: 24px 28px;
-	">
+	{#if data.profile.ls_customer_id}
+	<div style="background: var(--color-bg-surface); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--color-bg-border); padding: 24px 28px;">
 		<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0;">Billing History</p>
+			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin: 0;">Payment Timeline</p>
 			{#if invoicesLoading}
 				<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; color: var(--color-text-muted);">Loading…</span>
 			{/if}
@@ -420,25 +415,44 @@
 		{:else if invoicesLoaded && invoices.length === 0 && cancellations.length === 0}
 			<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-muted);">No billing history found.</p>
 		{:else if invoicesLoaded}
-			<div style="display: flex; flex-direction: column; gap: 8px;">
-				{#each timeline as entry}
-					{#if entry.kind === 'cancellation'}
-						<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: #ef444408; box-shadow: inset 0 0 0 1px #ef444425; overflow: hidden;">
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #ef444420; color: #ef4444; flex-shrink: 0;">Canceled</span>
-							<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Subscription canceled</span>
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); flex-shrink: 0; white-space: nowrap;">{entry.canceled_at ? fmtDate(entry.canceled_at) : '—'}</span>
-						</div>
-					{:else}
-						<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--color-bg-elevated); box-shadow: inset 0 0 0 1px var(--color-bg-border); overflow: hidden;">
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; background: {entry.status === 'paid' ? '#22c55e20' : '#ef444420'}; color: {entry.status === 'paid' ? '#22c55e' : '#ef4444'};">{entry.status ?? 'unknown'}</span>
-							<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{entry.description ?? entry.number ?? 'Invoice'}</span>
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--color-text-primary); flex-shrink: 0; white-space: nowrap;">{fmtCurrency(entry.amount_paid, entry.currency)}</span>
-							<span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); flex-shrink: 0; white-space: nowrap;">{fmtDate(entry.created)}</span>
-							{#if entry.hosted_invoice_url}
-								<a href={entry.hosted_invoice_url} target="_blank" rel="noopener noreferrer" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none; flex-shrink: 0;">View</a>
+			<div>
+				{#each timeline as entry, i}
+					{@const isLast = i === timeline.length - 1}
+					{@const dotColor = entry.kind === 'cancellation' ? '#dc2626' : (entry.kind === 'invoice' && entry.status === 'paid' ? '#16a34a' : '#d97706')}
+					<div style="display: flex; gap: 16px; align-items: flex-start;">
+						<!-- Spine -->
+						<div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 16px;">
+							<div style="width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; background: {dotColor}; border: 2px solid var(--color-bg-surface); box-shadow: 0 0 0 1px {dotColor};"></div>
+							{#if !isLast}
+								<div style="width: 1px; flex: 1; min-height: 28px; background: var(--color-bg-border); margin-top: 4px;"></div>
 							{/if}
 						</div>
-					{/if}
+						<!-- Content -->
+						<div style="flex: 1; padding-bottom: {isLast ? '0' : '16px'};">
+							<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+								<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+									{#if entry.kind === 'cancellation'}
+										<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: #dc262618; color: #dc2626;">Cancelled</span>
+										<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-primary);">Subscription cancelled</span>
+									{:else}
+										<span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: {entry.status === 'paid' ? '#16a34a18' : '#d9780618'}; color: {entry.status === 'paid' ? '#16a34a' : '#d97806'};">{entry.status === 'paid' ? 'Paid' : (entry.status ?? 'Unknown')}</span>
+										<span style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; color: var(--color-text-primary);">{entry.description ?? entry.number ?? 'Invoice'}</span>
+									{/if}
+								</div>
+								{#if entry.kind === 'invoice'}
+									<div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+										<span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: {entry.status === 'paid' ? '#16a34a' : 'var(--color-text-primary)'};">{fmtCurrency(entry.amount_paid, entry.currency)}</span>
+										{#if entry.hosted_invoice_url}
+											<a href={entry.hosted_invoice_url} target="_blank" rel="noopener noreferrer" style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--color-brand); text-decoration: none; padding: 2px 8px; border: 1px solid var(--color-brand); border-radius: 4px;">Receipt</a>
+										{/if}
+									</div>
+								{/if}
+							</div>
+							<p style="font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 11px; color: var(--color-text-muted); margin: 3px 0 0;">
+								{entry.kind === 'cancellation' ? (entry.canceled_at ? fmtDate(entry.canceled_at) : '—') : fmtDate(entry.created)}
+							</p>
+						</div>
+					</div>
 				{/each}
 			</div>
 		{/if}

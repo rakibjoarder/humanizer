@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe } from '$lib/server/stripe';
+import { lsApi } from '$lib/server/lemonsqueezy';
 import { getUserProfile } from '$lib/server/auth';
 
 export const config = { runtime: 'nodejs20.x', maxDuration: 30 };
@@ -16,36 +16,84 @@ export const GET: RequestHandler = async ({ locals }) => {
 		return json({ error: 'Failed to fetch profile.' }, { status: 500 });
 	}
 
-	if (!profile.stripe_customer_id) {
+	// Get subscription IDs from DB for this user
+	const { data: subRows } = await locals.supabase
+		.from('subscriptions')
+		.select('ls_subscription_id, plan, status, current_period_end')
+		.eq('user_id', user.id)
+		.not('ls_subscription_id', 'is', null)
+		.order('current_period_end', { ascending: false })
+		.limit(5);
+
+	const lsSubId   = subRows?.[0]?.ls_subscription_id ?? null;
+	const userEmail = (profile as unknown as Record<string, string | null>).email ?? null;
+
+	if (!lsSubId && !userEmail) {
 		return json({ invoices: [], cancellations: [] });
 	}
 
 	try {
-		const [invoicesRes, canceledSubsRes] = await Promise.all([
-			stripe.invoices.list({ customer: profile.stripe_customer_id, limit: 12 }),
-			stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: 'canceled', limit: 5 })
+		const results = await Promise.all([
+			// Subscription invoices (recurring charges)
+			lsSubId
+				? lsApi(`/subscription-invoices?filter[subscription_id]=${lsSubId}&page[size]=12&sort=-created_at`)
+						.then((r) => (r.ok ? r.json() : { data: [] }))
+						.catch(() => ({ data: [] }))
+				: Promise.resolve({ data: [] }),
+
+			// All orders for this user (subscription + word packs)
+			userEmail
+				? lsApi(`/orders?filter[user_email]=${encodeURIComponent(userEmail)}&page[size]=20`)
+						.then((r) => (r.ok ? r.json() : { data: [] }))
+						.catch(() => ({ data: [] }))
+				: Promise.resolve({ data: [] })
 		]);
 
-		const invoices = invoicesRes.data.map((inv) => ({
-			id: inv.id,
-			number: inv.number,
-			status: inv.status,
-			amount_paid: inv.amount_paid,
-			currency: inv.currency,
-			created: inv.created,
-			period_start: inv.period_start,
-			period_end: inv.period_end,
-			hosted_invoice_url: inv.hosted_invoice_url,
-			billing_reason: inv.billing_reason,
-			description: inv.description ?? inv.lines?.data?.[0]?.description ?? null
-		}));
+		const [invoicesRes, ordersRes] = results;
 
-		const cancellations = canceledSubsRes.data.map((sub) => ({
-			id: sub.id,
-			canceled_at: sub.canceled_at,
-			ended_at: sub.ended_at,
-			plan: (sub.items?.data?.[0]?.price?.nickname ?? null) as string | null
-		}));
+		const invoices = [
+			// Map subscription invoices
+			...(invoicesRes.data ?? []).map((inv: Record<string, unknown>) => {
+				const attrs = inv.attributes as Record<string, unknown>;
+				return {
+					id: String(inv.id),
+					number: null as string | null,
+					status: String(attrs.status ?? 'paid'),
+					amount_paid: Number(attrs.total ?? 0),
+					currency: String(attrs.currency ?? 'usd').toLowerCase(),
+					created: Math.floor(new Date(String(attrs.created_at)).getTime() / 1000),
+					hosted_invoice_url: (attrs.urls as Record<string, string> | null)?.invoice_url ?? null,
+					billing_reason: String(attrs.billing_reason ?? ''),
+					description: attrs.billing_reason === 'initial' ? 'Subscription started' : 'Subscription renewal'
+				};
+			}),
+			// Map one-time orders
+			...(ordersRes.data ?? []).map((order: Record<string, unknown>) => {
+				const attrs = order.attributes as Record<string, unknown>;
+				const item = attrs.first_order_item as Record<string, unknown> | undefined;
+				return {
+					id: String(order.id),
+					number: String(attrs.order_number ?? ''),
+					status: String(attrs.status ?? 'paid'),
+					amount_paid: Number(attrs.total ?? 0),
+					currency: String(attrs.currency ?? 'usd').toLowerCase(),
+					created: Math.floor(new Date(String(attrs.created_at)).getTime() / 1000),
+					hosted_invoice_url: (attrs.urls as Record<string, string> | null)?.receipt ?? null,
+					billing_reason: 'order',
+					description: item ? `${item.product_name} — ${item.variant_name}` : 'Order'
+				};
+			})
+		].sort((a, b) => b.created - a.created);
+
+		// Cancelled subscriptions from DB
+		const cancellations = (subRows ?? [])
+			.filter((s) => s.status === 'cancelled' || s.status === 'expired')
+			.map((s) => ({
+				id: s.ls_subscription_id ?? '',
+				canceled_at: Math.floor(new Date(s.current_period_end).getTime() / 1000),
+				ended_at:    Math.floor(new Date(s.current_period_end).getTime() / 1000),
+				plan:        s.plan ?? null
+			}));
 
 		return json({ invoices, cancellations });
 	} catch (err) {

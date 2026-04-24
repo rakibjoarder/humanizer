@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stripe } from '$lib/server/stripe';
+import { lsApi } from '$lib/server/lemonsqueezy';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { createClient } from '@supabase/supabase-js';
@@ -14,36 +14,31 @@ export const DELETE: RequestHandler = async ({ locals }) => {
 		return json({ error: 'You must be logged in.' }, { status: 401 });
 	}
 
-	// Use service role client to delete auth user (anon client cannot do this)
 	const adminClient = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 		auth: { autoRefreshToken: false, persistSession: false }
 	});
 
-	// 1. Cancel active Stripe subscription if any
+	// 1. Cancel active LemonSqueezy subscriptions
 	try {
-		const { data: profile } = await locals.supabase
-			.from('profiles')
-			.select('stripe_customer_id')
-			.eq('id', user.id)
-			.maybeSingle();
+		const { data: subs } = await locals.supabase
+			.from('subscriptions')
+			.select('ls_subscription_id')
+			.eq('user_id', user.id)
+			.in('status', ['active', 'on_trial'])
+			.not('ls_subscription_id', 'is', null);
 
-		if (profile?.stripe_customer_id) {
-			const subscriptions = await stripe.subscriptions.list({
-				customer: profile.stripe_customer_id,
-				status: 'active',
-				limit: 10
-			});
+		if (subs && subs.length > 0) {
 			await Promise.all(
-				subscriptions.data.map((sub) =>
-					stripe.subscriptions.cancel(sub.id)
-				)
+				subs
+					.filter((s) => s.ls_subscription_id)
+					.map((s) => lsApi(`/subscriptions/${s.ls_subscription_id}`, { method: 'DELETE' }))
 			);
 		}
 	} catch {
-		// Non-fatal: proceed with account deletion even if Stripe cleanup fails
+		// Non-fatal: proceed with account deletion even if LS cleanup fails
 	}
 
-	// 2. Delete user data rows (cascade handled by FK in most tables, but be explicit)
+	// 2. Delete user data rows
 	await Promise.allSettled([
 		locals.supabase.from('detections').delete().eq('user_id', user.id),
 		locals.supabase.from('humanizations').delete().eq('user_id', user.id),
@@ -51,7 +46,7 @@ export const DELETE: RequestHandler = async ({ locals }) => {
 		locals.supabase.from('profiles').delete().eq('id', user.id)
 	]);
 
-	// 3. Delete the auth user via admin client
+	// 3. Delete the auth user
 	const { error } = await adminClient.auth.admin.deleteUser(user.id);
 
 	if (error) {

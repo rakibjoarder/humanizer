@@ -4,7 +4,7 @@ import { fail } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
-import { stripe } from '$lib/server/stripe';
+import { lsApi } from '$lib/server/lemonsqueezy';
 
 function adminClient() {
 	return createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -12,18 +12,18 @@ function adminClient() {
 	});
 }
 
-export interface StripeSub {
+export interface LSSub {
 	id: string;
 	status: string;
 	cancel_at_period_end: boolean;
 	current_period_start: string;
 	current_period_end: string;
-	price: number | null;
 	interval: string | null;
 	created: string;
+	cancelled_at: string | null;
 }
 
-export interface StripePayment {
+export interface LSPayment {
 	id: string;
 	amount: number;
 	currency: string;
@@ -33,43 +33,10 @@ export interface StripePayment {
 	receiptUrl: string | null;
 }
 
-export interface StripeEvent {
-	id: string;
-	type: string;
-	created: string;
-	description: string;
-}
-
-export interface StripeCustomerInfo {
-	balance: number;
-	currency: string | null;
-	defaultPaymentMethod: string | null;
-	delinquent: boolean;
+export interface LSCustomerInfo {
 	totalSpent: number;
-	topUpSpent: number;
 	firstCharge: string | null;
 	lastCharge: string | null;
-}
-
-function eventLabel(type: string): string {
-	const map: Record<string, string> = {
-		'customer.created': 'Customer created',
-		'customer.updated': 'Customer updated',
-		'customer.subscription.created': 'Subscription created',
-		'customer.subscription.updated': 'Subscription updated',
-		'customer.subscription.deleted': 'Subscription cancelled',
-		'customer.subscription.trial_will_end': 'Trial ending soon',
-		'invoice.created': 'Invoice created',
-		'invoice.paid': 'Invoice paid',
-		'invoice.payment_failed': 'Payment failed',
-		'invoice.finalized': 'Invoice finalized',
-		'checkout.session.completed': 'Checkout completed',
-		'payment_intent.succeeded': 'Payment succeeded',
-		'payment_intent.payment_failed': 'Payment failed',
-		'charge.succeeded': 'Charge succeeded',
-		'charge.refunded': 'Charge refunded',
-	};
-	return map[type] ?? type;
 }
 
 type AdminProfile = {
@@ -79,6 +46,7 @@ type AdminProfile = {
 	plan: 'free' | 'basic' | 'pro' | 'ultra';
 	words_balance: number | null;
 	stripe_customer_id: string | null;
+	ls_customer_id: string | null;
 	created_at: string;
 	disabled: boolean;
 	disabled_at: string | null;
@@ -95,7 +63,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		{ count: detections },
 		{ count: humanizations },
 		{ data: recentDetections },
-		{ data: recentHumanizations }
+		{ data: recentHumanizations },
+		{ data: wordCredits }
 	] = await Promise.all([
 		db.from('detections').select('id', { count: 'exact', head: true }).eq('user_id', params.id),
 		db.from('humanizations').select('id', { count: 'exact', head: true }).eq('user_id', params.id),
@@ -108,17 +77,21 @@ export const load: PageServerLoad = async ({ params }) => {
 			.select('id, created_at')
 			.eq('user_id', params.id)
 			.order('created_at', { ascending: false })
-			.limit(10)
+			.limit(10),
+		db.from('word_credits')
+			.select('id, amount, source, description, created_at')
+			.eq('user_id', params.id)
+			.order('created_at', { ascending: false })
+			.limit(100)
 	]);
 
-	// `profiles.disabled` is optional until migration is applied.
 	let profile: AdminProfile | null = null;
 
 	{
 		const withDisabled = await db
 			.from('profiles')
 			.select(
-				'id, email, full_name, plan, words_balance, stripe_customer_id, created_at, disabled, disabled_at'
+				'id, email, full_name, plan, words_balance, stripe_customer_id, ls_customer_id, created_at, disabled, disabled_at'
 			)
 			.eq('id', params.id)
 			.maybeSingle();
@@ -133,6 +106,7 @@ export const load: PageServerLoad = async ({ params }) => {
 						plan: coercePlan(d.plan),
 						words_balance: (d.words_balance ?? 0) as number | null,
 						stripe_customer_id: (d.stripe_customer_id ?? null) as string | null,
+						ls_customer_id: (d.ls_customer_id ?? null) as string | null,
 						created_at: d.created_at!,
 						disabled: Boolean(d.disabled),
 						disabled_at: (d.disabled_at ?? null) as string | null
@@ -142,19 +116,16 @@ export const load: PageServerLoad = async ({ params }) => {
 			withDisabled.error.message.includes('column') &&
 			(withDisabled.error.message.includes('disabled') || withDisabled.error.message.includes('disabled_at'))
 		) {
-			// Migration not applied yet; retry without the new columns.
 			const withoutDisabled = await db
 				.from('profiles')
-				.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
+				.select('id, email, full_name, plan, words_balance, stripe_customer_id, ls_customer_id, created_at')
 				.eq('id', params.id)
 				.maybeSingle();
 			if (withoutDisabled.error) {
 				error(500, `Failed to load profile: ${withoutDisabled.error.message}`);
 			}
 			const d = withoutDisabled.data as Omit<AdminProfile, 'disabled' | 'disabled_at'> | null;
-			profile = d
-				? { ...d, disabled: false, disabled_at: null }
-				: null;
+			profile = d ? { ...d, disabled: false, disabled_at: null } : null;
 		} else {
 			error(500, `Failed to load profile: ${withDisabled.error.message}`);
 		}
@@ -162,8 +133,6 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	let resolvedProfile = profile;
 	if (!resolvedProfile) {
-		// If the auth user exists but the profile row is missing (e.g. trigger failed),
-		// auto-create a minimal profile so the admin panel can load.
 		const { data: authRes, error: authErr } = await db.auth.admin.getUserById(params.id);
 		if (authErr) error(500, `Failed to fetch auth user: ${authErr.message}`);
 		if (!authRes?.user) error(404, 'User not found');
@@ -183,7 +152,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 		const { data: reloaded, error: reloadError } = await db
 			.from('profiles')
-			.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at, disabled, disabled_at')
+			.select('id, email, full_name, plan, words_balance, stripe_customer_id, ls_customer_id, created_at, disabled, disabled_at')
 			.eq('id', params.id)
 			.maybeSingle();
 		if (reloadError) error(500, `Failed to reload profile: ${reloadError.message}`);
@@ -197,6 +166,7 @@ export const load: PageServerLoad = async ({ params }) => {
 					plan: coercePlan(d.plan),
 					words_balance: (d.words_balance ?? 0) as number | null,
 					stripe_customer_id: (d.stripe_customer_id ?? null) as string | null,
+					ls_customer_id: (d.ls_customer_id ?? null) as string | null,
 					created_at: d.created_at!,
 					disabled: Boolean(d.disabled),
 					disabled_at: (d.disabled_at ?? null) as string | null
@@ -205,83 +175,89 @@ export const load: PageServerLoad = async ({ params }) => {
 		if (!resolvedProfile) error(404, 'User not found');
 	}
 
-	let subscriptions: StripeSub[] = [];
-	let payments: StripePayment[] = [];
-	let events: StripeEvent[] = [];
-	let customerInfo: StripeCustomerInfo | null = null;
+	let subscriptions: LSSub[] = [];
+	let payments: LSPayment[] = [];
+	let customerInfo: LSCustomerInfo | null = null;
 
-	if (resolvedProfile.stripe_customer_id) {
-		await Promise.all([
-			stripe.customers.retrieve(resolvedProfile.stripe_customer_id)
-				.then((c) => {
-					if (c.deleted) return;
+	// Fetch subscriptions from our DB (LS doesn't support filter[customer_id])
+	const { data: dbSubs } = await db
+		.from('subscriptions')
+		.select('ls_subscription_id, plan, status, cancel_at_period_end, current_period_start, current_period_end, created_at')
+		.eq('user_id', params.id)
+		.not('ls_subscription_id', 'is', null)
+		.order('current_period_end', { ascending: false })
+		.limit(10);
+
+	if (dbSubs && dbSubs.length > 0) {
+		// Fetch live status from LS for each subscription
+		await Promise.all(
+			dbSubs.map((sub) =>
+				lsApi(`/subscriptions/${sub.ls_subscription_id}`)
+					.then((r) => (r.ok ? r.json() : null))
+					.then((body) => {
+						if (!body?.data) return;
+						const attrs = body.data.attributes as Record<string, unknown>;
+						const variantName = String(attrs.variant_name ?? '').toLowerCase();
+						const resolvedStatus = String(attrs.status ?? sub.status);
+						const isCancelled = resolvedStatus === 'cancelled' || resolvedStatus === 'expired';
+						subscriptions.push({
+							id: String(body.data.id),
+							status: resolvedStatus,
+							cancel_at_period_end: Boolean(attrs.cancelled),
+							current_period_start: String(attrs.created_at ?? sub.current_period_start),
+							current_period_end: String(attrs.renews_at ?? attrs.ends_at ?? sub.current_period_end),
+							interval: variantName.includes('year') ? 'yearly' : 'monthly',
+							created: String(attrs.created_at ?? sub.created_at),
+							cancelled_at: isCancelled ? String(attrs.updated_at ?? attrs.ends_at ?? '') || null : null
+						});
+					})
+					.catch(() => {})
+			)
+		);
+	}
+
+	// Fetch orders by email (LS doesn't support filter[customer_id] for orders)
+	const userEmail = resolvedProfile.email;
+	if (userEmail) {
+		await lsApi(`/orders?filter[user_email]=${encodeURIComponent(userEmail)}&page[size]=50`)
+			.then((r) => (r.ok ? r.json() : { data: [] }))
+			.then((body) => {
+				const orders = (body.data ?? []).filter(
+					(o: Record<string, unknown>) => (o.attributes as Record<string, unknown>).status === 'paid'
+				);
+
+				if (orders.length > 0) {
+					const totalSpent = orders.reduce((sum: number, o: Record<string, unknown>) => {
+						return sum + Number((o.attributes as Record<string, unknown>).total ?? 0);
+					}, 0);
+					const sorted = [...orders].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+						const ta = new Date(String((a.attributes as Record<string, unknown>).created_at)).getTime();
+						const tb = new Date(String((b.attributes as Record<string, unknown>).created_at)).getTime();
+						return ta - tb;
+					});
 					customerInfo = {
-						balance: c.balance ?? 0,
-						currency: c.currency ?? null,
-						defaultPaymentMethod: typeof c.invoice_settings?.default_payment_method === 'string'
-							? c.invoice_settings.default_payment_method
-							: null,
-						delinquent: c.delinquent ?? false,
-						totalSpent: 0,
-						topUpSpent: 0,
-						firstCharge: null,
-						lastCharge: null
+						totalSpent,
+						firstCharge: String((sorted[0].attributes as Record<string, unknown>).created_at ?? ''),
+						lastCharge: String((sorted[sorted.length - 1].attributes as Record<string, unknown>).created_at ?? '')
 					};
-				}).catch(() => {}),
+				}
 
-			stripe.subscriptions.list({ customer: resolvedProfile.stripe_customer_id, limit: 10 })
-				.then((r) => {
-					subscriptions = r.data.map((s) => ({
-						id: s.id,
-						status: s.status,
-						cancel_at_period_end: s.cancel_at_period_end,
-						current_period_start: new Date(s.current_period_start * 1000).toISOString(),
-						current_period_end: new Date(s.current_period_end * 1000).toISOString(),
-						price: s.items.data[0]?.price.unit_amount ?? null,
-						interval: s.items.data[0]?.price.recurring?.interval ?? null,
-						created: new Date(s.created * 1000).toISOString()
-					}));
-				}).catch(() => {}),
-
-			stripe.charges.list({ customer: resolvedProfile.stripe_customer_id, limit: 100 })
-				.then((r) => {
-					const paid = r.data.filter((c) => c.paid && !c.refunded);
-					const topUps = paid.filter((c) => c.metadata?.words);
-					const sorted = [...paid].sort((a, b) => a.created - b.created);
-
-					if (customerInfo && paid.length > 0) {
-						customerInfo.totalSpent = paid.reduce((s, c) => s + c.amount, 0);
-						customerInfo.topUpSpent = topUps.reduce((s, c) => s + c.amount, 0);
-						customerInfo.firstCharge = new Date(sorted[0].created * 1000).toISOString();
-						customerInfo.lastCharge = new Date(sorted[sorted.length - 1].created * 1000).toISOString();
-					}
-
-					payments = paid.slice(0, 20).map((c) => ({
-						id: c.id,
-						amount: c.amount,
-						currency: c.currency,
-						description: c.description ?? (c.metadata?.words ? `+${Number(c.metadata.words).toLocaleString()} words` : 'Payment'),
-						words: c.metadata?.words ? Number(c.metadata.words) : null,
-						created: new Date(c.created * 1000).toISOString(),
-						receiptUrl: c.receipt_url
-					}));
-				}).catch(() => {}),
-
-			stripe.events.list({ limit: 30 })
-				.then((r) => {
-					events = r.data
-						.filter((e) => {
-							const obj = e.data.object as unknown as Record<string, unknown>;
-							return obj.customer === resolvedProfile.stripe_customer_id;
-						})
-						.map((e) => ({
-							id: e.id,
-							type: e.type,
-							created: new Date(e.created * 1000).toISOString(),
-							description: eventLabel(e.type)
-						}));
-				}).catch(() => {})
-		]);
+				payments = orders.slice(0, 20).map((o: Record<string, unknown>) => {
+					const attrs = o.attributes as Record<string, unknown>;
+					const item = attrs.first_order_item as Record<string, unknown> | undefined;
+					const urls = attrs.urls as Record<string, string> | undefined;
+					return {
+						id: String(o.id),
+						amount: Number(attrs.total ?? 0),
+						currency: String(attrs.currency ?? 'usd').toLowerCase(),
+						description: item ? `${item.product_name} — ${item.variant_name}` : 'Order',
+						words: null as number | null,
+						created: String(attrs.created_at ?? ''),
+						receiptUrl: urls?.receipt ?? null
+					};
+				});
+			})
+			.catch(() => {});
 	}
 
 	const activity = [
@@ -293,13 +269,13 @@ export const load: PageServerLoad = async ({ params }) => {
 		profile: resolvedProfile,
 		subscriptions,
 		payments,
-		events,
 		activity,
 		customerInfo,
 		detections: detections ?? 0,
 		humanizations: humanizations ?? 0,
 		recentDetections: recentDetections ?? [],
-		recentHumanizations: recentHumanizations ?? []
+		recentHumanizations: recentHumanizations ?? [],
+		wordCredits: wordCredits ?? []
 	};
 };
 

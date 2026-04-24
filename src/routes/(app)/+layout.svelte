@@ -120,10 +120,10 @@
 	async function buyWordPack(priceId: string) {
 		wordBuyLoading = priceId;
 		try {
-			const res = await fetch('/api/stripe/tokens', {
+			const res = await fetch('/api/lemonsqueezy/tokens', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ priceId })
+				body: JSON.stringify({ variantId: priceId })
 			});
 			const json = await res.json();
 			if (json.url) {
@@ -464,10 +464,10 @@
 				{#each wordPacks as pack}
 					<button
 						class="topup-pack"
-						onclick={() => buyWordPack(pack.priceId)}
+						onclick={() => buyWordPack(pack.variantId)}
 						disabled={wordBuyLoading !== null}
 					>
-						<span class="topup-pack-words">{wordBuyLoading === pack.priceId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}</span>
+						<span class="topup-pack-words">{wordBuyLoading === pack.variantId ? '…' : `+${(pack.words / 1000).toFixed(0)}K`}</span>
 						<span class="topup-pack-label">words</span>
 						<span class="topup-pack-price">${pack.price}</span>
 					</button>

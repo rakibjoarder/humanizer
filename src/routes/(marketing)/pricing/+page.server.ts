@@ -1,20 +1,20 @@
 import type { PageServerLoad } from './$types';
-import { plans } from '$lib/server/stripe';
+import { plans } from '$lib/server/lemonsqueezy';
 
 export const load: PageServerLoad = async () => {
 	return {
-		priceIds: {
+		variantIds: {
 			basic: {
-				monthly: plans.basic.monthlyPriceId,
-				yearly: plans.basic.yearlyPriceId
+				monthly: plans.basic.monthlyVariantId,
+				yearly:  plans.basic.yearlyVariantId
 			},
 			pro: {
-				monthly: plans.pro.monthlyPriceId,
-				yearly: plans.pro.yearlyPriceId
+				monthly: plans.pro.monthlyVariantId,
+				yearly:  plans.pro.yearlyVariantId
 			},
 			ultra: {
-				monthly: plans.ultra.monthlyPriceId,
-				yearly: plans.ultra.yearlyPriceId
+				monthly: plans.ultra.monthlyVariantId,
+				yearly:  plans.ultra.yearlyVariantId
 			}
 		}
 	};

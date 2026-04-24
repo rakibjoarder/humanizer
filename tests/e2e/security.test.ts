@@ -101,15 +101,7 @@ test.describe('Authorization', () => {
 		expect(res.status()).toBe(401);
 	});
 
-	test('unauthenticated POST /api/stripe/checkout returns 401', async ({ request }) => {
-		const res = await request.post('/api/stripe/checkout', {
-			headers: { 'Content-Type': 'application/json' },
-			data: { priceId: 'price_test', billingCycle: 'monthly' }
-		});
-		expect(res.status()).toBe(401);
-	});
-
-	test('unauthenticated DELETE /api/account/delete returns 401', async ({ request }) => {
+test('unauthenticated DELETE /api/account/delete returns 401', async ({ request }) => {
 		const res = await request.delete('/api/account/delete');
 		expect(res.status()).toBe(401);
 	});

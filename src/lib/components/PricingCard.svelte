@@ -30,9 +30,9 @@
 	const plans: Record<Plan, PlanData> = {
 		basic: {
 			name: 'Basic',
-			monthlyPrice: 9,
-			yearlyPrice: 86.40,
-			yearlyMonthlyEquiv: 7.20,
+			monthlyPrice: 9.99,
+			yearlyPrice: 86.99,
+			yearlyMonthlyEquiv: 7.25,
 			wordsPerMonth: '4,500 words/mo',
 			cta: 'Start Basic',
 			features: [
@@ -46,9 +46,9 @@
 		},
 		pro: {
 			name: 'Pro',
-			monthlyPrice: 19,
-			yearlyPrice: 182.40,
-			yearlyMonthlyEquiv: 15.20,
+			monthlyPrice: 19.99,
+			yearlyPrice: 182.99,
+			yearlyMonthlyEquiv: 15.25,
 			wordsPerMonth: '12,000 words/mo',
 			cta: 'Start Pro',
 			badge: 'Most Popular',
@@ -63,9 +63,9 @@
 		},
 		ultra: {
 			name: 'Ultra',
-			monthlyPrice: 39,
-			yearlyPrice: 374.40,
-			yearlyMonthlyEquiv: 31.20,
+			monthlyPrice: 39.99,
+			yearlyPrice: 374.99,
+			yearlyMonthlyEquiv: 31.25,
 			wordsPerMonth: '35,000 words/mo',
 			cta: 'Start Ultra',
 			features: [

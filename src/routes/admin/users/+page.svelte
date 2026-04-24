@@ -74,7 +74,7 @@
 		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
-					{#each ['Email', 'Name', 'Plan', 'Words', 'Stripe ID', 'Joined'] as h}
+					{#each ['Email', 'Name', 'Plan', 'Words', 'LS Customer', 'Joined'] as h}
 						<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;">{h}</th>
 					{/each}
 					<th style="padding: 10px 14px;"></th>
@@ -91,7 +91,7 @@
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {(u.words_balance ?? 0) <= 500 && u.plan !== 'ultra' ? '#f59e0b' : 'var(--color-text-secondary)'};">
 							{u.words_balance === -1 ? '∞' : (u.words_balance ?? 0).toLocaleString()}
 						</td>
-						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{u.stripe_customer_id ? u.stripe_customer_id.slice(0, 14) + '…' : '—'}</td>
+						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted);">{u.ls_customer_id ? u.ls_customer_id.slice(0, 14) + '…' : '—'}</td>
 						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-text-muted); white-space: nowrap;">{fmtDate(u.created_at)}</td>
 						<td style="padding: 10px 14px;">
 							<a href={`/admin/users/${u.id}`} style="font-size: 12px; font-weight: 600; color: var(--color-brand); text-decoration: none;">View →</a>

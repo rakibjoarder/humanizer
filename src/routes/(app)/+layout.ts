@@ -10,7 +10,7 @@ export const load: LayoutLoad = async ({ parent, data }) => {
 
 	const { data: profile, error } = await supabase
 		.from('profiles')
-		.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
+		.select('id, email, full_name, plan, words_balance, stripe_customer_id, ls_customer_id, created_at')
 		.eq('id', user.id)
 		.maybeSingle();
 
@@ -22,7 +22,7 @@ export const load: LayoutLoad = async ({ parent, data }) => {
 		.from('subscriptions')
 		.select('cancel_at_period_end, current_period_end, status')
 		.eq('user_id', user.id)
-		.in('status', ['active', 'trialing'])
+		.in('status', ['active', 'trialing', 'on_trial'])
 		.order('current_period_end', { ascending: false })
 		.limit(1)
 		.maybeSingle();

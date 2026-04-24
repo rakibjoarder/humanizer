@@ -32,7 +32,7 @@
 		<div>
 			<h1 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 28px; font-weight: 400; color: var(--color-text-primary); margin: 0 0 4px;">Subscriptions</h1>
 			<p style="font-family: 'Space Grotesk', system-ui; font-size: 13px; color: var(--color-text-muted); margin: 0;">
-				{data.total} found · <span style="color: var(--color-brand);">live from Stripe</span>
+				{data.total} found · <span style="color: var(--color-brand);">live from LemonSqueezy</span>
 			</p>
 		</div>
 	</div>
@@ -45,9 +45,11 @@
 			style="padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; cursor: pointer; background: var(--color-bg-surface); border: 1px solid var(--color-bg-border); color: var(--color-text-primary); font-family: 'Space Grotesk', system-ui;"
 		>
 			<option value="active">Active</option>
-			<option value="canceled">Canceled</option>
+			<option value="on_trial">Trialing</option>
+			<option value="cancelled">Cancelled</option>
 			<option value="past_due">Past due</option>
-			<option value="trialing">Trialing</option>
+			<option value="paused">Paused</option>
+			<option value="expired">Expired</option>
 			<option value="all">All</option>
 		</select>
 	</div>
@@ -57,7 +59,7 @@
 		<table style="width: 100%; border-collapse: collapse; font-family: 'Space Grotesk', system-ui; font-size: 13px;">
 			<thead>
 				<tr style="border-bottom: 1px solid var(--color-bg-border); background: var(--color-bg-elevated);">
-					{#each ['Email', 'Status', 'Amount', 'Interval', 'Cancels?', 'Period end', 'Created'] as h}
+					{#each ['Email', 'Plan', 'Status', 'Interval', 'Cancels?', 'Period end', 'Created'] as h}
 						<th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;">{h}</th>
 					{/each}
 				</tr>
@@ -66,11 +68,9 @@
 				{#each data.subscriptions as s}
 					<tr style="border-bottom: 1px solid var(--color-bg-border);">
 						<td style="padding: 10px 14px; color: var(--color-text-primary); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{s.email}</td>
+						<td style="padding: 10px 14px; color: var(--color-text-secondary);">{s.plan}</td>
 						<td style="padding: 10px 14px;">
 							<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: {statusBg(s.status)}; color: {statusColor(s.status)};">{s.status}</span>
-						</td>
-						<td style="padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--color-text-secondary);">
-							{s.amount != null ? `$${(s.amount / 100).toFixed(2)}` : '—'}
 						</td>
 						<td style="padding: 10px 14px; color: var(--color-text-secondary);">{s.interval}</td>
 						<td style="padding: 10px 14px; color: {s.cancel_at_period_end ? '#f59e0b' : 'var(--color-text-muted)'};">{s.cancel_at_period_end ? 'Yes' : 'No'}</td>

@@ -13,27 +13,27 @@
 	let checkoutError = $state('');
 
 	const yearlySavingsLabel: Record<PlanKey, string> = {
-		basic: 'Save $21.60/year',
-		pro: 'Save $45.60/year',
-		ultra: 'Save $93.60/year'
+		basic: 'Save $32.89/year',
+		pro: 'Save $56.89/year',
+		ultra: 'Save $104.89/year'
 	};
 
 	async function handleSelectPlan(planKey: PlanKey) {
-		const priceId =
+		const variantId =
 			billingCycle === 'monthly'
-				? data.priceIds?.[planKey]?.monthly
-				: data.priceIds?.[planKey]?.yearly;
+				? data.variantIds?.[planKey]?.monthly
+				: data.variantIds?.[planKey]?.yearly;
 
-		if (!priceId) return;
+		if (!variantId) return;
 
 		checkoutError = '';
 		checkoutLoading = planKey;
 
 		try {
-			const res = await fetch('/api/stripe/checkout', {
+			const res = await fetch('/api/lemonsqueezy/checkout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ priceId, billingCycle })
+				body: JSON.stringify({ variantId, billingCycle })
 			});
 
 			const json = await res.json();
@@ -96,7 +96,7 @@
 
 <SEO
 	title="Pricing — AI Humanizer Plans | HumanizeAIWrite"
-	description="Humanize AI-generated text. Basic 4,500 words/mo from $9, Pro 12,000 words/mo from $19, Ultra 35,000 words/mo from $39. Bypass GPTZero, Turnitin, and more."
+	description="Humanize AI-generated text. Basic 4,500 words/mo from $9.99, Pro 12,000 words/mo from $19.99, Ultra 35,000 words/mo from $39.99. Bypass GPTZero, Turnitin, and more."
 	canonical="https://humanizeaiwrite.com/pricing"
 />
 
@@ -205,8 +205,8 @@
 				</thead>
 				<tbody>
 					{#each [
-						['Monthly price', '$9', '$19', '$39'],
-						['Yearly price', '$86.40/yr', '$182.40/yr', '$374.40/yr'],
+						['Monthly price', '$9.99', '$19.99', '$39.99'],
+						['Yearly price', '$86.99/yr', '$182.99/yr', '$374.99/yr'],
 						['Words per month', '4,500', '12,000', '35,000'],
 						['AI Detection', '✓', '✓', '✓'],
 						['AI Humanizer', '✓', '✓', '✓'],

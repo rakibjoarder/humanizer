@@ -13,6 +13,7 @@ export interface Profile {
 	plan: PlanName;
 	words_balance: number;
 	stripe_customer_id: string | null;
+	ls_customer_id: string | null;
 	created_at: string;
 }
 
@@ -51,7 +52,7 @@ export async function getUserProfile(
 ): Promise<Profile> {
 	const { data, error } = await supabase
 		.from('profiles')
-		.select('id, email, full_name, plan, words_balance, stripe_customer_id, created_at')
+		.select('id, email, full_name, plan, words_balance, stripe_customer_id, ls_customer_id, created_at')
 		.eq('id', userId)
 		.single();
 

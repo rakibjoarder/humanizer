@@ -21,27 +21,29 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	if (!UUID_RE.test(params.id)) return json({ error: 'Invalid user ID.' }, { status: 400 });
 
 	const body = await request.json();
-	const { words_balance, plan, disabled } = body as { words_balance?: number; plan?: string; disabled?: boolean };
+	const { words_credit, plan, disabled } = body as { words_credit?: number; plan?: string; disabled?: boolean };
+
+	const db = adminClient();
 
 	const update: Record<string, unknown> = {};
-	if (typeof words_balance === 'number' && words_balance >= -1) update.words_balance = words_balance;
 	if (plan === 'free' || plan === 'basic' || plan === 'pro' || plan === 'ultra') update.plan = plan;
 	if (typeof disabled === 'boolean') {
 		update.disabled = disabled;
 		update.disabled_at = disabled ? new Date().toISOString() : null;
 	}
 
-	if (Object.keys(update).length === 0) {
-		return json({ error: 'Nothing to update.' }, { status: 400 });
-	}
-
-	const db = adminClient();
-
-	// Fetch current balance before update so we can log the delta
+	// For credit, fetch current balance and compute new absolute value
 	let previousBalance = 0;
-	if (typeof words_balance === 'number') {
+	let delta = 0;
+	if (typeof words_credit === 'number' && words_credit !== 0) {
 		const { data: current } = await db.from('profiles').select('words_balance').eq('id', params.id).single();
 		previousBalance = current?.words_balance ?? 0;
+		delta = words_credit;
+		update.words_balance = previousBalance + delta;
+	}
+
+	if (Object.keys(update).length === 0) {
+		return json({ error: 'Nothing to update.' }, { status: 400 });
 	}
 
 	let { error: dbErr } = await db.from('profiles').update(update).eq('id', params.id);
@@ -73,14 +75,13 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 
 	if (dbErr) return json({ error: dbErr.message }, { status: 500 });
 
-	// Log admin credit when words were increased
-	if (typeof words_balance === 'number' && words_balance > previousBalance) {
-		const delta = words_balance - previousBalance;
+	// Log admin credit when words were added or removed
+	if (delta !== 0) {
 		await db.from('word_credits').insert({
 			user_id: params.id,
 			amount: delta,
 			source: 'admin_credit',
-			description: `Admin credit (+${delta.toLocaleString()} words) by ${user.email}`
+			description: delta > 0 ? `Words credited by admin` : `Words removed by admin`
 		});
 	}
 

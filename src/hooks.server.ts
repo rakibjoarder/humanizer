@@ -14,12 +14,12 @@ const SECURITY_HEADERS: Record<string, string> = {
 		"default-src 'self'",
 		// SvelteKit injects an inline hydration script; strict CSP requires nonce/hashes.
 		// Keep inline scripts allowed unless/until we implement nonce-based CSP.
-		"script-src 'self' 'unsafe-inline' https://js.stripe.com",
+		"script-src 'self' 'unsafe-inline'",
 		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
 		"font-src 'self' https://fonts.gstatic.com",
 		"img-src 'self' data: https:",
-		"connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
-		"frame-src https://js.stripe.com https://hooks.stripe.com",
+		"connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+		"frame-src 'none'",
 		"object-src 'none'",
 		"base-uri 'self'",
 	].join('; '),

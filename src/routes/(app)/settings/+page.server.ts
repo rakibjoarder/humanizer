@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { wordPacks } from '$lib/server/stripe';
+import { wordPacks } from '$lib/server/lemonsqueezy';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const { user } = await locals.safeGetSession();
@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.select('id, amount, source, description, created_at')
 			.eq('user_id', user.id)
 			.order('created_at', { ascending: false })
-			.limit(20);
+			.limit(100);
 		wordCredits = data ?? [];
 	}
 

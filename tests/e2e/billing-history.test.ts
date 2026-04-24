@@ -69,13 +69,13 @@ test.describe('Billing history API', () => {
 // ── UI: Settings billing history ──────────────────────────────────────────────
 
 test.describe('Billing History UI (settings)', () => {
-	test('billing history section is visible for user with stripe_customer_id', async ({ page }) => {
+	test('billing history section is visible for user with ls_customer_id', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/settings');
-		// Section is only shown when the user has a stripe_customer_id
+		// Section is only shown when the user has a ls_customer_id
 		const visible = await page.getByText('Billing History').isVisible({ timeout: 8_000 }).catch(() => false);
 		if (!visible) {
-			// User has no stripe_customer_id — skip rather than fail
+			// User has no ls_customer_id — skip rather than fail
 			test.skip();
 			return;
 		}
@@ -85,7 +85,7 @@ test.describe('Billing History UI (settings)', () => {
 	test('invoices load automatically without a button click', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/settings');
-		// If no stripe_customer_id, billing section absent — skip
+		// If no ls_customer_id, billing section absent — skip
 		const sectionVisible = await page.getByText('Billing History').isVisible({ timeout: 5_000 }).catch(() => false);
 		if (!sectionVisible) { test.skip(); return; }
 		// Either invoices appear OR "No billing history found" — both mean the load ran
@@ -116,7 +116,7 @@ test.describe('Billing History UI (settings)', () => {
 // ── UI: Dashboard billing history ─────────────────────────────────────────────
 
 test.describe('Billing History UI (dashboard)', () => {
-	test('billing history section is visible on dashboard for user with stripe_customer_id', async ({ page }) => {
+	test('billing history section is visible on dashboard for user with ls_customer_id', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/dashboard');
 		const visible = await page.getByText('Billing History').isVisible({ timeout: 8_000 }).catch(() => false);
