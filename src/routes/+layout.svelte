@@ -89,6 +89,24 @@
 			}
 		}
 
+		async function resumePendingCheckout() {
+			const pending = localStorage.getItem('pending-checkout');
+			if (!pending) return;
+			try {
+				const { variantId, billingCycle, discountCode } = JSON.parse(pending);
+				localStorage.removeItem('pending-checkout');
+				const res = await fetch('/api/lemonsqueezy/checkout', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ variantId, billingCycle, discountCode })
+				});
+				const json = await res.json();
+				if (res.ok && json.url) window.location.href = json.url;
+			} catch {
+				localStorage.removeItem('pending-checkout');
+			}
+		}
+
 		let debounce: ReturnType<typeof setTimeout> | null = null;
 		const {
 			data: { subscription }
@@ -96,6 +114,12 @@
 			// invalidateAll() refetched every load on the site (including token refresh) — very slow.
 			// Root +layout.ts uses depends('supabase:auth'); only those loads need to re-run.
 			if (event === 'INITIAL_SESSION') return;
+
+			if (event === 'SIGNED_IN') {
+				// Resume any checkout that was interrupted by the login wall
+				setTimeout(() => void resumePendingCheckout(), 300);
+			}
+
 			// Coalesce rapid TOKEN_REFRESHED / tab-focus bursts so GoTrue's storage lock is not hammered.
 			if (debounce) clearTimeout(debounce);
 			debounce = setTimeout(() => {
