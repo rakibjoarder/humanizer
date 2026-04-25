@@ -8,6 +8,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { openLoginModal } from '$lib/stores/loginModal';
 	import { openRegisterModal } from '$lib/stores/registerModal';
+	import PromoFloater from '$lib/components/PromoFloater.svelte';
 
 	let { data, children } = $props();
 
@@ -276,6 +277,13 @@
 
 <!-- Page content -->
 {@render children()}
+
+<!-- Promo floater (show for guests and free users only) -->
+<PromoFloater 
+	show={!user || profile?.plan === 'free'} 
+	proMonthlyVariantId={(data as any).proVariantIds?.monthly ?? ''}
+	proYearlyVariantId={(data as any).proVariantIds?.yearly ?? ''}
+/>
 
 <!-- ── FOOTER ── -->
 <footer class="marketing-footer">

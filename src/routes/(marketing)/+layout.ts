@@ -1,10 +1,10 @@
 import type { LayoutLoad } from './$types';
 
-export const load: LayoutLoad = async ({ parent }) => {
+export const load: LayoutLoad = async ({ parent, data }) => {
 	const { supabase, session, user } = await parent();
 
 	if (!user) {
-		return { profile: null };
+		return { profile: null, proVariantIds: data.proVariantIds };
 	}
 
 	const { data: profile, error } = await supabase
@@ -17,5 +17,5 @@ export const load: LayoutLoad = async ({ parent }) => {
 		console.error('Failed to load profile:', error.message);
 	}
 
-	return { profile: profile ?? null };
+	return { profile: profile ?? null, proVariantIds: data.proVariantIds };
 };

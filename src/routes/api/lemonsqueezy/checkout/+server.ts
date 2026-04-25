@@ -23,7 +23,11 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 		return json({ error: 'Invalid request body.' }, { status: 400 });
 	}
 
-	const { variantId, billingCycle } = body as { variantId?: unknown; billingCycle?: unknown };
+	const { variantId, billingCycle, discountCode } = body as { 
+		variantId?: unknown; 
+		billingCycle?: unknown;
+		discountCode?: unknown;
+	};
 
 	if (typeof variantId !== 'string' || !variantId) {
 		return json({ error: 'Missing required field: variantId.' }, { status: 400 });
@@ -80,6 +84,7 @@ export const POST: RequestHandler = async ({ request, locals, url }) => {
 						checkout_data: {
 							email: profile.email,
 							name: profile.full_name ?? undefined,
+							discount_code: typeof discountCode === 'string' ? discountCode : undefined,
 							custom: {
 								supabase_user_id: user.id,
 								billing_cycle: billingCycle

@@ -37,6 +37,38 @@
 	});
 
 	onMount(() => {
+		// Check for pending checkout (from PromoFloater)
+		if (data.user) {
+			const pending = localStorage.getItem('pending-checkout');
+			if (pending) {
+				try {
+					const { variantId, billingCycle, discountCode } = JSON.parse(pending);
+					localStorage.removeItem('pending-checkout');
+					
+					// Trigger checkout immediately
+					setTimeout(async () => {
+						try {
+							const res = await fetch('/api/lemonsqueezy/checkout', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({ variantId, billingCycle, discountCode })
+							});
+
+							const json = await res.json();
+
+							if (res.ok && json.url) {
+								window.location.href = json.url;
+							}
+						} catch {
+							// Silently fail - user can retry from promo banner
+						}
+					}, 300);
+				} catch {
+					localStorage.removeItem('pending-checkout');
+				}
+			}
+		}
+
 		let debounce: ReturnType<typeof setTimeout> | null = null;
 		const {
 			data: { subscription }
