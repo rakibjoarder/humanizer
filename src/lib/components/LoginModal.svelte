@@ -70,6 +70,28 @@
 		trackLogin('email');
 		await invalidate('supabase:auth');
 		if (isModal) onClose?.();
+
+		// Resume any interrupted checkout (e.g. from promo banner)
+		const pending = typeof localStorage !== 'undefined' ? localStorage.getItem('pending-checkout') : null;
+		if (pending) {
+			try {
+				const { variantId, billingCycle, discountCode } = JSON.parse(pending);
+				localStorage.removeItem('pending-checkout');
+				const res = await fetch('/api/lemonsqueezy/checkout', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ variantId, billingCycle, discountCode })
+				});
+				const json = await res.json();
+				if (res.ok && json.url) {
+					window.location.href = json.url;
+					return;
+				}
+			} catch {
+				localStorage.removeItem('pending-checkout');
+			}
+		}
+
 		window.location.href = safeRedirect;
 	}
 
