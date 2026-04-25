@@ -2,6 +2,7 @@
 	import PricingCard from '$lib/components/PricingCard.svelte';
 	import SEO from '$lib/components/SEO.svelte';
 	import { goto } from '$app/navigation';
+	import { trackPlanClick } from '$lib/client/analytics';
 
 	type BillingCycle = 'monthly' | 'yearly';
 	type PlanKey = 'basic' | 'pro' | 'ultra';
@@ -28,6 +29,7 @@
 
 		checkoutError = '';
 		checkoutLoading = planKey;
+		trackPlanClick(planKey, billingCycle, 'pricing_page');
 
 		try {
 			const res = await fetch('/api/lemonsqueezy/checkout', {

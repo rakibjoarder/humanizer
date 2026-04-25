@@ -9,6 +9,7 @@
 	import NavUserMenu from '$lib/components/NavUserMenu.svelte';
 	import { openLoginModal } from '$lib/stores/loginModal';
 	import { wordsBalanceStore } from '$lib/stores/wordsBalance';
+	import { trackLogout, trackWordPackClick } from '$lib/client/analytics';
 
 	let { data, children } = $props();
 	let supabase = $derived(data.supabase);
@@ -22,7 +23,8 @@
 			page.url.pathname === '/blog' ||
 			page.url.pathname.startsWith('/blog/') ||
 			page.url.pathname === '/privacy' ||
-			page.url.pathname === '/terms'
+			page.url.pathname === '/terms' ||
+			page.url.pathname === '/contact'
 		)
 	);
 
@@ -34,7 +36,8 @@
 		{ label: 'AI Humanizer', href: '/humanize' },
 		{ label: 'AI Detector', href: '/detect' },
 		{ label: 'Blog', href: '/blog' },
-		{ label: 'Pricing', href: '/pricing' }
+		{ label: 'Pricing', href: '/pricing' },
+		{ label: 'Contact', href: '/contact' }
 	];
 
 	function mkIsActive(href: string) {
@@ -113,12 +116,14 @@
 	}
 
 	async function signOut() {
+		trackLogout();
 		await supabase.auth.signOut();
 		window.location.href = '/';
 	}
 
 	async function buyWordPack(priceId: string) {
 		wordBuyLoading = priceId;
+		trackWordPackClick(priceId, 'sidebar');
 		try {
 			const res = await fetch('/api/lemonsqueezy/tokens', {
 				method: 'POST',
@@ -167,7 +172,8 @@
 		'/blog': 'Blog',
 		'/privacy': 'Privacy Policy',
 		'/terms': 'Terms of Service',
-		'/plans': 'Plans'
+		'/plans': 'Plans',
+		'/contact': 'Contact'
 	};
 
 	const activeNavLabel = $derived(
@@ -380,6 +386,10 @@
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
 								Settings
 							</a>
+							<a href="/contact" class="sidebar-user-menu-item" onclick={() => (userMenuOpen = false)}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+								Contact
+							</a>
 							<div class="sidebar-user-menu-divider"></div>
 							<button type="button" class="sidebar-user-menu-item sidebar-user-menu-signout" onclick={() => { userMenuOpen = false; signOut(); }}>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9"/></svg>
@@ -410,6 +420,10 @@
 						<a href="/settings" class="sidebar-user-menu-item" onclick={() => (userMenuOpen = false)}>
 							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
 							Settings
+						</a>
+						<a href="/contact" class="sidebar-user-menu-item" onclick={() => (userMenuOpen = false)}>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+							Contact
 						</a>
 						<div class="sidebar-user-menu-divider"></div>
 						<button type="button" class="sidebar-user-menu-item sidebar-user-menu-signout" onclick={() => { userMenuOpen = false; signOut(); }}>
@@ -491,6 +505,10 @@
 							<a href="/settings" class="sidebar-user-menu-item" onclick={() => { userMenuOpen = false; mobileOpen = false; }}>
 								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
 								Settings
+							</a>
+							<a href="/contact" class="sidebar-user-menu-item" onclick={() => { userMenuOpen = false; mobileOpen = false; }}>
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+								Contact
 							</a>
 							<div class="sidebar-user-menu-divider"></div>
 							<button type="button" class="sidebar-user-menu-item sidebar-user-menu-signout" onclick={() => { userMenuOpen = false; mobileOpen = false; signOut(); }}>

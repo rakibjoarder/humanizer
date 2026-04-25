@@ -10,9 +10,29 @@
 	import RegisterModal from '$lib/components/RegisterModal.svelte';
 	import { loginModalOpen, loginModalRedirect, closeLoginModal, openLoginModal } from '$lib/stores/loginModal';
 	import { registerModalOpen, registerModalRedirect, closeRegisterModal } from '$lib/stores/registerModal';
+	import { PUBLIC_GA_MEASUREMENT_ID } from '$env/static/public';
 
 	let { data, children } = $props();
 	let supabase = $derived(data.supabase);
+
+	// Inject GA4 once and track page views on navigation
+	let gaLoaded = false;
+	$effect(() => {
+		if (!browser || !PUBLIC_GA_MEASUREMENT_ID) return;
+		if (!gaLoaded) {
+			gaLoaded = true;
+			window.dataLayer = window.dataLayer || [];
+			window.gtag = function gtag() { window.dataLayer!.push(arguments as unknown); };
+			window.gtag('js', new Date());
+			window.gtag('config', PUBLIC_GA_MEASUREMENT_ID, { send_page_view: false });
+			const s = document.createElement('script');
+			s.src = `https://www.googletagmanager.com/gtag/js?id=${PUBLIC_GA_MEASUREMENT_ID}`;
+			s.async = true;
+			document.head.appendChild(s);
+		}
+		// Track page view on each navigation
+		window.gtag?.('event', 'page_view', { page_path: page.url.pathname });
+	});
 
 	/** Server auth gates redirect here with `?login=1&redirect=…` instead of `/login` so we can use the modal */
 	$effect(() => {

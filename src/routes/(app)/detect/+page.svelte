@@ -6,6 +6,7 @@
 	import type { PageData } from './$types';
 	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
 	import { detectText, OutOfWordsError, type DetectResult } from '$lib/client/api';
+	import { trackDetect } from '$lib/client/analytics';
 	import { wordsBalanceStore } from '$lib/stores/wordsBalance';
 	import ScoreGauge from '$lib/components/ScoreGauge.svelte';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
@@ -207,6 +208,7 @@
 			detId = 'det_' + Math.random().toString(36).slice(2, 8).toUpperCase();
 			detMs = Date.now() - t0;
 			if (result.words_balance !== undefined) wordsBalanceStore.set(result.words_balance);
+			trackDetect(wordCount);
 		} catch (err) {
 			if (err instanceof OutOfWordsError) {
 				outOfWords = true;

@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import SEO from '$lib/components/SEO.svelte';
+	import { onMount } from 'svelte';
+	import { trackPageVisit, trackWordPackClick } from '$lib/client/analytics';
+
+	onMount(() => trackPageVisit('dashboard'));
 
 	interface Profile {
 		plan: 'free' | 'basic' | 'pro' | 'ultra';
@@ -154,6 +158,7 @@
 
 	async function buyWords(priceId: string) {
 		wordBuyLoading = priceId;
+		trackWordPackClick(priceId, 'dashboard');
 		try {
 			const res = await fetch('/api/lemonsqueezy/tokens', {
 				method: 'POST',

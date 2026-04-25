@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import { trackPlanClick } from '$lib/client/analytics';
 
 	interface Props {
 		show?: boolean;
@@ -46,6 +47,7 @@
 		if (!variantId) return;
 
 		checkoutLoading = true;
+		trackPlanClick('pro', billingCycle, 'promo_banner');
 		try {
 			const res = await fetch('/api/lemonsqueezy/checkout', {
 				method: 'POST',

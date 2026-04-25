@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { trackPageVisit, trackBillingPortalClick, trackDeleteAccount, trackWordPackClick } from '$lib/client/analytics';
+
+	onMount(() => trackPageVisit('settings'));
 
 	let { data } = $props();
 	let supabase = $derived(data.supabase);
@@ -93,6 +97,7 @@
 
 	async function openBillingPortal() {
 		billingLoading = true;
+		trackBillingPortalClick();
 		try {
 			const res = await fetch('/api/billing/portal', { method: 'POST' });
 			const json = await res.json();
@@ -116,6 +121,7 @@
 
 		deleteLoading = true;
 		deleteError = '';
+		trackDeleteAccount();
 
 		try {
 			const res = await fetch('/api/account/delete', { method: 'DELETE' });
@@ -140,6 +146,7 @@
 
 	async function buyWordPack(variantId: string) {
 		wordBuyLoading = variantId;
+		trackWordPackClick(variantId, 'settings');
 		try {
 			const res = await fetch('/api/lemonsqueezy/tokens', {
 				method: 'POST',

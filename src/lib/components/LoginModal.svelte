@@ -4,6 +4,7 @@
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import Logo from '$lib/components/Logo.svelte';
 	import { openRegisterModal } from '$lib/stores/registerModal';
+	import { trackLogin } from '$lib/client/analytics';
 
 	type Variant = 'modal' | 'page';
 
@@ -66,6 +67,7 @@
 			loading = false;
 			return;
 		}
+		trackLogin('email');
 		await invalidate('supabase:auth');
 		if (isModal) onClose?.();
 		window.location.href = safeRedirect;
@@ -73,6 +75,7 @@
 
 	async function handleGoogleLogin() {
 		googleLoading = true;
+		trackLogin('google');
 		const dest = safeRedirect;
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',

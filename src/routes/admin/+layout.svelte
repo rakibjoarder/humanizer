@@ -9,7 +9,8 @@
 		{ href: '/admin/users', label: 'Users' },
 		{ href: '/admin/subscriptions', label: 'Subscriptions' },
 		{ href: '/admin/detections', label: 'Detections' },
-		{ href: '/admin/humanizations', label: 'Humanizations' }
+		{ href: '/admin/humanizations', label: 'Humanizations' },
+		{ href: '/admin/messages', label: 'Messages' }
 	];
 
 	function isActive(href: string) {

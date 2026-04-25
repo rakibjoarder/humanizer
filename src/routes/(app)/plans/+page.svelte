@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, invalidate } from '$app/navigation';
 	import PricingCard from '$lib/components/PricingCard.svelte';
+	import { trackPlanClick } from '$lib/client/analytics';
 
 	type BillingCycle = 'monthly' | 'yearly';
 	type PlanKey = 'basic' | 'pro' | 'ultra';
@@ -30,6 +31,7 @@
 
 		checkoutError = '';
 		checkoutLoading = planKey;
+		trackPlanClick(planKey, billingCycle, 'plans_page');
 
 		try {
 			const res = await fetch('/api/lemonsqueezy/checkout', {

@@ -316,7 +316,7 @@
 			<nav class="marketing-footer-nav" aria-label="Company">
 				<a href="/blog">About</a>
 				<a href="/blog">Blog</a>
-				<a href="/register">Careers</a>
+				<a href="/contact">Contact</a>
 				<a
 					href="/login"
 					onclick={(e) => {

@@ -6,6 +6,7 @@
 	import { setLastVisitedActivityId } from '$lib/client/lastActivityVisit';
 	import { humanizeText, OutOfWordsError, type HumanizeResult } from '$lib/client/api';
 	import { MAX_INPUT_WORDS } from '$lib/limits';
+	import { trackHumanize } from '$lib/client/analytics';
 	import { wordsBalanceStore } from '$lib/stores/wordsBalance';
 	import ClassificationBadge from '$lib/components/ClassificationBadge.svelte';
 	import DiffText from '$lib/components/DiffText.svelte';
@@ -129,6 +130,7 @@
 			resultSource = 'live';
 			progress = 100;
 			if (result.words_balance !== undefined) wordsBalanceStore.set(result.words_balance);
+			trackHumanize(inputWordCount);
 		} catch (err) {
 			if (err instanceof OutOfWordsError) {
 				outOfWords = true;

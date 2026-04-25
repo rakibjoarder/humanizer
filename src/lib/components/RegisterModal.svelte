@@ -3,6 +3,7 @@
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import Logo from '$lib/components/Logo.svelte';
 	import { openLoginModal } from '$lib/stores/loginModal';
+	import { trackSignUp } from '$lib/client/analytics';
 
 	interface Props {
 		supabase: SupabaseClient;
@@ -41,6 +42,7 @@
 
 	async function handleGoogleSignup() {
 		googleLoading = true;
+		trackSignUp('google');
 		const dest = redirectAfter ?? '/humanize';
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
@@ -67,6 +69,7 @@
 			options: { data: { full_name: fullName } }
 		});
 		if (authError) { error = authError.message; loading = false; return; }
+		trackSignUp('email');
 		success = true;
 		loading = false;
 	}
