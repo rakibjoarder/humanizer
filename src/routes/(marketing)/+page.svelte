@@ -2,17 +2,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { openLoginModal } from '$lib/stores/loginModal';
-	import { browser } from '$app/environment';
-	import {
-		countWords,
-		FREE_DETECTION_MAX_WORDS_PER_SCAN,
-		trimToMaxWords
-	} from '$lib/limits';
+	import { openRegisterModal } from '$lib/stores/registerModal';
 	import Reveal from '$lib/components/Reveal.svelte';
 	import PricingCard from '$lib/components/PricingCard.svelte';
 	import SEO from '$lib/components/SEO.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import ProductSuccessShowcase from '$lib/components/ProductSuccessShowcase.svelte';
 
 	const homeJsonLd = {
 		'@context': 'https://schema.org',
@@ -64,7 +57,7 @@
 					{
 						'@type': 'Question',
 						name: 'Can HumanizeAIWrite bypass Turnitin AI detection?',
-						acceptedAnswer: { '@type': 'Answer', text: 'Yes. Our humanizer rewrites AI-generated text to closely mimic natural human writing patterns, making it significantly harder for Turnitin\'s AI detector to flag.' }
+						acceptedAnswer: { '@type': 'Answer', text: "Yes. Our humanizer rewrites AI-generated text to closely mimic natural human writing patterns, making it significantly harder for Turnitin's AI detector to flag." }
 					},
 					{
 						'@type': 'Question',
@@ -89,38 +82,14 @@
 	let { data } = $props();
 
 	type BillingCycle = 'monthly' | 'yearly';
-	type ToolPath = '/humanize' | '/detect';
-
 	let billingCycle = $state<BillingCycle>('monthly');
-
-	let homeInput = $state('');
-	let fileInputEl = $state<HTMLInputElement | null>(null);
-	let moreOpen = $state(false);
-	let moreWrapEl = $state<HTMLDivElement | null>(null);
-
-	const heroArrow = 'M5 12h14 M13 6l6 6-6 6';
+	let openFaq = $state<number | null>(null);
 
 	const isPro = $derived(
 		data.profile?.plan === 'basic' || data.profile?.plan === 'pro' || data.profile?.plan === 'ultra'
 	);
 
-	const homeWordCount = $derived(countWords(homeInput));
-
-	function stashAndGoto(path: ToolPath, textOverride?: string) {
-		const t = (textOverride ?? homeInput).trim();
-		if (browser && t) {
-			try {
-				if (path === '/humanize') {
-					localStorage.setItem('humanize_prefill', t);
-				} else {
-					localStorage.setItem('detect_prefill', t);
-				}
-			} catch {
-				/* ignore quota */
-			}
-		}
-		// Humanizer requires sign-in. Client-side `goto` does not reliably run the server auth redirect,
-		// so open the login modal here instead of navigating to `/humanize` as a guest.
+	function stashAndGoto(path: '/humanize' | '/detect') {
 		if (path === '/humanize' && !data.user) {
 			openLoginModal('/humanize');
 			return;
@@ -128,142 +97,97 @@
 		goto(path);
 	}
 
-	function onComposerSubmit() {
-		stashAndGoto('/humanize');
+	function toggleFaq(i: number) {
+		openFaq = openFaq === i ? null : i;
 	}
 
-	function onComposerKeydown(e: KeyboardEvent) {
-		if (e.key !== 'Enter') return;
-		if (e.shiftKey) return;
-		e.preventDefault();
-		onComposerSubmit();
+	// ── Step demo state ─────────────────────────────────────────────────────────
+	const SAMPLE_DETECT_TEXT =
+		"In today's rapidly evolving digital landscape, AI-generated content often follows predictable patterns that detectors can easily identify.";
+	const HUMANIZED_OUTPUT =
+		'AI-generated writing can sometimes sound predictable, which makes it easier for detectors to flag. This rewrite keeps the same idea but uses a more natural, human tone.';
+
+	let demoTriggered = $state(false);
+	let detectTypingText = $state(SAMPLE_DETECT_TEXT);
+	let isTypingDetect = $state(false);
+	let detectActive = $state(false);
+
+	let humanizeReady = $state(false);
+	let humanizeDone = $state(false);
+	let humanizedDisplayText = $state('');
+	let isTypingHumanize = $state(false);
+
+	let verifyReady = $state(false);
+	let verifyDone = $state(false);
+
+	let stepsEl: HTMLElement | null = $state(null);
+
+	function sleep(ms: number): Promise<void> {
+		return new Promise((r) => setTimeout(r, ms));
 	}
 
-	function onFilePick(e: Event) {
-		const input = e.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = () => {
-			const text = typeof reader.result === 'string' ? reader.result : '';
-			homeInput = trimToMaxWords(text, data.user ? 50000 : FREE_DETECTION_MAX_WORDS_PER_SCAN);
-		};
-		reader.readAsText(file);
-		input.value = '';
-	}
+	async function runAutoDemo() {
+		detectTypingText = '';
+		isTypingDetect = true;
+		let i = 0;
+		await new Promise<void>((resolve) => {
+			const t = setInterval(() => {
+				i++;
+				detectTypingText = SAMPLE_DETECT_TEXT.slice(0, i);
+				if (i >= SAMPLE_DETECT_TEXT.length) {
+					clearInterval(t);
+					resolve();
+				}
+			}, 18);
+		});
+		isTypingDetect = false;
+		detectActive = true;
+		humanizeReady = true;
 
-	function onComposerInput(e: Event) {
-		const el = e.currentTarget as HTMLTextAreaElement;
-		const cap = data.user ? 50000 : FREE_DETECTION_MAX_WORDS_PER_SCAN;
-		homeInput = trimToMaxWords(el.value, cap);
+		await sleep(700);
+		await sleep(650);
+		humanizeDone = true;
+		humanizedDisplayText = '';
+		isTypingHumanize = true;
+		i = 0;
+		await new Promise<void>((resolve) => {
+			const t = setInterval(() => {
+				i++;
+				humanizedDisplayText = HUMANIZED_OUTPUT.slice(0, i);
+				if (i >= HUMANIZED_OUTPUT.length) {
+					clearInterval(t);
+					resolve();
+				}
+			}, 16);
+		});
+		isTypingHumanize = false;
+		verifyReady = true;
+
+		await sleep(700);
+		await sleep(750);
+		verifyDone = true;
 	}
 
 	onMount(() => {
-		const onDocClick = (e: MouseEvent) => {
-			if (!moreOpen || !moreWrapEl) return;
-			if (!moreWrapEl.contains(e.target as Node)) moreOpen = false;
-		};
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') moreOpen = false;
-		};
-		document.addEventListener('click', onDocClick);
-		window.addEventListener('keydown', onKey);
+		let io: IntersectionObserver | null = null;
+		if (stepsEl) {
+			io = new IntersectionObserver(
+				(entries) => {
+					entries.forEach((e) => {
+						if (e.isIntersecting && !demoTriggered) {
+							demoTriggered = true;
+							setTimeout(() => runAutoDemo(), 550);
+						}
+					});
+				},
+				{ threshold: 0.22 }
+			);
+			io.observe(stepsEl);
+		}
 		return () => {
-			document.removeEventListener('click', onDocClick);
-			window.removeEventListener('keydown', onKey);
+			io?.disconnect();
 		};
 	});
-
-	// ── Hub toolbar icons (detection + humanizer only) ───────────────────────────
-	const shieldIcon = 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z';
-	const scanIcon = 'M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2 M7 12h10';
-	const moreIcon = 'M12 5v.01 M12 12v.01 M12 19v.01';
-
-	const suggestions: Array<{
-		kind: 'detect' | 'humanize';
-		title: string;
-		sub: string;
-		seed: string;
-		route: ToolPath;
-	}> = [
-		{
-			kind: 'detect',
-			title: 'Sample: scan for AI style',
-			sub: 'Try the detector on obviously synthetic copy (50+ words on the detector page).',
-			seed:
-				"In today's rapidly evolving digital landscape, the fundamentally transformative power of AI-driven technologies has revolutionized operational efficiency. Furthermore, comprehensive data-driven paradigms have empowered stakeholders to leverage unprecedented synergy across multifaceted workflows.",
-			route: '/detect'
-		},
-		{
-			kind: 'humanize',
-			title: 'Sample: humanize stiff copy',
-			sub: 'Open the humanizer with corporate-sounding text and compare the rewrite.',
-			seed:
-				'The aforementioned initiative will facilitate seamless stakeholder alignment across all verticals while ensuring optimal outcomes.',
-			route: '/humanize'
-		},
-		{
-			kind: 'humanize',
-			title: 'Sample: soften marketing lines',
-			sub: 'Another humanizer example — tighten buzzwords into clearer sentences (Pro).',
-			seed:
-				'We are excited to leverage best-in-class solutions to drive synergistic outcomes across our ecosystem and empower stakeholders through innovative paradigms.',
-			route: '/humanize'
-		}
-	];
-
-	/** Generic use cases only — avoid implying real schools or brands use the product without proof */
-	const draftUseCases = [
-		'Course papers',
-		'Client emails',
-		'Blog posts',
-		'Proposals',
-		'Documentation',
-		'Marketing copy'
-	];
-
-	const whyHighlights: Array<{ title: string; body: string; icon: string }> = [
-		{
-			title: 'Accuracy you can interpret',
-			body: 'Clear AI likelihood signals—not a vague “score out of 100”—so you know what to revise before you ship.',
-			icon: scanIcon
-		},
-		{
-			title: 'Detector + humanizer together',
-			body: 'Check machine-like rhythm, then rewrite in a natural voice when you need it—one workflow, two focused tools.',
-			icon: scanIcon
-		},
-		{
-			title: 'Privacy-minded by design',
-			body: 'We don’t use your text to train public models. Processing is described in our Privacy Policy.',
-			icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'
-		},
-		{
-			title: 'Honest free limits',
-			body: 'Try detection on the house; upgrade when you want the humanizer, higher caps, and unlimited scans.',
-			icon: 'M12 2v20 M2 12h20'
-		}
-	];
-
-	const audiences: Array<{ title: string; body: string; icon: string }> = [
-		{
-			title: 'Students & researchers',
-			body: 'Tighten course papers and lit reviews so ideas read clearly—after you’ve done the thinking.',
-			icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z M8 7h8 M8 11h8 M8 15h5'
-		},
-		{
-			title: 'SEO & content teams',
-			body: 'Soften stiff AI drafts for blogs and landing pages while keeping facts and structure intact.',
-			icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.27 6.96 12 12.01l8.73-5.05 M12 22.08V12'
-		},
-		{
-			title: 'Job seekers & pros',
-			body: 'Polish cover letters, bios, and client emails so they sound like you—not a template.',
-			icon: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'
-		}
-	];
-
-	let openFaq = $state<number | null>(null);
 
 	const homeFaqs = [
 		{
@@ -280,13 +204,9 @@
 		},
 		{
 			q: 'Do you train on my content?',
-			a: 'No. We don’t use your submissions to train public models. Text is processed to deliver the result; we’re clear about retention in our Privacy Policy.'
+			a: "No. We don't use your submissions to train public models. Text is processed to deliver the result; we're clear about retention in our Privacy Policy."
 		}
 	];
-
-	function toggleFaq(i: number) {
-		openFaq = openFaq === i ? null : i;
-	}
 </script>
 
 <SEO
@@ -296,593 +216,376 @@
 	jsonLd={homeJsonLd}
 />
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     HUB — hero + composer + suggestions
-     (Premium promo banner lives in +layout.svelte under the nav)
-════════════════════════════════════════════════════════════════════════════ -->
-<section
-	style="
-		background: var(--color-bg-base);
-		padding: 40px 24px 56px;
-	"
->
-	<div style="max-width: 920px; margin: 0 auto;">
-		<Reveal delay={0}>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 11px;
-					font-weight: 600;
-					letter-spacing: 0.12em;
-					text-transform: uppercase;
-					color: var(--color-brand);
-					margin: 0 0 12px;
-				"
-			>
-				HumanizeAIWrite
-			</p>
-			<h1
-				style="
-					font-family: 'Newsreader', Georgia, serif;
-					font-size: clamp(32px, 5vw, 46px);
-					line-height: 1.12;
-					font-weight: 600;
-					color: var(--color-text-primary);
-					margin: 0 0 16px;
-					letter-spacing: -0.03em;
-					max-width: 720px;
-				"
-			>
-				Humanize AI text — and check it with a built-in detector
+<!-- ══════════════════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════════════════ -->
+<section class="hero-bg">
+	<div class="hero-container">
+		<!-- Left -->
+		<div class="hero-left">
+			<div class="fade-up hero-badge">✦ AI Humanizer &amp; Detector</div>
+			<h1 class="fade-up d1 hero-h1">
+				<span style="white-space: nowrap;">Humanize AI text.</span><br />Outsmart <span style="color: var(--color-brand)">AI detectors.</span>
 			</h1>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: clamp(15px, 1.9vw, 17px);
-					line-height: 1.55;
-					color: var(--color-text-secondary);
-					margin: 0 0 22px;
-					max-width: 560px;
-				"
-			>
-				Make ChatGPT, Claude, Gemini, Grok, and other AI drafts read more naturally. Paste below, then
-				<strong style="font-weight: 600; color: var(--color-text-primary);">humanize</strong> or
-				<strong style="font-weight: 600; color: var(--color-text-primary);">scan</strong> for AI-like patterns.
+			<p class="fade-up d2 hero-sub">
+				Make AI-generated content sound natural, human, and trustworthy — in seconds.
 			</p>
-			<div class="home-hero-cta-row">
-				<Button variant="primary" size="md" iconRight={heroArrow} onclick={() => goto('/register')}>
-					Try for free
-				</Button>
-				<Button variant="secondary" size="md" onclick={() => openLoginModal()}>Log in</Button>
+			<div class="fade-up d4 hero-cta-row">
+			<button class="btn-primary" onclick={() => (data.user ? goto('/humanize') : openRegisterModal('/humanize'))}>
+				Start writing for free →
+			</button>
+				<button class="btn-outline" onclick={() => document.getElementById('steps')?.scrollIntoView({ behavior: 'smooth' })}>
+					▷ See how it works
+				</button>
 			</div>
-			<div style="height: 28px;" aria-hidden="true"></div>
-		</Reveal>
+		</div>
 
-		<Reveal delay={60}>
-			<div
-				data-card
-				style="
-					background: var(--color-bg-surface);
-					border-radius: 18px;
-					box-shadow: var(--shadow-card);
-					border: 1px solid var(--color-bg-border);
-					overflow: hidden;
-					margin-bottom: 28px;
-				"
-			>
-				<div
-					style="
-						display: flex;
-						align-items: center;
-						justify-content: space-between;
-						gap: 12px;
-						padding: 14px 20px 0;
-						flex-wrap: wrap;
-					"
-				>
-					<span
-						style="
-							font-family: 'Space Grotesk', system-ui, sans-serif;
-							font-size: 13px;
-							font-weight: 600;
-							color: var(--color-text-primary);
-						"
-					>
-						Your text
-					</span>
-					<span
-						class="home-composer-wordcap"
-						style="
-							font-family: 'JetBrains Mono', monospace;
-							font-size: 11px;
-							font-weight: 500;
-							color: {!data.user && homeWordCount > FREE_DETECTION_MAX_WORDS_PER_SCAN * 0.9
-								? 'var(--color-uncertain)'
-								: 'var(--color-text-muted)'};
-						"
-					>
-						{#if !data.user}
-							{homeWordCount.toLocaleString('en-US')} / {FREE_DETECTION_MAX_WORDS_PER_SCAN.toLocaleString(
-								'en-US'
-							)} words
-						{:else}
-							{homeWordCount.toLocaleString('en-US')} words
-						{/if}
-					</span>
+		<!-- Right: floating visual -->
+		<div class="hero-visual">
+			<div class="dot-grid hero-dot-grid"></div>
+			<div class="hero-glow-blob"></div>
+
+			<!-- Top input card -->
+			<div class="soft-card hero-card-top">
+				<div class="card-header">
+					<span>Your text</span>
+					<span>240 / 3,000 words</span>
 				</div>
-				<div style="padding: 10px 20px 8px; min-height: 140px;">
-					<label class="sr-only" for="home-composer">Your text</label>
-					<textarea
-						id="home-composer"
-						class="home-composer-textarea"
-						value={homeInput}
-						placeholder="Paste text, upload a .txt file, then choose AI Detector or Humanizer below"
-						rows="5"
-						aria-describedby={!data.user
-							? 'home-composer-hint home-composer-guest-footer'
-							: 'home-composer-hint'}
-						oninput={onComposerInput}
-						onkeydown={onComposerKeydown}
-						style="
-							width: 100%;
-							min-height: 120px;
-							resize: vertical;
-							border: none;
-							background: transparent;
-							font-family: 'Space Grotesk', system-ui, sans-serif;
-							font-size: 16px;
-							line-height: 1.55;
-							color: var(--color-text-primary);
-							outline: none;
-						"
-					></textarea>
-					<p
-						id="home-composer-hint"
-						style="
-							margin: 10px 0 0;
-							font-family: 'Space Grotesk', system-ui, sans-serif;
-							font-size: 11px;
-							color: var(--color-text-dim);
-							line-height: 1.4;
-						"
-					>
-						<strong style="color: var(--color-text-muted);">Enter</strong> continues to Humanize ·
-						<strong style="color: var(--color-text-muted);">Shift+Enter</strong> new line ·
-						<strong style="color: var(--color-text-muted);">Detector</strong> needs 50+ words
-					</p>
+				<div class="card-body-text">
+					In today's <mark class="mark-ai">rapidly evolving</mark> digital landscape, organizations must
+					continuously adapt to remain competitive, efficient, and relevant. Success is no longer defined
+					solely by the quality of products or services, but by the ability to
+					<mark class="mark-ai">integrate technology, data</mark>, and human insight.
+				</div>
+			</div>
+
+			<!-- Alert badge -->
+			<div class="soft-card hero-alert">
+				AI patterns detected<br />
+				<span style="color: var(--color-ai); opacity: 0.8;">High AI probability</span>
+			</div>
+
+			<!-- Bottom output card -->
+			<div class="soft-card hero-card-bottom">
+				<div class="card-header">
+					<span>Humanized output</span>
+					<span class="chip-human">Human-written</span>
+				</div>
+				<div class="card-body-text">
+					In today's fast-changing digital world, organizations need to stay adaptable, efficient, and
+					relevant to stay ahead. It's not just about offering great products or services anymore—success
+					comes from combining technology, data, and human insight in a way that drives results.
+				</div>
+			</div>
+
+			<!-- Feature bar -->
+			<div class="soft-card hero-feature-bar">
+				<span class="feat-chip">✓ Meaning preserved</span>
+				<span class="feat-chip">✓ Natural phrasing</span>
+				<span class="feat-chip">✓ Bypasses AI detectors</span>
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     TRUST MARQUEE
+══════════════════════════════════════════════════════════════════════ -->
+<section class="trust-marquee-section">
+	<div class="trust-marquee-card soft-card">
+		<p class="trust-marquee-label">Trusted by writers and teams worldwide</p>
+		<div class="marquee-wrap">
+			<div class="marquee-track">
+				<div class="marquee-group">
+					<span class="logo-text">QuillBot</span>
+					<span class="logo-text">turnitin</span>
+					<span class="logo-text">◎ GPTZero</span>
+					<span class="logo-text">Originality.ai</span>
+					<span class="logo-text">Copyleaks</span>
+				</div>
+				<div class="marquee-group">
+					<span class="logo-text">QuillBot</span>
+					<span class="logo-text">turnitin</span>
+					<span class="logo-text">◎ GPTZero</span>
+					<span class="logo-text">Originality.ai</span>
+					<span class="logo-text">Copyleaks</span>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     STEPS — HOW IT WORKS
+══════════════════════════════════════════════════════════════════════ -->
+<section id="steps" class="steps-section" bind:this={stepsEl}>
+	<div class="steps-container">
+		<div class="steps-header reveal">
+			<div>
+				<p class="steps-eyebrow">How it works</p>
+				<h2 class="steps-h2">From AI to Human in 3 simple steps</h2>
+			</div>
+			<button class="btn-primary steps-try-btn" onclick={() => stashAndGoto('/humanize')}>
+				Try it live →
+			</button>
+		</div>
+
+		<div class="steps-grid">
+			<!-- Step 1: Detect -->
+			<div class="step-card reveal" class:detect-active={detectActive}>
+				<div class="step-head">
+					<span class="step-num">1</span>
+					<div>
+						<h3 class="step-title">Detect AI content</h3>
+						<p class="step-desc">Watch the detector analyze the sample text automatically.</p>
+					</div>
 				</div>
 
-				<div
-					style="
-						padding: 10px 12px 16px;
-						display: flex;
-						flex-direction: column;
-						gap: 10px;
-						border-top: 1px solid rgba(16, 185, 129, 0.3);
-						background: var(--color-brand-muted);
-					"
-				>
-					{#if !data.user}
-						<div
-							id="home-composer-guest-footer"
-							style="
-								display: flex;
-								align-items: flex-start;
-								justify-content: space-between;
-								gap: 12px;
-								flex-wrap: wrap;
-							"
-						>
-							<p
-								style="
-									margin: 0;
-									font-family: 'Space Grotesk', system-ui, sans-serif;
-									font-size: 12px;
-									line-height: 1.45;
-									color: var(--color-text-secondary);
-									flex: 1 1 200px;
-								"
-							>
-								<strong style="color: var(--color-text-muted); font-weight: 600;">Guest preview:</strong>
-								up to {FREE_DETECTION_MAX_WORDS_PER_SCAN} words per AI detection scan (same as the detector).
-							</p>
+				<div class="detect-stage">
+					<!-- Placeholder: typing view -->
+					<div class="detect-placeholder soft-card" class:hidden={detectActive}>
+						<p class="card-label">Sample input</p>
+						<div class="typing-box" class:is-typing={isTypingDetect}>{detectTypingText}</div>
+						<div class="step-action-btn">
+							<span>{isTypingDetect ? 'Scanning...' : 'Detecting AI...'}</span>
+						</div>
+					</div>
+
+					<!-- Result view -->
+					<div class="detect-result soft-card" class:hidden={!detectActive}>
+						<div class="detect-result-top">
+							<p class="card-label">AI Detection Result</p>
+							<span class="badge-ai">High AI</span>
+						</div>
+						<div class="detect-result-body">
+							<div class="gauge-wrap">
+								<svg class="gauge-svg" viewBox="0 0 100 100">
+									<circle cx="50" cy="50" r="42" fill="none" stroke="#fee2e2" stroke-width="8" />
+									<circle cx="50" cy="50" r="42" fill="none" stroke="#ef4444" stroke-width="8"
+										stroke-dasharray="264" stroke-dashoffset="26" stroke-linecap="round"
+										transform="rotate(-90 50 50)" />
+								</svg>
+								<div class="gauge-center">
+									<p class="gauge-num">99%</p>
+								</div>
+							</div>
+							<div class="detect-bars">
+								<div>
+									<div class="bar-label">
+										<span>AI-generated</span><span>99%</span>
+									</div>
+									<div class="bar-track"><div class="bar-fill bar-fill-ai" style="width:95%"></div></div>
+								</div>
+								<div>
+									<div class="bar-label">
+										<span>Human-written</span><span>1%</span>
+									</div>
+									<div class="bar-track"><div class="bar-fill bar-fill-human" style="width:5%"></div></div>
+								</div>
+							</div>
+						</div>
+						<div class="detect-note">
+							This text shows strong AI patterns and is highly likely to be generated by AI.
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Arrow -->
+			<div class="step-arrow arrow-animate">→</div>
+
+			<!-- Step 2: Humanize -->
+			<div class="step-card reveal" style="opacity: {humanizeReady ? 1 : 0.55}; transition: opacity .35s ease;">
+				<div class="step-head">
+					<span class="step-num">2</span>
+					<div>
+						<h3 class="step-title">Humanize the text</h3>
+						<p class="step-desc">Once detection is complete, the text is humanized automatically.</p>
+					</div>
+				</div>
+				<div class="soft-card step-demo">
+					{#if !humanizeReady}
+						<div class="waiting-state">
+							<span class="waiting-icon">↳</span>
+							<p class="waiting-text">Waiting for AI detection result...</p>
+						</div>
+					{:else if !humanizeDone}
+						<div class="humanize-active-state">
+							<div>
+								<p class="card-label">Detected text</p>
+								<p class="humanize-input-text">AI-generated content often follows predictable patterns that detectors can easily identify.</p>
+							</div>
+							<div class="step-action-btn mt-auto">Humanizing text...</div>
+						</div>
+					{:else}
+						<div class="humanize-output-state">
+							<p class="card-label" style="color:#059669">Humanized output</p>
+							<div class="typing-box" class:is-typing={isTypingHumanize}>{humanizedDisplayText}</div>
+							<div class="output-chips">
+								<span class="output-chip">✓ Natural tone</span>
+								<span class="output-chip">✓ Meaning preserved</span>
+							</div>
 						</div>
 					{/if}
-					<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-						<input
-							type="file"
-							accept=".txt,text/plain"
-							class="home-file-input"
-							bind:this={fileInputEl}
-							onchange={onFilePick}
-						/>
-						<button
-							type="button"
-							class="hub-pill"
-							title="Load text from a .txt file"
-							aria-label="Load text from a .txt file"
-							onclick={() => fileInputEl?.click()}
-						>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path d="M12 5v14 M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-							</svg>
-							Upload .txt
-						</button>
-						<button type="button" class="hub-pill hub-pill--primary" onclick={() => stashAndGoto('/humanize')}>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path d={shieldIcon} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							</svg>
-							Humanize
-						</button>
-						<button type="button" class="hub-pill" onclick={() => stashAndGoto('/detect')}>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path d={scanIcon} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							</svg>
-							AI Detector
-						</button>
-					<div class="hub-more-wrap" bind:this={moreWrapEl}>
-						<button
-							type="button"
-							class="hub-pill"
-							aria-haspopup="menu"
-							aria-expanded={moreOpen}
-							onclick={(e) => {
-								e.stopPropagation();
-								moreOpen = !moreOpen;
-							}}
-						>
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path d={moreIcon} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-							</svg>
-							More
-						</button>
-						{#if moreOpen}
-							<div
-								class="hub-more-menu"
-								role="menu"
-								style="
-									position: absolute;
-									z-index: 30;
-									right: 0;
-									bottom: calc(100% + 8px);
-									min-width: 200px;
-									padding: 6px;
-									border-radius: 12px;
-									background: var(--color-bg-surface);
-									box-shadow: var(--shadow-dropdown);
-									border: 1px solid var(--color-bg-border);
-								"
-							>
-								<a
-									role="menuitem"
-									href="/dashboard"
-									class="hub-more-link"
-									onclick={() => (moreOpen = false)}>Dashboard</a
-								>
-								<a role="menuitem" href="/activity" class="hub-more-link" onclick={() => (moreOpen = false)}
-									>Activity</a
-								>
-								<a role="menuitem" href="/settings" class="hub-more-link" onclick={() => (moreOpen = false)}
-									>Settings</a
-								>
-								<a role="menuitem" href="/pricing" class="hub-more-link" onclick={() => (moreOpen = false)}
-									>Pricing</a
-								>
-							</div>
-						{/if}
+				</div>
+			</div>
+
+			<!-- Arrow -->
+			<div class="step-arrow arrow-animate">→</div>
+
+			<!-- Step 3: Verify -->
+			<div class="step-card reveal" style="opacity: {verifyReady ? 1 : 0.55}; transition: opacity .35s ease;">
+				<div class="step-head">
+					<span class="step-num">3</span>
+					<div>
+						<h3 class="step-title">Pass AI detectors</h3>
+						<p class="step-desc">After humanizing, the final detector result appears automatically.</p>
 					</div>
+				</div>
+				<div class="soft-card step-demo" style="text-align: center;">
+					{#if !verifyReady}
+						<div class="waiting-state">
+							<span class="waiting-icon">✓</span>
+							<p class="waiting-text">Waiting for humanized text...</p>
+						</div>
+					{:else if !verifyDone}
+						<div class="humanize-active-state">
+							<div>
+								<p class="verify-tool-name">QuillBot <span class="verify-tool-ver">v5.9.1</span></p>
+								<p style="margin-top:20px; font-size:14px; line-height:1.7; color:var(--color-text-secondary); text-align:left">Humanized text is ready. Run a detector check to verify the result.</p>
+							</div>
+							<div class="step-action-btn mt-auto" style="margin-top: auto;">Verifying result...</div>
+						</div>
+					{:else}
+						<div class="verify-output-state">
+							<p class="verify-tool-name" style="text-align:left">QuillBot <span class="verify-tool-ver">v5.9.1</span></p>
+							<div class="verify-gauge-wrap">
+								<svg class="verify-gauge-svg" viewBox="0 0 100 100">
+									<circle cx="50" cy="50" r="45" fill="none" stroke="#ecfdf5" stroke-width="8" />
+									<circle cx="50" cy="50" r="45" fill="none" stroke="#059669" stroke-width="8"
+										stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="283"
+										class="verify-ring" transform="rotate(-90 50 50)" />
+								</svg>
+								<div class="verify-gauge-center">
+									<p class="verify-score">0<span style="font-size:20px">%</span></p>
+								</div>
+							</div>
+							<p style="color:var(--color-text-secondary); margin-top:16px">of text is likely AI</p>
+							<span class="badge-human-written">✓ Human-written</span>
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     FEATURES
+══════════════════════════════════════════════════════════════════════ -->
+<section id="features" class="features-section">
+	<div class="features-container">
+		<Reveal>
+			<div class="features-card">
+				<div class="features-left">
+					<p class="features-eyebrow">Beyond rewriting</p>
+					<h2 class="features-h2">Intelligent writing,<br />built for real results</h2>
+					<p class="features-sub">HumanizeAIWrite goes beyond simple rewriting. It helps you understand, improve, and publish with complete confidence.</p>
+					<button class="btn-white" onclick={() => goto('/pricing')}>Explore all features →</button>
+				</div>
+				<div class="features-grid">
+					<div class="feature-item">
+						<div class="mini-icon mb-5">⌁</div>
+						<h3 class="feature-title">Smart detection</h3>
+						<p class="feature-body">Advanced AI detection with clear breakdowns and actionable insights.</p>
+						<div class="soft-card feature-demo-card">
+							<p style="font-size:12px; font-weight:800; color:var(--color-text-primary)">Signal breakdown</p>
+							<div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+								<div style="height:8px; border-radius:999px; background:#6ee7b7;"></div>
+								<div style="height:8px; border-radius:999px; background:#f87171;"></div>
+								<div style="height:8px; border-radius:999px; background:#fdba74; width:75%;"></div>
+							</div>
+						</div>
+					</div>
+					<div class="feature-item">
+						<div class="mini-icon mb-5">✦</div>
+						<h3 class="feature-title">Natural rewriting</h3>
+						<p class="feature-body">Human-like rewrites that keep your meaning, tone, and intent intact.</p>
+						<div class="soft-card feature-demo-card">
+							<div style="display:flex; flex-direction:column; gap:10px;">
+								<div style="height:12px; border-radius:999px; background:#e2e8f0;"></div>
+								<div style="height:12px; border-radius:999px; background:#e2e8f0; width:91%;"></div>
+								<div style="height:12px; border-radius:999px; background:#6ee7b7; width:66%;"></div>
+								<div style="height:12px; border-radius:999px; background:#a7f3d0; width:83%;"></div>
+							</div>
+						</div>
+					</div>
+					<div class="feature-item">
+						<div class="mini-icon mb-5">✓</div>
+						<h3 class="feature-title">Built for real use</h3>
+						<p class="feature-body">Designed to pass real detectors and protect your integrity.</p>
+						<div class="soft-card feature-demo-card">
+							<p style="font-size:14px; font-weight:700; color:var(--color-text-primary); line-height:2;">
+								✓ Passes AI detectors<br />
+								✓ Meaning preserved<br />
+								✓ Plagiarism safe<br />
+								✓ Privacy focused
+							</p>
+						</div>
 					</div>
 				</div>
 			</div>
 		</Reveal>
+	</div>
+</section>
 
-		<Reveal delay={120}>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 13px;
-					color: var(--color-text-muted);
-					margin: 0 0 14px;
-				"
-			>
-				Quick samples — detection or humanizing:
-			</p>
-			<div class="home-suggestions">
-				{#each suggestions as s}
-					<button
-						type="button"
-						class="suggestion-card hai-hover-lift"
-						onclick={() => stashAndGoto(s.route, s.seed)}
-					>
-						<div style="display: flex; align-items: flex-start; gap: 12px; text-align: left;">
-							<div
-								class="suggestion-icon {s.kind === 'detect'
-									? 'suggestion-icon-detect'
-									: 'suggestion-icon-humanize'}"
-							>
-								{#if s.kind === 'detect'}
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-										<path d={scanIcon} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-									</svg>
-								{:else}
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-										<path
-											d="m15 4-2 2-2-2 M18 7l-2 2-2-2 M21 3v3 M3 21l9-9 M14 7l7 7-4 4-7-7z"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										/>
-									</svg>
-								{/if}
-							</div>
-							<div style="min-width: 0;">
-								<div
-									style="
-										font-family: 'Space Grotesk', system-ui, sans-serif;
-										font-size: 14px;
-										font-weight: 600;
-										color: var(--color-text-primary);
-										margin-bottom: 6px;
-									"
-								>
-									{s.title}
-								</div>
-								<div
-									style="
-										font-family: 'Space Grotesk', system-ui, sans-serif;
-										font-size: 13px;
-										line-height: 1.45;
-										color: var(--color-text-muted);
-										display: -webkit-box;
-										-webkit-line-clamp: 2;
-										-webkit-box-orient: vertical;
-										overflow: hidden;
-									"
-								>
-									{s.sub}
-								</div>
-							</div>
-						</div>
-					</button>
-				{/each}
+<!-- ══════════════════════════════════════════════════════════════════════
+     CTA DARK
+══════════════════════════════════════════════════════════════════════ -->
+<section class="cta-section">
+	<div class="cta-container">
+		<Reveal>
+			<div class="cta-card">
+				<h2 class="cta-h2">Ready to make your writing <span style="color:#6ee7b7">undetectable?</span></h2>
+				<p class="cta-sub">Join thousands of writers who create with AI and publish with confidence.</p>
+			<button class="btn-white" style="margin-top:36px; padding: 16px 40px; font-size:15px;" onclick={() => (data.user ? goto('/humanize') : openRegisterModal('/humanize'))}>
+				Start for free →
+			</button>
+				<p style="margin-top:20px; font-size:14px; color:rgba(255,255,255,.55);">No credit card required</p>
 			</div>
 		</Reveal>
 	</div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     WHY — compact value props
-════════════════════════════════════════════════════════════════════════════ -->
-<section class="home-why-section" style="background: var(--color-bg-base); padding: 0 24px 48px;">
-	<div style="max-width: 1100px; margin: 0 auto;">
-		<Reveal delay={0}>
-			<h2
-				style="
-					font-family: 'Newsreader', Georgia, serif;
-					font-size: clamp(22px, 3vw, 28px);
-					font-weight: 600;
-					color: var(--color-text-primary);
-					margin: 0 0 8px;
-					letter-spacing: -0.02em;
-					text-align: center;
-				"
-			>
-				Why HumanizeAIWrite?
-			</h2>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 14px;
-					color: var(--color-text-muted);
-					margin: 0 auto 28px;
-					max-width: 520px;
-					text-align: center;
-					line-height: 1.5;
-				"
-			>
-				One place to <strong style="font-weight: 600; color: var(--color-text-secondary);">check</strong> and
-				<strong style="font-weight: 600; color: var(--color-text-secondary);">refine</strong> AI-assisted drafts — without a bloated writing suite.
-			</p>
-		</Reveal>
-		<div class="home-why-grid">
-			{#each whyHighlights as w, wi}
-				<Reveal delay={40 + wi * 50}>
-					<div class="home-why-tile hai-hover-lift">
-						<div class="home-why-icon-wrap">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path
-									d={w.icon}
-									stroke="var(--color-brand)"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</div>
-						<h3 class="home-why-tile-title">{w.title}</h3>
-						<p class="home-why-tile-body">{w.body}</p>
-					</div>
-				</Reveal>
-			{/each}
-		</div>
-	</div>
-</section>
-
-<ProductSuccessShowcase variant="marketing" />
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     USE-CASE MARQUEE (no implied customer logos)
-════════════════════════════════════════════════════════════════════════════ -->
-<Reveal delay={400}>
-	<section class="home-marquee-section">
-		<div class="home-marquee-label-wrap">
-			<p class="home-marquee-label">Built for —</p>
-		</div>
-
-		<div class="home-marquee-mask">
-			<div class="home-marquee-track">
-				{#each [draftUseCases, draftUseCases] as group}
-					{#each group as label}
-						<span class="home-marquee-item">{label}</span>
-					{/each}
-				{/each}
-			</div>
-		</div>
-	</section>
-</Reveal>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     WHO IT'S FOR
-════════════════════════════════════════════════════════════════════════════ -->
-<section class="home-audience-section" style="background: var(--color-bg-base); padding: 0 24px 72px;">
-	<div style="max-width: 1100px; margin: 0 auto;">
-		<Reveal delay={0}>
-			<h2
-				style="
-					font-family: 'Newsreader', Georgia, serif;
-					font-size: clamp(26px, 3.5vw, 34px);
-					font-weight: 600;
-					color: var(--color-text-primary);
-					margin: 0 0 10px;
-					letter-spacing: -0.02em;
-					text-align: center;
-				"
-			>
-				Who it’s for
-			</h2>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 14px;
-					line-height: 1.55;
-					color: var(--color-text-muted);
-					margin: 0 auto 32px;
-					max-width: 520px;
-					text-align: center;
-				"
-			>
-				If you use AI as a drafting assistant, we help you <strong style="font-weight: 600; color: var(--color-text-secondary);">verify tone</strong> and
-				<strong style="font-weight: 600; color: var(--color-text-secondary);">tighten prose</strong> before you submit or publish.
-			</p>
-		</Reveal>
-		<div class="home-audience-grid">
-			{#each audiences as aud, ai}
-				<Reveal delay={60 + ai * 80}>
-					<div class="home-audience-card hai-hover-lift">
-						<div class="home-audience-icon">
-							<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path
-									d={aud.icon}
-									stroke="var(--color-brand)"
-									stroke-width="1.75"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</div>
-						<h3 class="home-audience-title">{aud.title}</h3>
-						<p class="home-audience-body">{aud.body}</p>
-					</div>
-				</Reveal>
-			{/each}
-		</div>
-	</div>
-</section>
-
-
+<!-- ══════════════════════════════════════════════════════════════════════
+     PRICING
+══════════════════════════════════════════════════════════════════════ -->
 {#if !isPro}
-	<!-- ═══════════════════════════════════════════════════════════════════════════
-	     PRICING
-	════════════════════════════════════════════════════════════════════════════ -->
-	<section style="
-		background: var(--color-bg-base);
-		padding: 0 48px 96px;
-	">
-		<div style="max-width: 1200px; margin: 0 auto;">
-			<Reveal delay={0}>
+	<section class="pricing-section">
+		<div class="pricing-container">
+			<Reveal>
 				<div style="margin-bottom: 40px; text-align: center;">
-					<h2 style="
-						font-family: 'Newsreader', Georgia, serif;
-						font-size: 40px;
-						font-weight: 400;
-						color: var(--color-text-primary);
-						margin: 0 0 8px;
-						letter-spacing: -0.02em;
-					">Simple pricing.</h2>
-					<p style="
-						font-family: 'Space Grotesk', system-ui, sans-serif;
-						font-size: 15px;
-						color: var(--color-text-secondary);
-						margin: 0 0 24px;
-					"></p>
-
-					<div style="
-						display: inline-flex;
-						padding: 4px;
-						background: var(--color-bg-surface);
-						border: 1px solid var(--color-bg-border);
-						border-radius: 12px;
-						gap: 4px;
-					" role="group" aria-label="Billing cycle">
+					<h2 class="section-h2">Simple pricing.</h2>
+					<div class="billing-toggle" role="group" aria-label="Billing cycle">
 						<button
-							style="
-								padding: 8px 18px;
-								border-radius: 9px;
-								border: none;
-								font-family: 'Space Grotesk', system-ui, sans-serif;
-								font-size: 13px;
-								font-weight: 500;
-								cursor: pointer;
-								transition: background 200ms, color 200ms;
-								background: {billingCycle === 'monthly' ? 'var(--color-bg-elevated)' : 'transparent'};
-								color: {billingCycle === 'monthly' ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
-							"
+							class="billing-btn"
+							class:billing-btn-active={billingCycle === 'monthly'}
 							onclick={() => (billingCycle = 'monthly')}
 							aria-pressed={billingCycle === 'monthly'}
 						>Monthly</button>
 						<button
-							style="
-								display: inline-flex;
-								align-items: center;
-								gap: 7px;
-								padding: 8px 18px;
-								border-radius: 9px;
-								border: none;
-								font-family: 'Space Grotesk', system-ui, sans-serif;
-								font-size: 13px;
-								font-weight: 500;
-								cursor: pointer;
-								transition: background 200ms, color 200ms;
-								background: {billingCycle === 'yearly' ? 'var(--color-bg-elevated)' : 'transparent'};
-								color: {billingCycle === 'yearly' ? 'var(--color-text-primary)' : 'var(--color-text-muted)'};
-							"
+							class="billing-btn billing-btn-yearly"
+							class:billing-btn-active={billingCycle === 'yearly'}
 							onclick={() => (billingCycle = 'yearly')}
 							aria-pressed={billingCycle === 'yearly'}
 						>
 							Yearly
-							<span style="
-								font-size: 10px;
-								font-weight: 700;
-								padding: 2px 7px;
-								border-radius: 99px;
-								background: var(--color-human-muted);
-								color: var(--color-human);
-								border: 1px solid var(--color-human);
-							">Save 20%</span>
+							<span class="save-badge">Save 20%</span>
 						</button>
 					</div>
 				</div>
 			</Reveal>
-
-			<div style="
-				display: grid;
-				grid-template-columns: repeat(3, 1fr);
-				gap: 20px;
-				max-width: 960px;
-				margin: 0 auto;
-				align-items: start;
-			" class="pricing-grid">
+			<div class="pricing-grid">
 				<Reveal delay={0}>
 					<a href="/pricing" style="display: block; text-decoration: none;">
 						<PricingCard plan="basic" {billingCycle} highlighted={false} />
@@ -903,127 +606,30 @@
 	</section>
 {/if}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     TRUST — short reassurance (distinct from feature cards above)
-════════════════════════════════════════════════════════════════════════════ -->
-<section
-	style="
-		background: var(--color-brand-muted);
-		border-top: 1px solid rgba(16, 185, 129, 0.3);
-		padding: 56px 24px 64px;
-	"
->
-	<div style="max-width: 1100px; margin: 0 auto;">
-		<Reveal delay={0}>
-			<h2
-				style="
-					font-family: 'Newsreader', Georgia, serif;
-					font-size: clamp(26px, 3.5vw, 34px);
-					font-weight: 400;
-					color: var(--color-text-primary);
-					margin: 0 0 10px;
-					letter-spacing: -0.02em;
-					text-align: center;
-				"
-			>
-				Built for trust, not tricks
-			</h2>
-			<p
-				style="
-					font-family: 'Space Grotesk', system-ui, sans-serif;
-					font-size: 14px;
-					color: var(--color-text-muted);
-					margin: 0 auto 36px;
-					max-width: 520px;
-					text-align: center;
-					line-height: 1.55;
-				"
-			>
-				Two focused tools — detection and humanizing — with clear limits on Free and no mystery features.
-			</p>
-		</Reveal>
-		<div class="home-trust-badges" aria-label="Policies and payments">
-			<a href="/privacy" class="home-trust-badge home-trust-badge--link">Privacy Policy</a>
-			<a href="/terms" class="home-trust-badge home-trust-badge--link">Terms of Service</a>
-			<span class="home-trust-badge">Secure card payments via Stripe</span>
-			<span class="home-trust-badge">We don’t sell your personal data</span>
-		</div>
-		<div class="home-trust-grid">
-			<Reveal delay={60}>
-				<div class="home-trust-card">
-					<h3 class="home-trust-title">No model training on your text</h3>
-					<p class="home-trust-body">
-						Your submissions aren’t used to train third-party models. We process requests to return a result, not to build a dataset from your work.
-					</p>
-				</div>
-			</Reveal>
-			<Reveal delay={120}>
-				<div class="home-trust-card">
-					<h3 class="home-trust-title">Straightforward limits</h3>
-					<p class="home-trust-body">
-						{#if isPro}
-							Guests and Free accounts stay capped so expectations stay clear. Your Pro plan includes unlimited
-							detection and humanizing while you’re subscribed.
-						{:else}
-							Free and guest usage are capped so expectations stay clear. Upgrade to Pro when you need the humanizer
-							and unlimited detection.
-						{/if}
-					</p>
-				</div>
-			</Reveal>
-			<Reveal delay={180}>
-				<div class="home-trust-card">
-					<h3 class="home-trust-title">Activity when you’re signed in</h3>
-					<p class="home-trust-body">
-						Signed-in users get history and activity to revisit past runs. Guests can still try a preview detection before creating an account.
-					</p>
-				</div>
-			</Reveal>
-		</div>
-	</div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════════════════════
      FAQ
-════════════════════════════════════════════════════════════════════════════ -->
-<section style="background: var(--color-bg-base); padding: 56px 24px 80px;">
-	<div style="max-width: 640px; margin: 0 auto;">
-		<Reveal delay={0}>
-			<h2
-				style="
-					font-family: 'Newsreader', Georgia, serif;
-					font-size: clamp(26px, 3.5vw, 34px);
-					font-weight: 400;
-					color: var(--color-text-primary);
-					margin: 0 0 28px;
-					letter-spacing: -0.02em;
-					text-align: center;
-				"
-			>
-				FAQ
-			</h2>
+══════════════════════════════════════════════════════════════════════ -->
+<section class="faq-section">
+	<div class="faq-container">
+		<Reveal>
+			<h2 class="section-h2" style="text-align:center; margin-bottom:28px;">FAQ</h2>
 		</Reveal>
 		<div style="display: flex; flex-direction: column; gap: 10px;">
 			{#each homeFaqs as item, i}
-				<div class="home-faq-item">
+				<div class="faq-item">
 					<button
 						type="button"
-						class="home-faq-trigger"
+						class="faq-trigger"
 						aria-expanded={openFaq === i}
 						aria-controls="faq-panel-{i}"
 						id="faq-trigger-{i}"
 						onclick={() => toggleFaq(i)}
 					>
-						<span class="home-faq-q">{item.q}</span>
-						<span class="home-faq-chevron" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
+						<span class="faq-q">{item.q}</span>
+						<span class="faq-chevron" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
 					</button>
 					{#if openFaq === i}
-						<div
-							class="home-faq-panel"
-							id="faq-panel-{i}"
-							role="region"
-							aria-labelledby="faq-trigger-{i}"
-						>
+						<div class="faq-panel" id="faq-panel-{i}" role="region" aria-labelledby="faq-trigger-{i}">
 							<p>{item.a}</p>
 						</div>
 					{/if}
@@ -1034,154 +640,1021 @@
 </section>
 
 <style>
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border: 0;
+	/* ─── GLOBAL RESET FOR THIS PAGE ─────────────────────────────────── */
+	:global(body) {
+		background: var(--color-bg-base);
 	}
 
-	.home-file-input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.hub-pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 14px;
-		border-radius: 999px;
-		border: 1px solid var(--color-bg-border);
-		background: var(--color-bg-surface);
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 12.5px;
-		font-weight: 500;
-		color: var(--color-text-secondary);
-		cursor: pointer;
-		transition: background 150ms, border-color 150ms, color 150ms;
-	}
-
-	.hub-pill:hover {
-		background: var(--color-bg-elevated);
-		color: var(--color-text-primary);
-		border-color: var(--color-bg-border-hi);
-	}
-
-	.hub-pill:focus-visible,
-	.home-composer-textarea:focus-visible,
-	.suggestion-card:focus-visible {
-		outline: 2px solid var(--color-brand);
-		outline-offset: 2px;
-	}
-
-	.hub-more-wrap {
-		position: relative;
-		z-index: 2;
-	}
-
-	.hub-more-link {
-		display: block;
-		padding: 9px 12px;
-		border-radius: 8px;
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 13px;
-		font-weight: 500;
-		color: var(--color-text-primary);
-		text-decoration: none;
-		transition: background 120ms;
-	}
-
-	.hub-more-link:hover {
-		background: var(--color-bg-elevated);
-	}
-
-	.suggestion-icon-detect {
-		background: var(--color-ai-muted) !important;
-		color: var(--color-ai) !important;
-	}
-
-	.suggestion-icon-humanize {
-		background: var(--color-brand-muted) !important;
-		color: var(--color-brand) !important;
-	}
-
-	.home-suggestions {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 14px;
-	}
-
-	.suggestion-card {
-		width: 100%;
-		padding: 16px 18px;
-		border-radius: 14px;
+	/* ─── UTILITIES ──────────────────────────────────────────────────── */
+	.soft-card {
 		border: 1px solid var(--color-bg-border);
 		background: var(--color-bg-surface);
 		box-shadow: var(--shadow-card);
-		cursor: pointer;
-		transition: transform 180ms ease, box-shadow 180ms ease;
 	}
 
-	.suggestion-icon {
-		flex-shrink: 0;
-		width: 36px;
-		height: 36px;
-		border-radius: 10px;
+	.mini-icon {
+		width: 34px;
+		height: 34px;
+		display: grid;
+		place-items: center;
+		border-radius: 999px;
 		background: var(--color-brand-muted);
 		color: var(--color-brand);
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		font-weight: 900;
+		flex-shrink: 0;
+		font-size: 14px;
 	}
 
-	.home-trust-grid {
+	.mb-5 {
+		margin-bottom: 20px;
+	}
+
+	.mt-auto {
+		margin-top: auto;
+	}
+
+	.hidden {
+		display: none !important;
+	}
+
+	/* ─── ANIMATIONS ─────────────────────────────────────────────────── */
+	.fade-up {
+		opacity: 0;
+		transform: translateY(22px);
+		animation: fadeUp 0.8s ease forwards;
+	}
+	.d1 { animation-delay: 0.08s; }
+	.d2 { animation-delay: 0.18s; }
+	.d4 { animation-delay: 0.38s; }
+	@keyframes fadeUp {
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	@keyframes floatTop {
+		0%, 100% { transform: translateY(0) rotate(6deg); }
+		50% { transform: translateY(-10px) rotate(6deg); }
+	}
+	@keyframes floatBottom {
+		0%, 100% { transform: translateY(0) rotate(-1deg); }
+		50% { transform: translateY(-12px) rotate(-1deg); }
+	}
+	@keyframes floatBar {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-8px); }
+	}
+	@keyframes alertPulse {
+		0%, 100% { transform: translateY(0) scale(1); }
+		50% { transform: translateY(-6px) scale(1.02); }
+	}
+	@keyframes marqueeAnim {
+		from { transform: translateX(0); }
+		to { transform: translateX(-50%); }
+	}
+	@keyframes arrowMove {
+		0%, 100% { transform: translateX(0); opacity: 0.55; }
+		50% { transform: translateX(8px); opacity: 1; }
+	}
+	@keyframes blink {
+		50% { opacity: 0; }
+	}
+	@keyframes ringDraw {
+		to { stroke-dashoffset: 0; }
+	}
+
+	/* ─── HERO ───────────────────────────────────────────────────────── */
+	.hero-bg {
+		background:
+			radial-gradient(circle at 78% 32%, rgba(16, 185, 129, 0.15), transparent 28%),
+			radial-gradient(circle at 85% 44%, rgba(16, 185, 129, 0.10), transparent 18%),
+			var(--color-bg-base);
+		position: relative;
+		overflow: hidden;
+		padding: 80px 32px 96px;
+	}
+
+	.hero-container {
+		max-width: 1180px;
+		margin: 0 auto;
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 18px;
+		grid-template-columns: 1fr 1.04fr;
+		align-items: center;
+		gap: 64px;
 	}
 
-	.home-trust-card {
-		background: var(--color-bg-surface);
-		border-radius: 14px;
-		padding: 22px 20px;
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		height: 100%;
+	.hero-left {
+		min-width: 0;
 	}
 
-	.home-trust-title {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 15px;
+	.hero-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		border-radius: 999px;
+		background: var(--color-brand-muted);
+		padding: 8px 16px;
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--color-brand);
+		margin-bottom: 28px;
+	}
+
+	.hero-h1 {
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: clamp(36px, 9.5vw, 64px);
+		line-height: 1.05;
 		font-weight: 700;
 		color: var(--color-text-primary);
-		margin: 0 0 10px;
-		letter-spacing: -0.01em;
+		margin: 0 0 32px;
+		letter-spacing: -0.045em;
+		overflow: visible;
 	}
 
-	.home-trust-body {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
+	@media (min-width: 640px) {
+		.hero-h1 {
+			font-size: 64px;
+			line-height: 0.98;
+		}
+	}
+
+	.hero-sub {
+		font-size: 18px;
+		line-height: 2;
+		color: var(--color-text-secondary);
+		margin: 0 0 36px;
+		max-width: 560px;
+		font-weight: 400;
+	}
+
+	.hero-cta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+		margin-bottom: 40px;
+	}
+
+	.btn-primary {
+		border-radius: 12px;
+		background: var(--color-brand);
+		padding: 14px 28px;
+		font-weight: 900;
+		font-size: 14px;
+		color: #fff;
+		border: none;
+		cursor: pointer;
+		box-shadow: 0 20px 40px var(--color-brand-glow);
+		transition: filter 150ms;
+		font-family: inherit;
+	}
+	.btn-primary:hover { filter: brightness(1.07); }
+
+	.btn-outline {
+		border-radius: 12px;
+		border: 1px solid var(--color-bg-border);
+		background: var(--color-bg-surface);
+		padding: 14px 28px;
+		font-weight: 900;
+		font-size: 14px;
+		color: var(--color-text-primary);
+		cursor: pointer;
+		box-shadow: var(--shadow-card);
+		transition: background 150ms;
+		font-family: inherit;
+	}
+	.btn-outline:hover { background: var(--color-bg-elevated); }
+
+	.btn-white {
+		border-radius: 12px;
+		background: var(--color-bg-surface);
+		padding: 16px 28px;
+		font-weight: 900;
+		font-size: 14px;
+		color: var(--color-text-primary);
+		border: none;
+		cursor: pointer;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		transition: filter 150ms;
+		font-family: inherit;
+	}
+	.btn-white:hover { filter: brightness(0.97); }
+
+	/* ─── HERO VISUAL ─────────────────────────────────────────────────── */
+	.hero-visual {
+		position: relative;
+		min-height: 610px;
+		overflow: visible;
+	}
+
+	.hero-dot-grid {
+		position: absolute;
+		right: -12px;
+		top: 190px;
+		height: 330px;
+		width: 300px;
+		opacity: 0.7;
+		background-image: radial-gradient(rgba(5, 150, 105, 0.22) 1px, transparent 1px);
+		background-size: 12px 12px;
+		border: none !important;
+		box-shadow: none !important;
+		background-color: transparent !important;
+	}
+
+	.hero-glow-blob {
+		position: absolute;
+		right: 60px;
+		top: 40px;
+		height: 520px;
+		width: 520px;
+		border-radius: 50%;
+		background: var(--color-brand-glow);
+		filter: blur(64px);
+		pointer-events: none;
+	}
+
+	.hero-card-top {
+		position: absolute;
+		right: 30px;
+		top: 0;
+		z-index: 10;
+		width: 455px;
+		border-radius: 24px;
+		padding: 24px;
+		animation: floatTop 5.8s ease-in-out infinite;
+	}
+
+	.hero-alert {
+		position: absolute;
+		right: 460px;
+		top: 260px;
+		z-index: 25;
+		width: 190px;
+		border-radius: 18px;
+		padding: 20px;
+		border-color: var(--color-ai-muted) !important;
+		background: var(--color-bg-surface) !important;
+		font-size: 12px;
+		font-weight: 900;
+		color: var(--color-ai);
+		animation: alertPulse 2.8s ease-in-out infinite;
+		line-height: 1.5;
+	}
+
+	.hero-card-bottom {
+		position: absolute;
+		right: 0;
+		top: 285px;
+		z-index: 40;
+		width: 500px;
+		border-radius: 24px;
+		padding: 24px;
+		animation: floatBottom 6.8s ease-in-out infinite;
+	}
+
+	.hero-feature-bar {
+		position: absolute;
+		right: 0;
+		bottom: -20px;
+		width: 500px;
+		z-index: 30;
+		border-radius: 16px;
+		padding: 12px 20px;
+		animation: floatBar 6.2s ease-in-out infinite;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 10px;
+		align-items: center;
+		background: var(--color-bg-surface) !important;
+		box-shadow: var(--shadow-card) !important;
+	}
+
+	.card-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 16px;
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--color-text-muted);
+	}
+
+	.chip-human {
+		border-radius: 999px;
+		background: var(--color-brand-muted);
+		padding: 4px 12px;
+		color: var(--color-brand);
+		font-weight: 800;
+		font-size: 11px;
+	}
+
+	.card-body-text {
+		border-radius: 16px;
+		border: 1px solid var(--color-bg-border);
+		background: var(--color-bg-elevated);
+		padding: 24px;
+		font-size: 13px;
+		font-weight: 600;
+		line-height: 2;
+		color: var(--color-text-secondary);
+	}
+
+	.mark-ai {
+		border-radius: 4px;
+		background: var(--color-ai-muted);
+		padding: 0 4px;
+		color: var(--color-ai);
+	}
+
+	.feat-chip {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		white-space: nowrap;
+		border-radius: 999px;
+		background: var(--color-brand-muted);
+		padding: 8px 12px;
+		font-size: 11px;
+		font-weight: 900;
+		color: var(--color-brand);
+	}
+
+	/* ─── TRUST MARQUEE ──────────────────────────────────────────────── */
+	.trust-marquee-section {
+		max-width: 1180px;
+		margin: -32px auto 0;
+		position: relative;
+		z-index: 10;
+		padding: 0 32px;
+	}
+
+	.trust-marquee-card {
+		border-radius: 20px;
+		padding: 32px;
+		text-align: center;
+	}
+
+	.trust-marquee-label {
+		margin: 0 0 28px;
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--color-text-muted);
+	}
+
+	.marquee-wrap {
+		overflow: hidden;
+		-webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+		mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+	}
+
+	.marquee-track {
+		display: flex;
+		width: max-content;
+		animation: marqueeAnim 22s linear infinite;
+		will-change: transform;
+	}
+
+	.marquee-group {
+		display: flex;
+		align-items: center;
+		gap: 72px;
+		padding-right: 72px;
+		flex-shrink: 0;
+	}
+
+	.logo-text {
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 22px;
+		font-weight: 900;
+		color: var(--color-text-primary);
+		white-space: nowrap;
+	}
+
+	/* ─── STEPS ──────────────────────────────────────────────────────── */
+	.steps-section {
+		padding: 112px 32px;
+	}
+
+	.steps-container {
+		max-width: 1180px;
+		margin: 0 auto;
+	}
+
+	.steps-header {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: 20px;
+		margin-bottom: 64px;
+	}
+
+	@media (min-width: 768px) {
+		.steps-header {
+			flex-direction: row;
+			align-items: flex-end;
+			justify-content: space-between;
+			text-align: left;
+		}
+	}
+
+	.steps-eyebrow {
+		margin: 0 0 8px;
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--color-brand);
+	}
+
+	.steps-h2 {
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: clamp(28px, 3.6vw, 40px);
+		line-height: 1.05;
+		font-weight: 700;
+		color: var(--color-text-primary);
+		margin: 0;
+		letter-spacing: -0.03em;
+	}
+
+	.steps-try-btn {
+		white-space: nowrap;
+		align-self: flex-end;
+	}
+
+	.steps-grid {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr auto 1fr;
+		gap: 0 48px;
+		align-items: stretch;
+	}
+
+	.step-card {
+		display: flex;
+		flex-direction: column;
+		min-height: 430px;
+		border-radius: 24px;
+		transition: transform 0.25s ease, filter 0.25s ease;
+	}
+
+	.step-card:hover {
+		transform: translateY(-4px);
+		filter: drop-shadow(0 14px 24px rgba(15, 23, 42, 0.055));
+	}
+
+	.step-head {
+		display: flex;
+		align-items: center;
+		gap: 20px;
+		margin-bottom: 20px;
+	}
+
+	.step-num {
+		display: grid;
+		width: 48px;
+		height: 48px;
+		flex-shrink: 0;
+		place-items: center;
+		border-radius: 50%;
+		background: var(--color-brand-muted);
+		font-size: 20px;
+		font-weight: 900;
+		color: var(--color-brand);
+	}
+
+	.step-title {
+		font-size: 20px;
+		font-weight: 900;
+		color: var(--color-text-primary);
+		margin: 0 0 8px;
+	}
+
+	.step-desc {
+		margin: 0;
 		font-size: 13px;
 		line-height: 1.6;
 		color: var(--color-text-secondary);
+	}
+
+	.step-demo {
+		flex: 1;
+		border-radius: 20px;
+		padding: 32px;
+		display: flex;
+		flex-direction: column;
+		min-height: 270px;
+	}
+
+	.step-arrow {
+		display: none;
+		padding-top: 176px;
+		font-size: 36px;
+		color: var(--color-text-muted);
+		animation: arrowMove 1.6s infinite ease-in-out;
+		align-self: flex-start;
+	}
+
+	.arrow-animate {
+		animation: arrowMove 1.6s infinite ease-in-out;
+	}
+
+	/* Detect stage */
+	.detect-stage {
+		position: relative;
+		flex: 1;
+		min-height: 270px;
+	}
+
+	.detect-placeholder,
+	.detect-result {
+		border-radius: 20px;
+		padding: 28px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.detect-placeholder {
+		position: absolute;
+		inset: 0;
+		transition: opacity 0.45s ease, transform 0.45s ease;
+	}
+
+	.detect-result {
+		position: absolute;
+		inset: 0;
+		transition: opacity 0.45s ease, transform 0.45s ease;
+	}
+
+	.card-label {
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-muted);
+		margin: 0 0 20px;
+	}
+
+	.typing-box {
+		font-size: 13px;
+		font-weight: 500;
+		line-height: 1.75;
+		color: var(--color-text-secondary);
+		flex: 1;
+	}
+
+	.typing-box.is-typing::after {
+		content: '';
+		display: inline-block;
+		width: 2px;
+		height: 1.1em;
+		margin-left: 3px;
+		vertical-align: -2px;
+		background: var(--color-brand);
+		animation: blink 0.85s steps(1) infinite;
+	}
+
+	.step-action-btn {
+		display: inline-flex;
+		border-radius: 12px;
+		background: var(--color-brand);
+		padding: 12px 24px;
+		font-size: 13px;
+		font-weight: 900;
+		color: #fff;
+		box-shadow: 0 8px 20px var(--color-brand-glow);
+		margin-top: 32px;
+		cursor: default;
+	}
+
+	.detect-result-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0;
+	}
+
+	.badge-ai {
+		border-radius: 999px;
+		background: var(--color-ai-muted);
+		padding: 4px 12px;
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--color-ai);
+	}
+
+	.detect-result-body {
+		display: flex;
+		align-items: center;
+		gap: 24px;
+		margin-top: 24px;
+	}
+
+	.gauge-wrap {
+		position: relative;
+		width: 96px;
+		height: 96px;
+		flex-shrink: 0;
+	}
+
+	.gauge-svg {
+		width: 96px;
+		height: 96px;
+	}
+
+	.gauge-center {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+	}
+
+	.gauge-num {
+		font-size: 24px;
+		font-weight: 900;
+		color: var(--color-ai);
 		margin: 0;
 	}
 
-	.home-faq-item {
+	.detect-bars {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.bar-label {
+		display: flex;
+		justify-content: space-between;
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--color-text-muted);
+		margin-bottom: 8px;
+	}
+
+	.bar-track {
+		height: 8px;
+		border-radius: 999px;
+		background: var(--color-bg-elevated);
+		overflow: hidden;
+	}
+
+	.bar-fill {
+		height: 100%;
+		border-radius: 999px;
+	}
+
+	.bar-fill-ai { background: var(--color-ai); }
+	.bar-fill-human { background: var(--color-brand); }
+
+	.detect-note {
+		margin-top: 24px;
+		border-radius: 12px;
+		background: var(--color-bg-elevated);
+		padding: 16px;
+		font-size: 12px;
+		color: var(--color-text-secondary);
+		line-height: 1.5;
+	}
+
+	/* Humanize step */
+	.waiting-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+		height: 100%;
+		flex: 1;
+	}
+
+	.waiting-icon {
+		display: grid;
+		width: 56px;
+		height: 56px;
+		place-items: center;
+		border-radius: 50%;
+		background: var(--color-bg-elevated);
+		font-size: 24px;
+		color: var(--color-text-muted);
+	}
+
+	.waiting-text {
+		margin: 20px 0 0;
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--color-text-muted);
+	}
+
+	.humanize-active-state {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.humanize-input-text {
+		margin: 16px 0 0;
+		font-size: 13px;
+		line-height: 1.75;
+		color: var(--color-text-secondary);
+	}
+
+	.humanize-output-state {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.output-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 24px;
+	}
+
+	.output-chip {
+		display: inline-flex;
+		align-items: center;
+		border-radius: 999px;
+		background: var(--color-brand-muted);
+		padding: 8px 12px;
+		font-size: 11px;
+		font-weight: 900;
+		color: var(--color-brand);
+	}
+
+	/* Verify step */
+	.verify-tool-name {
+		font-size: 20px;
+		font-weight: 900;
+		color: var(--color-brand);
+		margin: 0;
+	}
+
+	.verify-tool-ver {
+		font-size: 11px;
+		color: var(--color-text-muted);
+		font-weight: 400;
+	}
+
+	.verify-output-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.verify-gauge-wrap {
+		position: relative;
+		width: 144px;
+		height: 144px;
+		margin-top: 32px;
+	}
+
+	.verify-gauge-svg {
+		width: 144px;
+		height: 144px;
+	}
+
+	.verify-ring {
+		animation: ringDraw 1s ease forwards;
+	}
+
+	.verify-gauge-center {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
+	}
+
+	.verify-score {
+		font-size: 48px;
+		font-weight: 900;
+		color: var(--color-brand);
+		margin: 0;
+	}
+
+	.badge-human-written {
+		display: inline-flex;
+		border-radius: 999px;
+		background: var(--color-brand-muted);
+		padding: 12px 20px;
+		font-size: 13px;
+		font-weight: 900;
+		color: var(--color-brand);
+		margin-top: 24px;
+	}
+
+	/* ─── FEATURES ───────────────────────────────────────────────────── */
+	.features-section {
+		padding: 0 32px 96px;
+	}
+
+	.features-container {
+		max-width: 1180px;
+		margin: 0 auto;
+	}
+
+	.features-card {
+		display: grid;
+		grid-template-columns: 1fr 2fr;
+		gap: 40px;
+		border-radius: 28px;
+		border: 1px solid var(--color-brand-muted);
+		background: var(--color-brand-muted);
+		padding: 40px;
+		align-items: start;
+	}
+
+	.features-left {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.features-eyebrow {
+		margin: 0 0 16px;
+		font-size: 11px;
+		font-weight: 900;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--color-brand);
+	}
+
+	.features-h2 {
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 36px;
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--color-text-primary);
+		margin: 0 0 20px;
+		letter-spacing: -0.025em;
+	}
+
+	.features-sub {
+		margin: 0 0 32px;
+		max-width: 320px;
+		line-height: 1.75;
+		color: var(--color-text-secondary);
+		font-size: 14px;
+	}
+
+	.features-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 24px;
+	}
+
+	.feature-item {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.feature-title {
+		font-size: 15px;
+		font-weight: 900;
+		color: var(--color-text-primary);
+		margin: 0 0 12px;
+	}
+
+	.feature-body {
+		margin: 0 0 24px;
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--color-text-secondary);
+	}
+
+	.feature-demo-card {
+		border-radius: 16px;
+		padding: 20px;
+		margin-top: auto;
+	}
+
+	/* ─── CTA ────────────────────────────────────────────────────────── */
+	.cta-section {
+		padding: 0 32px 64px;
+	}
+
+	.cta-container {
+		max-width: 1180px;
+		margin: 0 auto;
+	}
+
+	.cta-card {
+		border-radius: 28px;
+		background: #063f32;
+		padding: 56px 32px;
+		text-align: center;
+		color: #fff;
+		box-shadow: 0 32px 80px rgba(6, 63, 50, 0.2);
+	}
+
+	.cta-h2 {
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: clamp(28px, 4vw, 48px);
+		font-weight: 700;
+		margin: 0;
+		letter-spacing: -0.025em;
+		line-height: 1.1;
+	}
+
+	.cta-sub {
+		margin: 20px auto 0;
+		max-width: 540px;
+		color: rgba(255, 255, 255, 0.75);
+		font-size: 15px;
+		line-height: 1.6;
+	}
+
+	/* ─── PRICING ────────────────────────────────────────────────────── */
+	.pricing-section {
+		padding: 0 48px 96px;
+	}
+
+	.pricing-container {
+		max-width: 1200px;
+		margin: 0 auto;
+	}
+
+	.section-h2 {
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 36px;
+		font-weight: 700;
+		color: var(--color-text-primary);
+		margin: 0 0 24px;
+		letter-spacing: -0.025em;
+	}
+
+	.billing-toggle {
+		display: inline-flex;
+		padding: 4px;
+		background: var(--color-bg-elevated);
+		border: 1px solid var(--color-bg-border);
+		border-radius: 12px;
+		gap: 4px;
+		margin-top: 8px;
+	}
+
+	.billing-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 8px 18px;
+		border-radius: 9px;
+		border: none;
+		font-family: inherit;
+		font-size: 13px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 200ms, color 200ms;
+		background: transparent;
+		color: var(--color-text-muted);
+	}
+
+	.billing-btn-active {
+		background: var(--color-bg-surface) !important;
+		color: var(--color-text-primary) !important;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+	}
+
+	.save-badge {
+		font-size: 10px;
+		font-weight: 700;
+		padding: 2px 7px;
+		border-radius: 99px;
+		background: var(--color-brand-muted);
+		color: var(--color-brand);
+		border: 1px solid var(--color-brand);
+	}
+
+	.pricing-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+		max-width: 960px;
+		margin: 0 auto;
+		align-items: start;
+	}
+
+	/* ─── FAQ ────────────────────────────────────────────────────────── */
+	.faq-section {
+		padding: 56px 24px 80px;
+	}
+
+	.faq-container {
+		max-width: 640px;
+		margin: 0 auto;
+	}
+
+	.faq-item {
 		border-radius: 12px;
 		background: var(--color-bg-surface);
 		box-shadow: inset 0 0 0 1px var(--color-bg-border);
 		overflow: hidden;
 	}
 
-	.home-faq-trigger {
+	.faq-trigger {
 		width: 100%;
 		display: flex;
 		align-items: center;
@@ -1197,244 +1670,115 @@
 		transition: background 120ms ease;
 	}
 
-	.home-faq-trigger:hover {
-		background: var(--color-bg-elevated);
-	}
+	.faq-trigger:hover { background: var(--color-bg-elevated); }
 
-	.home-faq-trigger:focus-visible {
-		outline: 2px solid var(--color-brand);
-		outline-offset: -2px;
-	}
-
-	.home-faq-q {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
+	.faq-q {
+		font-family: inherit;
 		font-size: 14px;
 		font-weight: 600;
 		line-height: 1.4;
 	}
 
-	.home-faq-chevron {
+	.faq-chevron {
 		flex-shrink: 0;
-		font-family: 'JetBrains Mono', monospace;
 		font-size: 18px;
 		font-weight: 600;
 		color: var(--color-text-muted);
 		line-height: 1;
 	}
 
-	.home-faq-panel {
+	.faq-panel {
 		padding: 0 18px 16px;
-		border-top: 1px solid var(--color-divider);
+		border-top: 1px solid var(--color-bg-border);
 	}
 
-	.home-faq-panel p {
+	.faq-panel p {
 		margin: 0;
 		padding-top: 12px;
-		font-family: 'Space Grotesk', system-ui, sans-serif;
 		font-size: 13px;
 		line-height: 1.65;
 		color: var(--color-text-secondary);
 	}
 
-	/* Marquee — align label with main column; consistent horizontal padding */
-	.home-marquee-section {
-		background: var(--color-bg-base);
-		padding: 28px 24px 64px;
-		overflow: hidden;
+	/* ─── RESPONSIVE ─────────────────────────────────────────────────── */
+	@media (min-width: 1025px) {
+		.step-arrow { display: block; }
 	}
 
-	.home-marquee-label-wrap {
-		max-width: 920px;
-		margin: 0 auto;
-		padding: 0 0 20px;
-		box-sizing: border-box;
+	@media (max-width: 1100px) {
+		.hero-bg { padding-left: 24px; padding-right: 24px; }
+		.hero-card-top { right: 70px; width: 420px; }
+		.hero-card-bottom { right: 40px; top: 270px; width: 450px; }
+		.hero-alert { right: 410px; top: 135px; }
+		.hero-feature-bar { left: 70px; right: 55px; bottom: 0; }
 	}
 
-	.home-marquee-label {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--color-text-dim);
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		margin: 0;
-		text-align: center;
-		line-height: 1.4;
-	}
-
-	.home-marquee-mask {
-		position: relative;
-		overflow: hidden;
-		margin: 0 -24px;
-		padding: 12px 0 8px;
-		mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-		-webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-	}
-
-	.home-marquee-track {
-		display: flex;
-		gap: 56px;
-		animation: hai-marquee 40s linear infinite;
-		width: max-content;
-	}
-
-	.home-marquee-item {
-		font-family: 'Newsreader', Georgia, serif;
-		font-size: clamp(18px, 2.5vw, 22px);
-		font-style: italic;
-		color: var(--color-text-muted);
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-
-	.home-hero-cta-row {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.hub-pill--primary {
-		background: var(--color-brand) !important;
-		color: #fff !important;
-		border-color: var(--color-brand) !important;
-		font-weight: 600;
-	}
-
-	.hub-pill--primary:hover {
-		filter: brightness(1.06);
-		color: #fff !important;
-	}
-
-	.home-why-grid {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 16px;
-	}
-
-	.home-why-tile {
-		background: var(--color-bg-surface);
-		border-radius: 14px;
-		padding: 20px 18px;
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		height: 100%;
-	}
-
-	.home-why-icon-wrap {
-		width: 40px;
-		height: 40px;
-		border-radius: 10px;
-		background: var(--color-brand-muted);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-bottom: 14px;
-	}
-
-	.home-why-tile-title {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 15px;
-		font-weight: 700;
-		color: var(--color-text-primary);
-		margin: 0 0 8px;
-		letter-spacing: -0.01em;
-	}
-
-	.home-why-tile-body {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 13px;
-		line-height: 1.55;
-		color: var(--color-text-secondary);
-		margin: 0;
-	}
-
-	.home-audience-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 20px;
-	}
-
-	.home-audience-card {
-		background: var(--color-bg-surface);
-		border-radius: 14px;
-		padding: 24px 22px;
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-		height: 100%;
-	}
-
-	.home-audience-icon {
-		width: 44px;
-		height: 44px;
-		border-radius: 12px;
-		background: var(--color-brand-muted);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-bottom: 16px;
-	}
-
-	.home-audience-title {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 16px;
-		font-weight: 700;
-		color: var(--color-text-primary);
-		margin: 0 0 10px;
-	}
-
-	.home-audience-body {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 14px;
-		line-height: 1.6;
-		color: var(--color-text-secondary);
-		margin: 0;
-	}
-
-	.home-trust-badges {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 10px;
-		margin: 0 auto 32px;
-		max-width: 900px;
-	}
-
-	.home-trust-badge {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 12px;
-		font-weight: 500;
-		color: var(--color-text-secondary);
-		padding: 8px 14px;
-		border-radius: 999px;
-		background: var(--color-bg-surface);
-		box-shadow: inset 0 0 0 1px var(--color-bg-border);
-	}
-
-	a.home-trust-badge--link {
-		text-decoration: none;
-		color: var(--color-text-primary);
-		transition: background 150ms ease, box-shadow 150ms ease;
-	}
-
-	a.home-trust-badge--link:hover {
-		background: var(--color-bg-elevated);
-		box-shadow: inset 0 0 0 1px var(--color-bg-border-hi);
+	@media (max-width: 1024px) {
+		.steps-grid {
+			grid-template-columns: 1fr;
+			gap: 32px;
+		}
+		.step-arrow { display: none !important; }
+		.step-card { min-height: auto; }
 	}
 
 	@media (max-width: 900px) {
-		.pricing-grid {
-			grid-template-columns: 1fr !important;
+		.hero-container {
+			grid-template-columns: 1fr;
+			gap: 0;
 		}
-		.home-suggestions {
+		.hero-visual {
+			min-height: 620px;
+			transform: scale(0.92);
+			transform-origin: top center;
+			margin-bottom: -40px;
+		}
+		.hero-card-top { right: 48px; top: 0; width: 420px; }
+		.hero-card-bottom { right: 24px; top: 285px; width: 455px; }
+		.hero-alert { right: 395px; top: 130px; width: 180px; }
+		.hero-feature-bar { left: 54px; right: 36px; bottom: 20px; }
+		.features-card {
 			grid-template-columns: 1fr;
 		}
-		.home-trust-grid {
-			grid-template-columns: 1fr;
+		.features-grid { grid-template-columns: 1fr; }
+		.pricing-grid { grid-template-columns: 1fr !important; }
+	}
+
+	@media (max-width: 640px) {
+		.hero-bg { padding: 40px 16px 48px; }
+		.hero-h1 { font-size: clamp(34px, 9.5vw, 48px); }
+		.hero-visual {
+			min-height: auto;
+			transform: none;
+			display: flex;
+			flex-direction: column;
+			gap: 14px;
+			margin: 44px 0 0;
 		}
-		.home-why-grid {
-			grid-template-columns: 1fr !important;
+		.hero-dot-grid,
+		.hero-glow-blob { display: none; }
+		.hero-card-top,
+		.hero-alert,
+		.hero-card-bottom,
+		.hero-feature-bar {
+			position: relative;
+			inset: auto;
+			right: auto;
+			left: auto;
+			top: auto;
+			bottom: auto;
+			width: 100%;
+			animation: none;
+			transform: none !important;
 		}
-		.home-audience-grid {
-			grid-template-columns: 1fr !important;
-		}
+		.hero-card-top { order: 1; border-radius: 20px; }
+		.hero-alert { order: 2; width: 86%; margin-left: 6%; }
+		.hero-card-bottom { order: 3; border-radius: 20px; }
+		.hero-feature-bar { order: 4; justify-content: flex-start; }
+		.steps-section { padding: 72px 16px; }
+		.features-section,
+		.cta-section { padding-left: 16px; padding-right: 16px; }
+		.trust-marquee-section { padding: 0 16px; }
+		.marquee-group { gap: 44px; padding-right: 44px; }
 	}
 </style>

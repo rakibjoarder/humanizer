@@ -7,7 +7,9 @@
 	import { goto, invalidate } from '$app/navigation';
 	import type { AuthChangeEvent } from '@supabase/supabase-js';
 	import LoginModal from '$lib/components/LoginModal.svelte';
+	import RegisterModal from '$lib/components/RegisterModal.svelte';
 	import { loginModalOpen, loginModalRedirect, closeLoginModal, openLoginModal } from '$lib/stores/loginModal';
+	import { registerModalOpen, registerModalRedirect, closeRegisterModal } from '$lib/stores/registerModal';
 
 	let { data, children } = $props();
 	let supabase = $derived(data.supabase);
@@ -66,5 +68,13 @@
 		variant="modal"
 		redirectAfter={$loginModalRedirect}
 		onClose={closeLoginModal}
+	/>
+{/if}
+
+{#if $registerModalOpen}
+	<RegisterModal
+		{supabase}
+		redirectAfter={$registerModalRedirect}
+		onClose={closeRegisterModal}
 	/>
 {/if}

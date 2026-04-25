@@ -3,6 +3,7 @@
 	import { goto, invalidate } from '$app/navigation';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import Logo from '$lib/components/Logo.svelte';
+	import { openRegisterModal } from '$lib/stores/registerModal';
 
 	type Variant = 'modal' | 'page';
 
@@ -86,8 +87,12 @@
 	}
 
 	function goRegister() {
-		if (isModal) onClose?.();
-		goto('/register');
+		if (isModal) {
+			onClose?.();
+			openRegisterModal(safeRedirect);
+		} else {
+			goto('/register');
+		}
 	}
 
 	const inputStyle = `

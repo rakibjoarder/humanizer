@@ -7,6 +7,7 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { openLoginModal } from '$lib/stores/loginModal';
+	import { openRegisterModal } from '$lib/stores/registerModal';
 
 	let { data, children } = $props();
 
@@ -71,8 +72,6 @@
 	const planBorder = $derived(
 		profile?.plan === 'free' ? 'var(--color-bg-border)' : 'var(--color-brand)'
 	);
-
-	/** Yearly Pro ≈ $99 → monthly equivalent for promo strip */
 
 	/** Home promo: guests + Free only */
 	const showHomePromoBanner = $derived(
@@ -163,7 +162,7 @@
 				<NavUserMenu {supabase} {user} {profile} />
 			{:else}
 				<Button variant="ghost" size="sm" onclick={() => openLoginModal()}>Sign in</Button>
-				<Button variant="primary" size="sm" iconRight={arrowR} onclick={() => goto('/register')}>Get started</Button>
+				<Button variant="primary" size="sm" iconRight={arrowR} onclick={() => openRegisterModal()}>Get started</Button>
 			{/if}
 
 			<button
@@ -264,11 +263,11 @@
 						}}
 						style="display: block; width: 100%; padding: 11px 16px; text-align: center; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: var(--color-text-secondary); background: var(--color-bg-elevated); border-radius: 9px; box-shadow: inset 0 0 0 1px var(--color-bg-border); border: none; cursor: pointer;"
 					>Sign in</button>
-					<a
-						href="/register"
-						onclick={() => (mobileOpen = false)}
-						style="display: block; padding: 11px 16px; text-align: center; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: white; text-decoration: none; background: var(--color-brand); border-radius: 9px;"
-					>Get started</a>
+				<button
+					type="button"
+					onclick={() => { mobileOpen = false; openRegisterModal(); }}
+					style="display: block; width: 100%; padding: 11px 16px; text-align: center; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; color: white; background: var(--color-brand); border-radius: 9px; border: none; cursor: pointer;"
+				>Get started</button>
 				</div>
 			{/if}
 		</div>
@@ -281,26 +280,35 @@
 <!-- ── FOOTER ── -->
 <footer class="marketing-footer">
 	<div class="marketing-footer-grid">
+		<!-- Brand -->
 		<div class="marketing-footer-brand">
-			<Logo size={24} onclick={() => goto('/')} />
+			<div class="footer-brand-logo" role="button" tabindex="0" onclick={() => goto('/')} onkeydown={(e) => e.key === 'Enter' && goto('/')}>
+				<div class="footer-brand-icon">H</div>
+				<span class="footer-brand-name">HumanizeAI<span style="color:#059669">Write</span></span>
+			</div>
 			<p class="marketing-footer-tagline">
-				AI detection and humanizing — built for drafts you stand behind.
+				Make AI-generated content sound natural, human, and trustworthy.
 			</p>
 		</div>
 
+		<!-- Product -->
 		<div class="marketing-footer-col">
 			<h3 class="marketing-footer-heading">Product</h3>
 			<nav class="marketing-footer-nav" aria-label="Product">
-				<a href="/detect">AI Detector</a>
 				<a href="/humanize" onclick={(e) => onGuestAppLink(e, '/humanize')}>AI Humanizer</a>
+				<a href="/detect">AI Detector</a>
 				<a href="/pricing">Pricing</a>
-				<a href="/">Home</a>
+				<a href="/blog">Blog</a>
 			</nav>
 		</div>
 
+		<!-- Company -->
 		<div class="marketing-footer-col">
-			<h3 class="marketing-footer-heading">Account</h3>
-			<nav class="marketing-footer-nav" aria-label="Account">
+			<h3 class="marketing-footer-heading">Company</h3>
+			<nav class="marketing-footer-nav" aria-label="Company">
+				<a href="/blog">About</a>
+				<a href="/blog">Blog</a>
+				<a href="/register">Careers</a>
 				<a
 					href="/login"
 					onclick={(e) => {
@@ -308,35 +316,21 @@
 						openLoginModal();
 					}}>Sign in</a
 				>
-				<a href="/register">Create account</a>
-				<a href="/dashboard" onclick={(e) => onGuestAppLink(e, '/dashboard')}>Dashboard</a>
-				<a href="/activity" onclick={(e) => onGuestAppLink(e, '/activity')}>Activity</a>
 			</nav>
 		</div>
 
-		<div class="marketing-footer-col">
-			<h3 class="marketing-footer-heading">Resources</h3>
-			<nav class="marketing-footer-nav" aria-label="Resources">
-				<a href="/blog">Blog</a>
-				<a href="/blog/how-to-bypass-gptzero">Bypass GPTZero</a>
-				<a href="/blog/does-turnitin-detect-chatgpt">Turnitin & ChatGPT</a>
-				<a href="/blog/make-ai-text-undetectable">Undetectable AI Text</a>
-				<a href="/blog/what-to-look-for-in-an-ai-humanizer">Choosing a Humanizer</a>
-			</nav>
-		</div>
-
+		<!-- Legal -->
 		<div class="marketing-footer-col">
 			<h3 class="marketing-footer-heading">Legal</h3>
 			<nav class="marketing-footer-nav" aria-label="Legal">
-				<a href="/terms">Terms of Service</a>
 				<a href="/privacy">Privacy Policy</a>
+				<a href="/terms">Terms of Service</a>
 			</nav>
 		</div>
 	</div>
 
 	<div class="marketing-footer-bottom">
-		<span class="marketing-footer-copy">&copy; {new Date().getFullYear()} HumanizeAIWrite</span>
-		<span class="marketing-footer-note">Detection and humanizing only — we don’t sell your text.</span>
+		<span class="marketing-footer-copy">&copy; {new Date().getFullYear()} HumanizeAIWrite. All rights reserved.</span>
 	</div>
 </footer>
 
@@ -370,18 +364,19 @@
 		min-width: 200px;
 	}
 
+	/* ── FOOTER ─────────────────────────────────────────────────────────── */
 	.marketing-footer {
-		background: var(--color-brand-muted);
-		border-top: 1px solid rgba(16, 185, 129, 0.3);
-		padding: 48px 24px 28px;
+		background: #063f32;
+		border-top: none;
 	}
 
 	.marketing-footer-grid {
-		max-width: 1200px;
+		max-width: 1180px;
 		margin: 0 auto;
+		padding: 64px 32px 0;
 		display: grid;
-		grid-template-columns: 1.4fr repeat(4, 1fr);
-		gap: 32px 40px;
+		grid-template-columns: 1.6fr repeat(3, 1fr);
+		gap: 40px;
 		align-items: start;
 	}
 
@@ -389,23 +384,55 @@
 		min-width: 0;
 	}
 
+	.footer-brand-logo {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		cursor: pointer;
+		margin-bottom: 16px;
+	}
+
+	.footer-brand-icon {
+		width: 32px;
+		height: 32px;
+		display: grid;
+		place-items: center;
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.15);
+		color: #fff;
+		font-weight: 900;
+		font-size: 16px;
+		flex-shrink: 0;
+	}
+
+	.footer-brand-name {
+		font-size: 17px;
+		font-weight: 800;
+		color: #fff;
+		font-family: inherit;
+	}
+
+	.footer-brand-name span {
+		color: #6ee7b7;
+	}
+
 	.marketing-footer-tagline {
-		margin: 14px 0 0;
-		max-width: 280px;
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 13px;
-		line-height: 1.55;
-		color: var(--color-text-secondary);
+		margin: 0;
+		max-width: 260px;
+		font-size: 14px;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.6);
+	}
+
+	.marketing-footer-col {
+		min-width: 0;
 	}
 
 	.marketing-footer-heading {
 		margin: 0 0 12px;
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--color-text-muted);
+		font-size: 14px;
+		font-weight: 900;
+		color: #fff;
 	}
 
 	.marketing-footer-nav {
@@ -415,59 +442,48 @@
 	}
 
 	.marketing-footer-nav a {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 13px;
-		font-weight: 500;
-		color: var(--color-text-primary);
+		font-size: 14px;
+		font-weight: 400;
+		color: rgba(255, 255, 255, 0.65);
 		text-decoration: none;
 		transition: color 120ms ease;
 	}
 
 	.marketing-footer-nav a:hover {
-		color: var(--color-brand);
+		color: #fff;
 	}
 
 	.marketing-footer-bottom {
-		max-width: 1200px;
-		margin: 40px auto 0;
-		padding-top: 24px;
-		border-top: 1px solid rgba(16, 185, 129, 0.2);
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px 24px;
+		max-width: 1180px;
+		margin: 64px auto 0;
+		padding: 24px 32px;
+		border-top: 1px solid rgba(255, 255, 255, 0.12);
+		text-align: center;
 	}
 
 	.marketing-footer-copy {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
 		font-size: 12px;
-		color: var(--color-text-muted);
+		color: rgba(255, 255, 255, 0.45);
 	}
 
-	.marketing-footer-note {
-		font-family: 'Space Grotesk', system-ui, sans-serif;
-		font-size: 12px;
-		color: var(--color-text-secondary);
-		max-width: 420px;
-		text-align: right;
-	}
-
+	/* ── RESPONSIVE ──────────────────────────────────────────────────────── */
 	@media (max-width: 900px) {
 		.marketing-footer-grid {
 			grid-template-columns: 1fr 1fr;
+			padding: 48px 24px 0;
 		}
 		.marketing-footer-brand {
 			grid-column: 1 / -1;
 		}
-		.marketing-footer-note {
-			text-align: left;
+		.marketing-footer-bottom {
+			padding-left: 24px;
+			padding-right: 24px;
 		}
 	}
 
 	@media (max-width: 520px) {
 		.marketing-footer-grid {
-			grid-template-columns: 1fr;
+			grid-template-columns: 1fr 1fr;
 		}
 	}
 

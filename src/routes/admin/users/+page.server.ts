@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	let query = db
 		.from('profiles')
-		.select('id, email, full_name, plan, words_balance, ls_customer_id, created_at', { count: 'exact' })
+		.select('id, email, full_name, plan, words_balance, ls_customer_id, created_at, disabled', { count: 'exact' })
 		.order('created_at', { ascending: false })
 		.range((page - 1) * perPage, page * perPage - 1);
 
