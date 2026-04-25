@@ -23,7 +23,6 @@
 	const refreshIcon = 'M3 12a9 9 0 0 1 15-6.7L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-15 6.7L3 16 M3 21v-5h5';
 	const trashIcon   = 'M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6';
 	const uploadIcon  = 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12';
-	const playIcon    = 'M8 5v14l11-7z';
 
 	// Human-natural words highlighted in output
 	const HUMAN_FIXES = new Set([
@@ -55,7 +54,6 @@
 	let elapsedInterval: ReturnType<typeof setInterval> | null = null;
 	let progressInterval: ReturnType<typeof setInterval> | null = null;
 	let fileInputEl: HTMLInputElement | null = null;
-	let showHowItWorks = $state(false);
 
 
 	const inputWordCount = $derived(
@@ -313,19 +311,7 @@
 					loading={isLoading}
 					onclick={handleHumanize}
 				>Humanize</Button>
-				<Button
-					variant="ghost"
-					size="md"
-					icon={playIcon}
-					onclick={() => {
-						showHowItWorks = true;
-						queueMicrotask(() => {
-							const el = document.getElementById('how-it-works');
-							el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-						});
-					}}
-				>How it works</Button>
-				<Button variant="secondary" size="md" icon={scanIcon} onclick={handleRecheck}>Re-check detection</Button>
+<Button variant="secondary" size="md" icon={scanIcon} onclick={handleRecheck}>Re-check detection</Button>
 				<Button variant="ghost" size="md" icon={uploadIcon} onclick={triggerUpload}>Upload file</Button>
 			</div>
 		</div>
@@ -487,23 +473,6 @@
 		{/each}
 	</div>
 
-	{#if showHowItWorks}
-		<section id="how-it-works" style="margin-top: 18px; padding-top: 6px;">
-			<div style="background:var(--color-bg-surface);border-radius:14px;box-shadow:inset 0 0 0 1px var(--color-bg-border);padding:18px 20px;">
-				<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
-					<div style="font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-text-muted);">How it works</div>
-					<button
-						type="button"
-						onclick={() => (showHowItWorks = false)}
-						style="padding:6px 10px;border-radius:10px;background:transparent;border:1px solid var(--color-bg-border);cursor:pointer;font-family:'Space Grotesk',system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--color-text-secondary);"
-					>Close</button>
-				</div>
-				<p style="margin:0;font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px;line-height:1.7;color:var(--color-text-secondary);">
-					Paste (or upload) text, click <b>Humanize</b>, and we rewrite it for clarity and natural flow while preserving meaning. Use <b>Re-check detection</b> to analyze the output.
-				</p>
-			</div>
-		</section>
-	{/if}
 </div>
 
 {#if outOfWords}
